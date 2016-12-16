@@ -1,7 +1,133 @@
 #[macro_use]
 extern crate nom;
-use nom::*;
-use nom::IResult::*;
+use nom::IResult::Done;
+use std::io;
+use std::io::Read;
+use std::fs::File;
+
+#[derive(Debug,PartialEq,Eq,Clone)]
+enum IRI {
+	IRI(String),
+	PrefixedName(String,String)
+}
+
+#[derive(Debug,PartialEq,Eq)]
+enum RDFLiteralType {
+  LangTag(String),
+  DataType(IRI)
+}
+
+#[derive(Debug,PartialEq,Eq)]
+struct RDFLiteral {
+    string: String,
+    data_type: Option<RDFLiteralType>
+}
+
+#[derive(Debug,PartialEq,Eq)]
+enum Literal {
+    RDFLiteral(RDFLiteral),
+    Integer(i64),
+    Boolean(bool)
+}
+
+#[derive(Debug,PartialEq,Eq)]
+enum Object {
+	IRI(IRI),
+	Literal(Literal),
+}
+
+#[derive(Debug,PartialEq,Eq)]
+struct PredicatedObjects {
+	verb: IRI,
+	objects: Vec<Object>,
+}
+
+#[derive(Debug,PartialEq,Eq)]
+pub struct Triples {
+	subject: IRI,
+	predicated_objects_list: Vec<PredicatedObjects>,
+}
+
+#[derive(Debug,PartialEq,Eq)]
+pub enum Statement {
+	Prefix(String,String),
+	Base(String),
+	Triples(Triples),
+}
+
+/// [1] turtleDoc ::= statement*
+named!(turtle<&str,Vec<Statement>>, delimited!(
+  take_while_s!(is_ws),
+  separated_list!(take_while_s!(is_ws), statement),
+  take_while_s!(is_ws)
+));
+
+/// [2] statement ::= directive | triples '.'
+named!(statement<&str,Statement>, alt!(statement_triples | prefix_id | base | sparql_base | sparql_prefix));
+//named!(statement<&str,Statement>, call!(prefix_id));
+
+named!(statement_triples<&str,Statement>, do_parse!(
+  triples: triples >>
+  take_while_s!(is_ws) >>
+  tag!(".") >>
+  take_while_s!(is_ws) >>
+  (Statement::Triples(triples))
+));
+
+/// [4] prefixID ::= '@prefix' PNAME_NS IRIREF '.'
+named!(prefix_id<&str,Statement>, do_parse!(
+  tag!("@prefix") >>
+  take_while1_s!(is_ws) >>
+  pn_prefix: pn_prefix >>
+  take_while_s!(is_ws) >>
+  tag!(":") >>
+  take_while_s!(is_ws) >>
+  iri_ref: iri_ref >>
+  take_while_s!(is_ws) >>
+  tag!(".") >>
+  (Statement::Prefix(pn_prefix, iri_ref))
+));
+
+/// [5] base ::= '@base' IRIREF '.'
+named!(base<&str,Statement>, do_parse!(
+  tag!("@base") >>
+  take_while1_s!(is_ws) >>
+  iri_ref: iri_ref >>
+  take_while_s!(is_ws) >>
+  tag!(".") >>
+  (Statement::Base(iri_ref))
+));
+
+/// [5s] sparqlBase ::= "BASE" IRIREF
+named!(sparql_base<&str,Statement>, do_parse!(
+  tag!("BASE") >>
+  take_while1_s!(is_ws) >>
+  iri_ref: iri_ref >>
+  (Statement::Base(iri_ref))
+));
+
+/// [6s] sparqlPrefix ::= "PREFIX" PNAME_NS IRIREF
+named!(sparql_prefix<&str,Statement>, do_parse!(
+  tag!("PREFIX") >>
+  take_while1_s!(is_ws) >>
+  pn_prefix: pn_prefix >>
+  take_while_s!(is_ws) >>
+  tag!(":") >>
+  take_while_s!(is_ws) >>
+  iri_ref: iri_ref >>
+  (Statement::Prefix(pn_prefix, iri_ref))
+));
+
+/// [6] triples ::= subject predicateObjectList | blankNodePropertyList predicateObjectList?
+named!(triples<&str,Triples>, do_parse!(
+	subject: iri >>
+    take_while_s!(is_ws) >>
+	predicated_objects_list: predicated_objects_list >>
+	(Triples{
+	   subject: subject,
+	   predicated_objects_list: predicated_objects_list
+	})
+));
 
 fn is_ws(c: char) -> bool {
 	c == ' ' || c == '\t' || c == '\r' || c == '\n'
@@ -73,9 +199,34 @@ named!(pn_prefix<&str,String>, do_parse!(
   })
 ));
 
-named!(alpha<&str,&str>, take_while_s!(is_alpha));
-named!(alphanumeric<&str,&str>, take_while_s!(is_alphanum));
-named!(digit<&str,&str>, take_while_s!(is_digit));
+named!(pn_local<&str,String>, do_parse!(
+  p1: take_s!(1) >>
+  p2: take_while_s!(is_alphanum) >>
+  ({
+  		let mut s = String::from(p1);
+  		s.push_str(p2);
+  		s
+  })
+));
+
+named!(prefixed_name<&str,IRI>, do_parse!(
+  pn_prefix: opt!(pn_prefix) >>
+  tag!(":") >>
+  pn_local: opt!(pn_local) >>
+  (IRI::PrefixedName(pn_prefix.unwrap_or(String::new()),
+  		pn_local.unwrap_or(String::new())))
+));
+
+
+#[test]
+fn test_prefixed_name() {
+    assert_eq!(prefixed_name("a:a"), Done(&""[..], IRI::PrefixedName(String::from("a"),String::from("a"))));
+    assert_eq!(prefixed_name(":"), Done(&""[..], IRI::PrefixedName(String::new(),String::new())));
+}
+
+named!(alpha<&str,&str>, take_while1_s!(is_alpha));
+named!(alphanumeric<&str,&str>, take_while1_s!(is_alphanum));
+named!(digit<&str,&str>, take_while1_s!(is_digit));
 
 // IRIREF ::= '<' ([^#x00-#x20<>"{}|^`\] | UCHAR)* '>'
 
@@ -94,11 +245,13 @@ named!(iri_ref<&str,String>,
   )
 );
 
-named!(iri<&str,String>, call!(iri_ref));
+named!(iri_iri<&str,IRI>, map!(iri_ref, IRI::IRI));
+
+named!(iri<&str,IRI>, alt!(iri_iri|prefixed_name));
 
 #[test]
 fn test_iri() {
-    assert_eq!(iri("<urn:123>"), Done(&""[..],String::from("urn:123")));
+    assert_eq!(iri("<urn:123>"), Done(&""[..],IRI::IRI(String::from("urn:123"))));
 }
 
 named!(iri_ref_literal<&str,RDFLiteralType>, do_parse!(
@@ -124,7 +277,7 @@ named!(string_literal_quote<&str,String>,
 
 #[test]
 fn test_string_literal_quote() {
-    assert_eq!(string_literal_quote("\"\""), Done(&""[..], String::from("")));
+    assert_eq!(string_literal_quote("\"\""), Done(&""[..], String::new()));
 }
 
 #[inline]
@@ -144,7 +297,7 @@ named!(string_literal_single_quote<&str,String>,
 
 #[test]
 fn test_string_literal_single_quote() {
-    assert_eq!(string_literal_single_quote("''"), Done(&""[..], String::from("")));
+    assert_eq!(string_literal_single_quote("''"), Done(&""[..], String::new()));
 }
 
 #[inline]
@@ -165,7 +318,7 @@ named!(string_literal_long_single_quote<&str,String>,
 
 #[test]
 fn test_string_literal_long_single_quote() {
-    assert_eq!(string_literal_long_single_quote("''''''"), Done(&""[..], String::from("")));
+    assert_eq!(string_literal_long_single_quote("''''''"), Done(&""[..], String::new()));
 }
 
 #[inline]
@@ -185,7 +338,7 @@ named!(string_literal_long_quote<&str,String>,
 
 #[test]
 fn test_string_literal_long_quote() {
-    assert_eq!(string_literal_long_quote("\"\"\"\"\"\""), Done(&""[..], String::from("")));
+    assert_eq!(string_literal_long_quote("\"\"\"\"\"\""), Done(&""[..], String::new()));
 }
 
 named!(string<&str,String>, alt!(string_literal_quote | string_literal_single_quote
@@ -206,50 +359,6 @@ fn test_langtag() {
     assert_eq!(langtag("@nl "), Done(&" "[..], RDFLiteralType::LangTag(String::from("nl"))));
 }
 
-#[derive(Debug,PartialEq,Eq)]
-enum RDFLiteralType {
-  LangTag(String),
-  DataType(String)
-}
-
-#[derive(Debug,PartialEq,Eq)]
-struct RDFLiteral {
-    string: String,
-    data_type: Option<RDFLiteralType>
-}
-
-#[derive(Debug,PartialEq,Eq)]
-enum Literal {
-    RDFLiteral(RDFLiteral),
-    Integer(i64),
-    Boolean(bool)
-}
-
-#[derive(Debug,PartialEq,Eq)]
-enum Object {
-	IRI(String),
-	Literal(Literal),
-}
-
-#[derive(Debug,PartialEq,Eq)]
-struct PredicatedObjects {
-	verb: String,
-	objects: Vec<Object>,
-}
-
-#[derive(Debug,PartialEq,Eq)]
-struct Triples {
-	subject: String,
-	predicated_objects_list: Vec<PredicatedObjects>,
-}
-
-#[derive(Debug,PartialEq,Eq)]
-enum Statement {
-	Prefix(String,String),
-	Base(String),
-	Triples(Triples),
-}
-
 named!(rdfliteral<&str,Literal>, do_parse!(
   string: string >>
   data_type: opt!(alt!(langtag | iri_ref_literal)) >>
@@ -261,7 +370,7 @@ named!(rdfliteral<&str,Literal>, do_parse!(
 
 #[test]
 fn test_rdfliteral() {
-    let r = RDFLiteral{string:String::from(""),data_type:None};
+    let r = RDFLiteral{string:String::new(),data_type:None};
     assert_eq!(rdfliteral("'' "), Done(&" "[..], Literal::RDFLiteral(r)));
 }
 
@@ -323,8 +432,15 @@ fn test_object_list() {
     assert_eq!(object_list("true, 1 , false"), Done(&""[..],v));
 }
 
+named!(a<&str,IRI>, do_parse!(
+  tag!("a") >>
+  (IRI::IRI(String::from("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")))
+));
+
+named!(verb<&str,IRI>, alt!(iri|a));
+
 named!(predicated_objects<&str,PredicatedObjects>, do_parse!(
-	verb: iri >>
+	verb: verb >>
     take_while_s!(is_ws) >>
 	objects: object_list >>
 	(PredicatedObjects{
@@ -336,7 +452,7 @@ named!(predicated_objects<&str,PredicatedObjects>, do_parse!(
 #[test]
 fn test_predicated_objects() {
 	let v = vec![Object::Literal(Literal::Integer(1))];
-	let po = PredicatedObjects{verb:String::from("urn:123"),objects:v};
+	let po = PredicatedObjects{verb:IRI::IRI(String::from("urn:123")),objects:v};
     assert_eq!(predicated_objects("<urn:123> 1"), Done(&""[..],po));
 }
 
@@ -348,102 +464,71 @@ named!(predicated_objects_list_list_separator<&str,()>, do_parse!(
 
 named!(predicated_objects_list<&str,Vec<PredicatedObjects>>, separated_nonempty_list!(call!(predicated_objects_list_list_separator),predicated_objects));
 
-named!(triples<&str,Triples>, do_parse!(
-	subject: iri >>
-    take_while_s!(is_ws) >>
-	predicated_objects_list: predicated_objects_list >>
-	(Triples{
-	   subject: subject,
-	   predicated_objects_list: predicated_objects_list
-	})
-));
 
 #[test]
 fn test_triples() {
 	let v = vec![Object::Literal(Literal::Integer(1))];
-	let po = vec![PredicatedObjects{verb:String::from("urn:123"),objects:v}];
-	let t = Triples{subject:String::from("urn:123"),predicated_objects_list:po};
+	let i = IRI::IRI(String::from("urn:123"));
+	let po = vec![PredicatedObjects{verb:i.clone(),objects:v}];
+	let t = Triples{subject:i,predicated_objects_list:po};
     assert_eq!(triples("<urn:123> <urn:123> 1"), Done(&""[..],t));
 }
 
-named!(statement_triples<&str,Statement>, do_parse!(
-  triples: triples >>
-  take_while_s!(is_ws) >>
-  tag!(".") >>
-  (Statement::Triples(triples))
-));
 
 #[test]
 fn test_statement_triples() {
 	let v = vec![Object::Literal(Literal::Integer(1))];
-	let po = vec![PredicatedObjects{verb:String::from("urn:123"),objects:v}];
-	let t = Triples{subject:String::from("urn:123"),predicated_objects_list:po};
+	let i = IRI::IRI(String::from("urn:123"));
+	let po = vec![PredicatedObjects{verb:i.clone(),objects:v}];
+	let t = Triples{subject:i,predicated_objects_list:po};
 	let s = Statement::Triples(t);
     assert_eq!(statement_triples("<urn:123> <urn:123> 1."), Done(&""[..],s));
 }
 
-named!(prefix_id<&str,Statement>, do_parse!(
-  tag!("@prefix") >>
-  take_while1_s!(is_ws) >>
-  pn_prefix: pn_prefix >>
-  take_while_s!(is_ws) >>
-  tag!(":") >>
-  take_while_s!(is_ws) >>
-  iri_ref: iri_ref >>
-  take_while_s!(is_ws) >>
-  tag!(".") >>
-  (Statement::Prefix(pn_prefix, iri_ref))
-));
 
 #[test]
 fn test_prefix_id() {
 	assert_eq!(prefix_id("@prefix a.b.c : <urn> ."), Done(&""[..],Statement::Prefix(String::from("a.b.c"),String::from("urn"))));
 }
 
-named!(base<&str,Statement>, do_parse!(
-  tag!("@base") >>
-  take_while1_s!(is_ws) >>
-  iri_ref: iri_ref >>
-  take_while_s!(is_ws) >>
-  tag!(".") >>
-  (Statement::Base(iri_ref))
-));
 
 #[test]
 fn test_base() {
 	assert_eq!(base("@base <urn> ."), Done(&""[..],Statement::Base(String::from("urn"))));
 }
 
-named!(sparql_base<&str,Statement>, do_parse!(
-  tag!("BASE") >>
-  take_while1_s!(is_ws) >>
-  iri_ref: iri_ref >>
-  (Statement::Base(iri_ref))
-));
 
 #[test]
 fn test_sparql_base() {
 	assert_eq!(sparql_base("BASE <urn>"), Done(&""[..],Statement::Base(String::from("urn"))));
 }
 
-named!(sparql_prefix<&str,Statement>, do_parse!(
-  tag!("PREFIX") >>
-  take_while1_s!(is_ws) >>
-  pn_prefix: pn_prefix >>
-  take_while_s!(is_ws) >>
-  tag!(":") >>
-  take_while_s!(is_ws) >>
-  iri_ref: iri_ref >>
-  (Statement::Prefix(pn_prefix, iri_ref))
-));
 
 #[test]
 fn test_sparql_prefix() {
 	assert_eq!(sparql_prefix("PREFIX a.b.c : <urn>"), Done(&""[..],Statement::Prefix(String::from("a.b.c"),String::from("urn"))));
 }
 
-named!(statement<&str,Statement>, alt!(statement_triples | prefix_id | base | sparql_base | sparql_prefix));
 
-pub fn parse() {
-    statement("<urn:123><urn:123>1");
+
+pub fn parse(data: &str) -> nom::IResult<&str,Vec<Statement>> {
+    turtle(data)
+}
+
+pub fn run(path: &str) -> io::Result<()> {
+    let mut s = String::new();
+    let mut f = try!(File::open(path));
+    try!(f.read_to_string(&mut s));
+    let r = parse(s.as_str());
+    println!("{}", s);
+    println!("{:?}", r);
+    Ok(())
+}
+
+#[test]
+fn test_run() {
+	let path = "/tmp/tracker/tests/libtracker-data/update/delete-insert-where-1.ontology";
+	if let Err(e) = run(&path) {
+        println!("{:?}", e);
+	}
 }
