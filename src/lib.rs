@@ -382,7 +382,7 @@ fn is_pn_chars(c: char) -> bool {
 
 /// [167s] PN_PREFIX ::= PN_CHARS_BASE ((PN_CHARS | '.')* PN_CHARS)?
 named!(pn_prefix<&str,String>, map!(recognize!(tuple!(
-    one_if!(is_alpha),
+    one_if!(is_pn_chars_base),
     take_while_s!(is_pn_chars),
     many0!(tuple!(
         tag_s!("."),
@@ -392,7 +392,7 @@ named!(pn_prefix<&str,String>, map!(recognize!(tuple!(
 
 /// [168s] PN_LOCAL ::= (PN_CHARS_U | ':' | [0-9] | PLX) ((PN_CHARS | '.' | ':' | PLX)* (PN_CHARS | ':' | PLX))?
 named!(pn_local<&str,String>, map!(recognize!(tuple!(
-    one_if!(is_alpha),
+    one_if!(is_pn_chars_u),
     take_while_s!(is_alphanum)
 )), String::from));
 
@@ -400,7 +400,8 @@ named!(pn_local<&str,String>, map!(recognize!(tuple!(
 /// [170s] PERCENT ::= '%' HEX HEX
 /// [171s] HEX ::= [0-9] | [A-F] | [a-f]
 /// [172s] PN_LOCAL_ESC ::= '\' ('_' | '~' | '.' | '-' | '!' | '$' | '&' | "'" | '(' | ')' | '*' | '+' | ',' | ';' | '=' | '/' | '?' | '#' | '@' | '%')
-
+//named!(pn_local_esc<&str,&str>, recognize!(tuple!(
+//    char!("\\"), one_of!("_~.-!$&'()*+,;=/?#@%"))));
 
 fn is_alpha(c: char) -> bool {
     (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
