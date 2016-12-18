@@ -31,12 +31,12 @@ impl TurtleConsumer {
 }
 
 impl<'a> Consumer<&'a [u8], usize, (), Move> for TurtleConsumer {
-	    fn state(&self) -> &ConsumerState<usize, (), Move> {
+    fn state(&self) -> &ConsumerState<usize, (), Move> {
         &self.c_state
-}
-	    fn handle(&mut self, _: Input<&'a [u8]>) -> &ConsumerState<usize, (), Move> {
-	    	&self.c_state
-	    }
+    }
+    fn handle(&mut self, _: Input<&'a [u8]>) -> &ConsumerState<usize, (), Move> {
+        &self.c_state
+    }
 }
 
 pub struct TurtleStreamer {
@@ -65,9 +65,7 @@ impl Iterator for TurtleStreamer {
         self.file_producer.apply(&mut self.consumer);
         match self.consumer.state {
             State::Error => None,
-            _ => {
-                Some(String::new())
-            }
+            _ => Some(String::new()),
         }
     }
 }

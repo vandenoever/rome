@@ -2,13 +2,13 @@
 #[derive(Debug,PartialEq,Eq,Clone)]
 pub enum IRI {
     IRI(String),
-    PrefixedName(String,String)
+    PrefixedName(String, String),
 }
 
 #[derive(Debug,PartialEq,Eq)]
 pub enum RDFLiteralType {
     LangTag(String),
-    DataType(IRI)
+    DataType(IRI),
 }
 
 #[derive(Debug,PartialEq)]
@@ -42,7 +42,7 @@ pub struct Triples {
 
 #[derive(Debug,PartialEq)]
 pub enum Statement {
-    Prefix(String,String),
+    Prefix(String, String),
     Base(String),
     Triples(Triples),
 }
