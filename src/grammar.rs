@@ -26,7 +26,7 @@ named!(comment<&str,()>, value!((), tuple!(
     take_until_either_and_consume!("\r\n")
 )));
 
-/// whitespace that my contain comments
+/// whitespace that may contain comments
 fn tws(mut str: &str) -> IResult<&str, ()> {
     loop {
         match comment(str) {
@@ -122,21 +122,27 @@ named!(triples_subject<&str,Triples>, do_parse!(
     })
 ));
 
-named!(triples_blank<&str,Triples>, do_parse!(
-    blank: blank_node_property_list >>
-    tws >>
-    predicated_objects_list: opt!(predicated_objects_list) >>
-    ({
-        let mut b = blank.clone();
-        if let Some(pol) = predicated_objects_list {
-            b.append(&mut pol.clone());
+fn triples_blank(str: &str) -> IResult<&str, Triples> {
+    match blank_node_property_list(str) {
+        Done(mut left, mut blank) => {
+            match predicated_objects_list(left) {
+                Done(l, mut pol) => {
+                    left = l;
+                    blank.append(&mut pol);
+                }
+                IResult::Error(e) => {},
+                IResult::Incomplete(i) => return IResult::Incomplete(i),
+            };
+            let t = Triples {
+                subject: Subject::BlankNode(BlankNode::Anon),
+                predicated_objects_list: blank,
+            };
+            Done(left, t)
         }
-        Triples{
-            subject: Subject::BlankNode(BlankNode::Anon),
-            predicated_objects_list: b
-        }
-    })
-));
+        IResult::Error(e) => IResult::Error(e),
+        IResult::Incomplete(i) => IResult::Incomplete(i),
+    }
+}
 
 /// [7] predicateObjectList ::= verb objectList (';' (verb objectList)?)*
 named!(predicated_objects_list<&str,Vec<PredicatedObjects>>,

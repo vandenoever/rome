@@ -11,7 +11,7 @@ pub enum RDFLiteralType {
     DataType(IRI),
 }
 
-#[derive(Debug,PartialEq,Clone)]
+#[derive(Debug,PartialEq)]
 pub enum Literal {
     LangString(String, String),
     XsdString(String),
@@ -22,19 +22,19 @@ pub enum Literal {
     TypedLiteral(String, IRI),
 }
 
-#[derive(Debug,PartialEq,Clone)]
+#[derive(Debug,PartialEq,Eq)]
 pub enum BlankNode {
     Anon,
     BlankNode(String),
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug,PartialEq,Eq)]
 pub enum Subject {
     IRI(IRI),
     BlankNode(BlankNode),
 }
 
-#[derive(Debug,PartialEq,Clone)]
+#[derive(Debug,PartialEq,Eq)]
 pub enum Object {
     IRI(IRI),
     BlankNode(BlankNode),
@@ -42,21 +42,23 @@ pub enum Object {
     Literal(Literal),
 }
 
-#[derive(Debug,PartialEq,Clone)]
+#[derive(Debug,PartialEq,Eq)]
 pub struct PredicatedObjects {
     pub verb: IRI,
     pub objects: Vec<Object>,
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug,PartialEq,Eq)]
 pub struct Triples {
     pub subject: Subject,
     pub predicated_objects_list: Vec<PredicatedObjects>,
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug,PartialEq,Eq)]
 pub enum Statement {
     Prefix(String, String),
     Base(String),
     Triples(Triples),
 }
+
+impl Eq for Literal {}
