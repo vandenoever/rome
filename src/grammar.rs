@@ -125,14 +125,19 @@ named!(triples_subject<&str,Triples>, do_parse!(
 fn triples_blank(str: &str) -> IResult<&str, Triples> {
     match blank_node_property_list(str) {
         Done(mut left, mut blank) => {
-            match predicated_objects_list(left) {
-                Done(l, mut pol) => {
-                    left = l;
-                    blank.append(&mut pol);
+            match tws(left) {
+                Done(l, _) => {
+                    match predicated_objects_list(l) {
+                        Done(l, mut pol) => {
+                            left = l;
+                            blank.append(&mut pol);
+                        }
+                        IResult::Incomplete(i) => return IResult::Incomplete(i),
+                        _ => {}
+                    }
                 }
-                IResult::Error(e) => {},
-                IResult::Incomplete(i) => return IResult::Incomplete(i),
-            };
+                _ => {}
+            }
             let t = Triples {
                 subject: Subject::BlankNode(BlankNode::Anon),
                 predicated_objects_list: blank,
