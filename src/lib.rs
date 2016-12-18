@@ -48,12 +48,31 @@ fn resolve_iri(iri: &IRI,
     Ok(i)
 }
 
-fn make_subject(subject: &IRI,
+fn make_subject(subject: Subject,
                 base: &String,
-                prefixes: &HashMap<String, String>)
+                prefixes: &HashMap<String, String>,
+                blank_nodes: &mut HashMap<String, usize>,
+                blank_node_count: &mut usize)
                 -> Result<ast::Subject, String> {
-    let iri = try!(resolve_iri(subject, base, prefixes));
-    Ok(ast::Subject::IRI(iri))
+    match subject {
+        Subject::IRI(iri) => {
+            let iri = try!(resolve_iri(&iri, base, prefixes));
+            Ok(ast::Subject::IRI(iri))
+        }
+        Subject::Anon => {
+            let blank = ast::Subject::BlankNode(*blank_node_count);
+            *blank_node_count += 1;
+            Ok(blank)
+        }
+        Subject::BlankNode(label) => {
+            let blank = blank_nodes.entry(label).or_insert_with(|| {
+                let n = *blank_node_count;
+                *blank_node_count += 1;
+                n
+            });
+            Ok(ast::Subject::BlankNode(*blank))
+        }
+    }
 }
 
 fn make_object(triples: &mut Vec<ast::Triple>,
@@ -125,7 +144,11 @@ fn add_triples(triples: &mut Vec<ast::Triple>,
                blank_nodes: &mut HashMap<String, usize>,
                blank_node_count: &mut usize)
                -> Result<(), String> {
-    let subject = try!(make_subject(&new_triples.subject, base, prefixes));
+    let subject = try!(make_subject(new_triples.subject,
+                                    base,
+                                    prefixes,
+                                    blank_nodes,
+                                    blank_node_count));
     add_predicated_objects(triples,
                            subject,
                            new_triples.predicated_objects_list,

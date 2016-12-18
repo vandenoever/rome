@@ -59,7 +59,7 @@ named!(pub turtle<&str,Vec<Statement>>, do_parse!(
 /// [2] statement ::= directive | triples '.'
 /// [3] directive ::= prefixID | base | sparqlPrefix | sparqlBase
 named!(statement<&str,Statement>, alt!(prefix_id | base | sparql_prefix
-		| sparql_base | statement_triples));
+        | sparql_base | statement_triples));
 
 named!(statement_triples<&str,Statement>, do_parse!(
     triples: triples >>
@@ -109,13 +109,31 @@ named!(sparql_prefix<&str,Statement>, do_parse!(
 ));
 
 /// [6] triples ::= subject predicateObjectList | blankNodePropertyList predicateObjectList?
-named!(triples<&str,Triples>, do_parse!(
-    subject: iri >>
+named!(triples<&str,Triples>, alt!(triples_subject | triples_blank));
+
+named!(triples_subject<&str,Triples>, do_parse!(
+    subject: subject >>
     tws >>
     predicated_objects_list: predicated_objects_list >>
     (Triples{
         subject: subject,
         predicated_objects_list: predicated_objects_list
+    })
+));
+
+named!(triples_blank<&str,Triples>, do_parse!(
+    blank: blank_node_property_list >>
+    tws >>
+    predicated_objects_list: opt!(predicated_objects_list) >>
+    ({
+        let mut b = blank.clone();
+        if let Some(pol) = predicated_objects_list {
+            b.append(&mut pol.clone());
+        }
+        Triples{
+            subject: Subject::Anon,
+            predicated_objects_list: b
+        }
     })
 ));
 
@@ -127,19 +145,17 @@ named!(predicated_objects_list<&str,Vec<PredicatedObjects>>,
             tag_s!(";"),
             tws
         ),
-        predicated_objects
+        do_parse!(
+            verb: verb >>
+            tws >>
+            objects: object_list >>
+            (PredicatedObjects{
+                verb:verb,
+                objects:objects
+            })
+        )
     )
 );
-
-named!(predicated_objects<&str,PredicatedObjects>, do_parse!(
-    verb: verb >>
-    tws >>
-    objects: object_list >>
-    (PredicatedObjects{
-        verb:verb,
-        objects:objects
-    })
-));
 
 /// [8] objectList ::= object (',' object)*
 named!(object_list<&str,Vec<Object>>, separated_nonempty_list!(
@@ -160,6 +176,7 @@ named!(a<&str,IRI>, value!(
 ));
 
 /// [10] subject ::= iri | BlankNode | collection
+named!(subject<&str,Subject>, map!(iri, Subject::IRI));
 
 /// [11] predicate ::= iri
 
@@ -507,16 +524,17 @@ fn test_predicated_objects() {
         verb: IRI::IRI(String::from("urn:123")),
         objects: v,
     };
-    assert_eq!(predicated_objects("<urn:123> 1"), Done(&""[..],po));
+    assert_eq!(predicated_objects_list("<urn:123> 1"), Done(&""[..],vec![po]));
 }
 
 #[test]
 fn test_triples() {
     let v = vec![Object::Literal(Literal::XsdInteger(1))];
     let i = IRI::IRI(String::from("urn:123"));
+    let s = Subject::IRI(i.clone());
     let po = vec![PredicatedObjects{verb:i.clone(),objects:v}];
     let t = Triples {
-        subject: i,
+        subject: s,
         predicated_objects_list: po,
     };
     assert_eq!(triples("<urn:123> <urn:123> 1"), Done(&""[..],t));
@@ -525,9 +543,10 @@ fn test_triples() {
 #[test]
 fn test_statement_triples() {
     let i = IRI::PrefixedName(String::new(), String::new());
+    let s = Subject::IRI(i.clone());
     let po = vec![PredicatedObjects{verb:i.clone(),objects:vec![Object::IRI(i.clone())]}];
     let t = Triples {
-        subject: i,
+        subject: s,
         predicated_objects_list: po,
     };
     let s = Statement::Triples(t);
