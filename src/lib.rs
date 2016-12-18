@@ -48,6 +48,27 @@ fn resolve_iri(iri: &IRI,
     Ok(i)
 }
 
+fn make_blank(blank_node: BlankNode,
+              blank_nodes: &mut HashMap<String, usize>,
+              blank_node_count: &mut usize)
+              -> usize {
+    match blank_node {
+        BlankNode::Anon => {
+            let blank = *blank_node_count;
+            *blank_node_count += 1;
+            blank
+        }
+        BlankNode::BlankNode(label) => {
+            let blank = blank_nodes.entry(label).or_insert_with(|| {
+                let n = *blank_node_count;
+                *blank_node_count += 1;
+                n
+            });
+            *blank
+        }
+    }
+}
+
 fn make_subject(subject: Subject,
                 base: &String,
                 prefixes: &HashMap<String, String>,
@@ -59,18 +80,8 @@ fn make_subject(subject: Subject,
             let iri = try!(resolve_iri(&iri, base, prefixes));
             Ok(ast::Subject::IRI(iri))
         }
-        Subject::Anon => {
-            let blank = ast::Subject::BlankNode(*blank_node_count);
-            *blank_node_count += 1;
-            Ok(blank)
-        }
-        Subject::BlankNode(label) => {
-            let blank = blank_nodes.entry(label).or_insert_with(|| {
-                let n = *blank_node_count;
-                *blank_node_count += 1;
-                n
-            });
-            Ok(ast::Subject::BlankNode(*blank))
+        Subject::BlankNode(blank) => {
+            Ok(ast::Subject::BlankNode(make_blank(blank, blank_nodes, blank_node_count)))
         }
     }
 }
@@ -84,6 +95,9 @@ fn make_object(triples: &mut Vec<ast::Triple>,
                -> Result<ast::Object, String> {
     let o = match object {
         Object::IRI(ref iri) => ast::Object::IRI(try!(resolve_iri(&iri, base, prefixes))),
+        Object::BlankNode(blank) => {
+            ast::Object::BlankNode(make_blank(blank, blank_nodes, blank_node_count))
+        }
         Object::Literal(Literal::LangString(v, l)) => ast::Object::LangString(v, l),
         Object::Literal(Literal::XsdString(v)) => ast::Object::XsdString(v),
         Object::Literal(Literal::XsdInteger(v)) => ast::Object::XsdInteger(v),

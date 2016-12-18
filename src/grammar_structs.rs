@@ -22,18 +22,24 @@ pub enum Literal {
     TypedLiteral(String, IRI),
 }
 
+#[derive(Debug,PartialEq,Clone)]
+pub enum BlankNode {
+    Anon,
+    BlankNode(String),
+}
+
 #[derive(Debug,PartialEq)]
 pub enum Subject {
     IRI(IRI),
-    Anon,
-    BlankNode(String),
+    BlankNode(BlankNode),
 }
 
 #[derive(Debug,PartialEq,Clone)]
 pub enum Object {
     IRI(IRI),
-    Literal(Literal),
+    BlankNode(BlankNode),
     BlankNodePropertyList(Vec<PredicatedObjects>),
+    Literal(Literal),
 }
 
 #[derive(Debug,PartialEq,Clone)]

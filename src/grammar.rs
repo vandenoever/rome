@@ -131,7 +131,7 @@ named!(triples_blank<&str,Triples>, do_parse!(
             b.append(&mut pol.clone());
         }
         Triples{
-            subject: Subject::Anon,
+            subject: Subject::BlankNode(BlankNode::Anon),
             predicated_objects_list: b
         }
     })
@@ -176,7 +176,10 @@ named!(a<&str,IRI>, value!(
 ));
 
 /// [10] subject ::= iri | BlankNode | collection
-named!(subject<&str,Subject>, map!(iri, Subject::IRI));
+named!(subject<&str,Subject>, alt!(
+    map!(iri, Subject::IRI) |
+    map!(blank_node, Subject::BlankNode)
+));
 
 /// [11] predicate ::= iri
 
@@ -184,6 +187,7 @@ named!(subject<&str,Subject>, map!(iri, Subject::IRI));
 named!(object<&str,Object>, alt!(
     map!(literal, Object::Literal) |
     map!(iri, Object::IRI) |
+    map!(blank_node, Object::BlankNode) |
     map!(blank_node_property_list, Object::BlankNodePropertyList)
 ));
 
@@ -253,6 +257,7 @@ named!(prefixed_name<&str,IRI>, do_parse!(
 ));
 
 /// [137s]  BlankNode ::= BLANK_NODE_LABEL | ANON
+named!(blank_node<&str,BlankNode>, alt!(blank_node_label | anon));
 
 /// [18] IRIREF ::= '<' ([^#x00-#x20<>"{}|^`\] | UCHAR)* '>'
 /// #x00=NULL #01-#x1F=control codes #x20=space
@@ -273,6 +278,21 @@ named!(pname_ns<&str,&str>, do_parse!(
 
 /// [140s] PNAME_LN ::= PNAME_NS PN_LOCAL
 /// [141s] BLANK_NODE_LABEL ::= '_:' (PN_CHARS_U | [0-9]) ((PN_CHARS | '.')* PN_CHARS)?
+named!(blank_node_label<&str,BlankNode>, do_parse!(
+    tag!("_:") >>
+    label: recognize!(tuple!(
+        one_if!(is_pn_chars_u_digit),
+        fold_many0!(tuple!(
+            tag!("."),
+            take_while_s!(is_pn_chars)
+        ),(),|_,_|())
+    )) >> (BlankNode::BlankNode(String::from(label)))
+));
+
+fn is_pn_chars_u_digit(c: char) -> bool {
+    is_digit(c) || is_pn_chars_u(c)
+}
+
 /// [144s] LANGTAG ::= '@' [a-zA-Z]+ ('-' [a-zA-Z0-9]+)*
 named!(langtag<&str,RDFLiteralType>, do_parse!(
     tag_s!("@") >>
@@ -367,6 +387,12 @@ fn is_ws(c: char) -> bool {
 }
 
 /// [162s] ANON ::= '[' WS* ']'
+named!(anon<&str,BlankNode>, do_parse!(
+    tag_s!("[") >>
+    tws >>
+    tag_s!("]") >> (BlankNode::Anon)
+));
+
 /// [163s] PN_CHARS_BASE ::= [A-Z] | [a-z] | [#x00C0-#x00D6] | [#x00D8-#x00F6]
 /// | [#x00F8-#x02FF] | [#x0370-#x037D] | [#x037F-#x1FFF] | [#x200C-#x200D]
 /// | [#x2070-#x218F] | [#x2C00-#x2FEF] | [#x3001-#xD7FF] | [#xF900-#xFDCF]
