@@ -12,6 +12,7 @@ pub mod ast;
 pub mod triple_stream;
 mod grammar;
 mod grammar_structs;
+mod grammar_helper;
 
 use grammar::turtle;
 use grammar_structs::*;

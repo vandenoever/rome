@@ -1,4 +1,5 @@
 use grammar_structs::*;
+use grammar_helper::*;
 use nom::IResult;
 use nom::IResult::Done;
 use nom::Needed;
@@ -318,96 +319,55 @@ named!(integer<&str,Literal>, do_parse!(
 /// [20] DECIMAL ::= [+-]? [0-9]* '.' [0-9]+
 /// [21] DOUBLE ::= [+-]? ([0-9]+ '.' [0-9]* EXPONENT | '.' [0-9]+ EXPONENT | [0-9]+ EXPONENT)
 /// [154s] EXPONENT ::= [eE] [+-]? [0-9]+
+
 /// [22] STRING_LITERAL_QUOTE ::= '"' ([^#x22#x5C#xA#xD] | ECHAR | UCHAR)* '"'
 /// /* #x22=" #x5C=\ #xA=new line #xD=carriage return */
-named!(string_literal_quote<&str,String>, delimited!(
-    tag_s!("\""),
-    map!(
-        take_while_s!(is_string_literal_quote),
-        String::from
-    ),
-    tag_s!("\"")
-));
-
-#[inline]
-fn is_string_literal_quote(chr: char) -> bool {
-    chr != '"' && chr != '\\' && chr != '\n' && chr != '\r'
+fn string_literal_quote(str: &str) -> IResult<&str, String> {
+    string_literal(str, 1, start_quote, find_quote)
+}
+fn start_quote(s: &str) -> bool {
+    s.starts_with('"')
+}
+fn find_quote(s: &str) -> Option<usize> {
+    s.find('"')
 }
 
 /// [23] STRING_LITERAL_SINGLE_QUOTE ::= "'" ([^#x27#x5C#xA#xD] | ECHAR | UCHAR)* "'"
 /// /* #x27=' #x5C=\ #xA=new line #xD=carriage return */
-named!(string_literal_single_quote<&str,String>, delimited!(
-    tag_s!("'"),
-    map!(
-        take_while_s!(is_string_literal_single_quote),
-        String::from
-    ),
-    tag_s!("'")
-));
-
-#[inline]
-fn is_string_literal_single_quote(chr: char) -> bool {
-    chr != '\'' && chr != '\\' && chr != '\n' && chr != '\r'
+fn string_literal_single_quote(str: &str) -> IResult<&str, String> {
+    string_literal(str, 1, start_single_quote, find_single_quote)
+}
+fn start_single_quote(s: &str) -> bool {
+    s.starts_with('\'')
+}
+fn find_single_quote(s: &str) -> Option<usize> {
+    s.find('\'')
 }
 
 /// [24] STRING_LITERAL_LONG_SINGLE_QUOTE ::= "'''" (("'" | "''")? ([^'\] | ECHAR | UCHAR))* "'''"
-named!(string_literal_long_single_quote<&str,String>, delimited!(
-    tag_s!("'''"),
-    map!(
-        take_while_s!(is_string_literal_long_single_quote),
-        String::from
-    ),
-    tag_s!("'''")
-));
-
-#[inline]
-fn is_string_literal_long_single_quote(chr: char) -> bool {
-    chr != '\'' as char && chr != '\\' && chr != '\n' && chr != '\r'
+fn string_literal_long_single_quote(str: &str) -> IResult<&str, String> {
+    string_literal(str, 3, start_long_single_quote, find_long_single_quote)
+}
+fn start_long_single_quote(s: &str) -> bool {
+    s.starts_with("'''")
+}
+fn find_long_single_quote(s: &str) -> Option<usize> {
+    s.find("'''")
 }
 
 /// [25] STRING_LITERAL_LONG_QUOTE ::= '"""' (('"' | '""')? ([^"\] | ECHAR | UCHAR))* '"""'
-named!(string_literal_long_quote<&str,String>, delimited!(
-    tag_s!("\"\"\""),
-    map!(
-        take_while_s!(is_string_literal_long_quote),
-        String::from
-    ),
-    tag_s!("\"\"\"")
-));
-
-#[inline]
-fn is_string_literal_long_quote(chr: char) -> bool {
-    chr != '"' && chr != '\\' && chr != '\n' && chr != '\r'
+fn string_literal_long_quote(str: &str) -> IResult<&str, String> {
+    string_literal(str, 3, start_long_quote, find_long_quote)
+}
+fn start_long_quote(s: &str) -> bool {
+    s.starts_with("\"\"\"")
+}
+fn find_long_quote(s: &str) -> Option<usize> {
+    s.find("\"\"\"")
 }
 
 /// [26] UCHAR ::= '\u' HEX HEX HEX HEX | '\U' HEX HEX HEX HEX HEX HEX HEX HEX
-named!(uchar<&str,&str>, alt!(uchar1 | uchar2));
-
-named!(uchar1<&str,&str>, recognize!(tuple!(
-    tag_s!("\\u"),
-    one_if!(is_hex),
-    one_if!(is_hex),
-    one_if!(is_hex),
-    one_if!(is_hex)
-)));
-
-named!(uchar2<&str,&str>, recognize!(tuple!(
-    tag_s!("\\U"),
-    one_if!(is_hex),
-    one_if!(is_hex),
-    one_if!(is_hex),
-    one_if!(is_hex),
-    one_if!(is_hex),
-    one_if!(is_hex),
-    one_if!(is_hex),
-    one_if!(is_hex)
-)));
-
 /// [159s] ECHAR ::= '\' [tbnrf"'\]
-named!(echar<&str,&str>, recognize!(tuple!(
-    tag_s!("\\"),
-    one_if!(|c| "tbnrf\"'".contains(c))
-)));
 
 /// [161s] WS ::= #x20 | #x9 | #xD | #xA
 /// /* #x20=space #x9=character tabulation #xD=carriage return #xA=new line */
@@ -469,11 +429,11 @@ named!(pn_local<&str,String>, map!(recognize!(tuple!(
 named!(pn_chars_colon<&str,&str>, take_while1_s!(is_pn_chars_colon));
 
 fn is_pn_local_start(c: char) -> bool {
-	c == ':' || is_digit(c) || is_pn_chars_u(c)
+    c == ':' || is_digit(c) || is_pn_chars_u(c)
 }
 
 fn is_pn_chars_colon(c: char) -> bool {
-	c == ':' || is_pn_chars(c)
+    c == ':' || is_pn_chars(c)
 }
 
 /// [169s] PLX ::= PERCENT | PN_LOCAL_ESC
@@ -507,7 +467,7 @@ fn is_digit(c: char) -> bool {
 }
 
 fn is_hex(c: char) -> bool {
-	is_digit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')
+    is_digit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')
 }
 
 fn in_range(c: char, lower: u32, upper: u32) -> bool {
@@ -540,7 +500,7 @@ fn test_iri() {
 
 #[test]
 fn test_string_literal_quote() {
-    assert_eq!(string_literal_quote("\"\""), Done(&""[..], String::new()));
+    assert_eq!(string_literal_quote("\"\\\\\""), Done(&""[..], String::from("\\")));
 }
 
 #[test]
@@ -555,7 +515,8 @@ fn test_string_literal_long_single_quote() {
 
 #[test]
 fn test_string_literal_long_quote() {
-    assert_eq!(string_literal_long_quote("\"\"\"\"\"\""), Done(&""[..], String::new()));
+    assert_eq!(string_literal_long_quote("\"\"\"\\U0001f435\"\"\""), Done(&""[..],
+            String::from("🐵")));
 }
 
 #[test]
