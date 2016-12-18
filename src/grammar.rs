@@ -25,7 +25,26 @@ named!(comment<&str,()>, value!((), tuple!(
     take_until_either_and_consume!("\r\n")
 )));
 
-named!(tws<&str,()>, value!((), take_while_s!(is_ws)));
+/// whitespace that my contain comments
+fn tws(mut str: &str) -> IResult<&str,()> {
+	loop {
+		match comment(str) {
+			Done(left,_) => {
+				str = left;
+			},
+			IResult::Error(_) => {}
+			IResult::Incomplete(_) => return Done(str,()),
+		}
+		match take_while_s!(str, is_ws) {
+			Done(left,"") => return Done(left,()),
+			Done(left,_) => {
+				str = left;
+			},
+			IResult::Error(e) => return IResult::Error(e),
+			IResult::Incomplete(_) => return Done(str,()),
+		}
+	}
+}
 
 /// [1] turtleDoc ::= statement*
 named!(pub turtle<&str,Vec<Statement>>, do_parse!(
