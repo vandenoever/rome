@@ -32,6 +32,14 @@ fn resolve_iri_ref(iri: &String, base: &String) -> String {
     iri.clone()
 }
 
+struct State {
+    triples: Vec<ast::Triple>,
+    base: String,
+    prefixes: HashMap<String, String>,
+    blank_nodes: HashMap<String, usize>,
+    blank_node_count: usize,
+}
+
 fn resolve_iri(iri: &IRI,
                base: &String,
                prefixes: &HashMap<String, String>)
@@ -49,42 +57,90 @@ fn resolve_iri(iri: &IRI,
     Ok(i)
 }
 
+fn new_blank(blank_node_count: &mut usize) -> usize {
+    let blank = *blank_node_count;
+    *blank_node_count += 1;
+    blank
+}
+
 fn make_blank(blank_node: BlankNode,
               blank_nodes: &mut HashMap<String, usize>,
               blank_node_count: &mut usize)
               -> usize {
     match blank_node {
-        BlankNode::Anon => {
-            let blank = *blank_node_count;
-            *blank_node_count += 1;
-            blank
-        }
+        BlankNode::Anon => new_blank(blank_node_count),
         BlankNode::BlankNode(label) => {
-            let blank = blank_nodes.entry(label).or_insert_with(|| {
-                let n = *blank_node_count;
-                *blank_node_count += 1;
-                n
-            });
+            let blank = blank_nodes.entry(label).or_insert_with(|| new_blank(blank_node_count));
             *blank
         }
     }
 }
 
+fn make_collection(collection: Vec<Object>,
+                   triples: &mut Vec<ast::Triple>,
+                   base: &String,
+                   prefixes: &HashMap<String, String>,
+                   blank_nodes: &mut HashMap<String, usize>,
+                   blank_node_count: &mut usize)
+                   -> Result<usize, String> {
+    let first = String::from("http://www.w3.org/1999/02/22-rdf-syntax-ns#first");
+    let rest = String::from("http://www.w3.org/1999/02/22-rdf-syntax-ns#rest");
+    let nil = String::from("http://www.w3.org/1999/02/22-rdf-syntax-ns#nil");
+    let head = new_blank(blank_node_count);
+
+    let mut node = head;
+    for object in collection {
+        let o = try!(make_object(triples,
+                                 object,
+                                 base,
+                                 prefixes,
+                                 blank_nodes,
+                                 blank_node_count));
+        triples.push(ast::Triple {
+            subject: ast::Subject::BlankNode(node),
+            predicate: first.clone(),
+            object: o,
+        });
+        let next = new_blank(blank_node_count);
+        triples.push(ast::Triple {
+            subject: ast::Subject::BlankNode(node),
+            predicate: rest.clone(),
+            object: ast::Object::BlankNode(next),
+        });
+        node = next;
+    }
+    triples.push(ast::Triple {
+        subject: ast::Subject::BlankNode(node),
+        predicate: rest.clone(),
+        object: ast::Object::IRI(nil),
+    });
+    Ok(head)
+}
+
 fn make_subject(subject: Subject,
+                triples: &mut Vec<ast::Triple>,
                 base: &String,
                 prefixes: &HashMap<String, String>,
                 blank_nodes: &mut HashMap<String, usize>,
                 blank_node_count: &mut usize)
                 -> Result<ast::Subject, String> {
-    match subject {
+    Ok(match subject {
         Subject::IRI(iri) => {
             let iri = try!(resolve_iri(&iri, base, prefixes));
-            Ok(ast::Subject::IRI(iri))
+            ast::Subject::IRI(iri)
         }
         Subject::BlankNode(blank) => {
-            Ok(ast::Subject::BlankNode(make_blank(blank, blank_nodes, blank_node_count)))
+            ast::Subject::BlankNode(make_blank(blank, blank_nodes, blank_node_count))
         }
-    }
+        Subject::Collection(collection) => {
+            ast::Subject::BlankNode(try!(make_collection(collection,
+                                                         triples,
+                                                         base,
+                                                         prefixes,
+                                                         blank_nodes,
+                                                         blank_node_count)))
+        }
+    })
 }
 
 fn make_object(triples: &mut Vec<ast::Triple>,
@@ -94,10 +150,18 @@ fn make_object(triples: &mut Vec<ast::Triple>,
                blank_nodes: &mut HashMap<String, usize>,
                blank_node_count: &mut usize)
                -> Result<ast::Object, String> {
-    let o = match object {
+    Ok(match object {
         Object::IRI(ref iri) => ast::Object::IRI(try!(resolve_iri(&iri, base, prefixes))),
         Object::BlankNode(blank) => {
             ast::Object::BlankNode(make_blank(blank, blank_nodes, blank_node_count))
+        }
+        Object::Collection(collection) => {
+            ast::Object::BlankNode(try!(make_collection(collection,
+                                                        triples,
+                                                        base,
+                                                        prefixes,
+                                                        blank_nodes,
+                                                        blank_node_count)))
         }
         Object::Literal(Literal::LangString(v, l)) => ast::Object::LangString(v, l),
         Object::Literal(Literal::XsdString(v)) => ast::Object::XsdString(v),
@@ -110,9 +174,8 @@ fn make_object(triples: &mut Vec<ast::Triple>,
             ast::Object::TypedLiteral(v, datatype)
         }
         Object::BlankNodePropertyList(predicated_objects_list) => {
-            let blank = ast::Object::BlankNode(*blank_node_count);
-            let subject = ast::Subject::BlankNode(*blank_node_count);
-            *blank_node_count += 1;
+            let blank = new_blank(blank_node_count);
+            let subject = ast::Subject::BlankNode(blank);
             try!(add_predicated_objects(triples,
                                         subject,
                                         predicated_objects_list,
@@ -120,10 +183,9 @@ fn make_object(triples: &mut Vec<ast::Triple>,
                                         prefixes,
                                         blank_nodes,
                                         blank_node_count));
-            blank
+            ast::Object::BlankNode(blank)
         }
-    };
-    Ok(o)
+    })
 }
 
 fn add_predicated_objects(triples: &mut Vec<ast::Triple>,
@@ -160,6 +222,7 @@ fn add_triples(triples: &mut Vec<ast::Triple>,
                blank_node_count: &mut usize)
                -> Result<(), String> {
     let subject = try!(make_subject(new_triples.subject,
+                                    triples,
                                     base,
                                     prefixes,
                                     blank_nodes,

@@ -171,7 +171,8 @@ named!(a<&str,IRI>, value!(
 /// [10] subject ::= iri | BlankNode | collection
 named!(subject<&str,Subject>, alt!(
     map!(iri, Subject::IRI) |
-    map!(blank_node, Subject::BlankNode)
+    map!(blank_node, Subject::BlankNode) |
+    map!(collection, Subject::Collection)
 ));
 
 /// [11] predicate ::= iri
@@ -181,6 +182,7 @@ named!(object<&str,Object>, alt!(
     map!(literal, Object::Literal) |
     map!(iri, Object::IRI) |
     map!(blank_node, Object::BlankNode) |
+    map!(collection, Object::Collection) |
     map!(blank_node_property_list, Object::BlankNodePropertyList)
 ));
 
@@ -195,6 +197,14 @@ named!(blank_node_property_list<&str,Vec<PredicatedObjects>>, do_parse!(
 ));
 
 /// [15] collection ::= '(' object* ')'
+named!(collection<&str,Vec<Object>>, do_parse!(
+    tag_s!("(") >> tws >>
+    objects: many0!(do_parse!(
+        object: object >> tws >>
+        (object))) >>
+    tag_s!(")") >> (objects)
+));
+
 /// [16] NumericLiteral ::= INTEGER | DECIMAL | DOUBLE
 
 /// [128s]  RDFLiteral ::= String (LANGTAG | '^^' iri)?
@@ -399,10 +409,10 @@ fn is_pn_chars(c: char) -> bool {
 named!(pn_prefix<&str,&str>, recognize!(tuple!(
     one_if!(is_pn_chars_base),
     take_while_s!(is_pn_chars),
-    many0!(tuple!(
+    fold_many0!(tuple!(
         tag_s!("."),
         take_while1_s!(is_pn_chars)
-    ))
+    ),(),|_,_|())
 )));
 
 /// [168s] PN_LOCAL ::= (PN_CHARS_U | ':' | [0-9] | PLX)
@@ -410,10 +420,10 @@ named!(pn_prefix<&str,&str>, recognize!(tuple!(
 named!(pn_local<&str,String>, map_opt!(recognize!(tuple!(
     alt!(one_if!(is_pn_local_start) | plx),
     fold_many0!(alt!(pn_chars_colon | plx),(),|_,_|()),
-    many0!(tuple!(
+    fold_many0!(tuple!(
         tag_s!("."),
         fold_many0!(alt!(pn_chars_colon | plx),(),|_,_|())
-    ))
+    ),(),|_,_|())
 )), pn_local_unescape));
 
 named!(pn_chars_colon<&str,&str>, take_while1_s!(is_pn_chars_colon));

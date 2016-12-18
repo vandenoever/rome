@@ -32,12 +32,14 @@ pub enum BlankNode {
 pub enum Subject {
     IRI(IRI),
     BlankNode(BlankNode),
+    Collection(Vec<Object>),
 }
 
 #[derive(Debug,PartialEq,Eq)]
 pub enum Object {
     IRI(IRI),
     BlankNode(BlankNode),
+    Collection(Vec<Object>),
     BlankNodePropertyList(Vec<PredicatedObjects>),
     Literal(Literal),
 }
