@@ -17,8 +17,6 @@ use grammar::turtle;
 use grammar_structs::*;
 use std::collections::HashMap;
 
-/// TODO: in turtle comments count as whitespace
-
 fn parse_nom(data: &str) -> Result<Vec<Statement>, String> {
     match turtle(data) {
         IResult::Done("", statements) => Ok(statements),
@@ -141,4 +139,19 @@ fn test_run() {
     if let Err(e) = run(&path) {
         println!("{:?}", e);
     }
+}
+
+#[test]
+fn test_short() {
+    let r1 = parse("@prefix:<>.").unwrap();
+    assert_eq!(r1, vec![]);
+    let r2 = parse("<><><>.").unwrap();
+    let t = ast::Triple {
+        subject: ast::Subject::IRI(String::new()),
+        predicate: String::new(),
+        object: ast::Object::IRI(String::new()),
+    };
+    assert_eq!(r2, vec![t.clone()]);
+    let r3 = parse("@prefix:<>.: : :.").unwrap();
+    assert_eq!(r3, vec![t]);
 }

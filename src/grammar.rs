@@ -26,10 +26,13 @@ named!(comment<&str,()>, value!((), tuple!(
 )));
 
 /// [1] turtleDoc ::= statement*
-named!(pub turtle<&str,Vec<Statement>>, delimited!(
-    take_while_s!(is_ws),
-    separated_list!(take_while_s!(is_ws), statement),
-    take_while_s!(is_ws)
+named!(pub turtle<&str,Vec<Statement>>, do_parse!(
+    take_while_s!(is_ws) >>
+    s: many0!(do_parse!(
+        s: statement >>
+        take_while_s!(is_ws) >>
+        (s))) >>
+    (s)
 ));
 
 /// [2] statement ::= directive | triples '.'
@@ -39,28 +42,25 @@ named!(statement_triples<&str,Statement>, do_parse!(
     triples: triples >>
     take_while_s!(is_ws) >>
     tag_s!(".") >>
-    take_while_s!(is_ws) >>
     (Statement::Triples(triples))
 ));
 
 /// [4] prefixID ::= '@prefix' PNAME_NS IRIREF '.'
 named!(prefix_id<&str,Statement>, do_parse!(
     tag_s!("@prefix") >>
-    take_while1_s!(is_ws) >>
-    pn_prefix: pn_prefix >>
     take_while_s!(is_ws) >>
-    tag_s!(":") >>
+    pname_ns: pname_ns >>
     take_while_s!(is_ws) >>
     iri_ref: iri_ref >>
     take_while_s!(is_ws) >>
     tag_s!(".") >>
-    (Statement::Prefix(pn_prefix, iri_ref))
+    (Statement::Prefix(String::from(pname_ns), iri_ref))
 ));
 
 /// [5] base ::= '@base' IRIREF '.'
 named!(base<&str,Statement>, do_parse!(
     tag_s!("@base") >>
-    take_while1_s!(is_ws) >>
+    take_while_s!(is_ws) >>
     iri_ref: iri_ref >>
     take_while_s!(is_ws) >>
     tag_s!(".") >>
@@ -79,12 +79,10 @@ named!(sparql_base<&str,Statement>, do_parse!(
 named!(sparql_prefix<&str,Statement>, do_parse!(
     tag_s!("PREFIX") >>
     take_while1_s!(is_ws) >>
-    pn_prefix: pn_prefix >>
-    take_while_s!(is_ws) >>
-    tag_s!(":") >>
+    pname_ns: pname_ns >>
     take_while_s!(is_ws) >>
     iri_ref: iri_ref >>
-    (Statement::Prefix(pn_prefix, iri_ref))
+    (Statement::Prefix(String::from(pname_ns), iri_ref))
 ));
 
 /// [6] triples ::= subject predicateObjectList | blankNodePropertyList predicateObjectList?
@@ -144,8 +142,8 @@ named!(a<&str,IRI>, value!(
 
 /// [12] object ::= iri | BlankNode | collection | blankNodePropertyList | literal
 named!(object<&str,Object>, alt!(
-    map!(literal,Object::Literal) |
-    map!(iri,Object::IRI)
+    map!(literal, Object::Literal) |
+    map!(iri, Object::IRI)
 ));
 
 /// [13] literal ::= RDFLiteral | NumericLiteral | BooleanLiteral
@@ -199,7 +197,7 @@ named!(prefixed_name<&str,IRI>, do_parse!(
     tag_s!(":") >>
     pn_local: opt!(pn_local) >>
     (IRI::PrefixedName(
-        pn_prefix.unwrap_or(String::new()),
+        String::from(pn_prefix.unwrap_or("")),
         pn_local.unwrap_or(String::new())
     ))
 ));
@@ -217,6 +215,12 @@ named!(iri_ref<&str,String>, delimited!(
 ));
 
 /// [139s] PNAME_NS ::= PN_PREFIX? ':'
+named!(pname_ns<&str,&str>, do_parse!(
+    pn_prefix: opt!(pn_prefix) >>
+    tag_s!(":") >>
+    (pn_prefix.unwrap_or(""))
+));
+
 /// [140s] PNAME_LN ::= PNAME_NS PN_LOCAL
 /// [141s] BLANK_NODE_LABEL ::= '_:' (PN_CHARS_U | [0-9]) ((PN_CHARS | '.')* PN_CHARS)?
 /// [144s] LANGTAG ::= '@' [a-zA-Z]+ ('-' [a-zA-Z0-9]+)*
@@ -340,14 +344,14 @@ fn is_pn_chars(c: char) -> bool {
 }
 
 /// [167s] PN_PREFIX ::= PN_CHARS_BASE ((PN_CHARS | '.')* PN_CHARS)?
-named!(pn_prefix<&str,String>, map!(recognize!(tuple!(
+named!(pn_prefix<&str,&str>, recognize!(tuple!(
     one_if!(is_pn_chars_base),
     take_while_s!(is_pn_chars),
     many0!(tuple!(
         tag_s!("."),
         take_while1_s!(is_pn_chars)
     ))
-)), String::from));
+)));
 
 /// [168s] PN_LOCAL ::= (PN_CHARS_U | ':' | [0-9] | PLX) ((PN_CHARS | '.' | ':' | PLX)* (PN_CHARS | ':' | PLX))?
 named!(pn_local<&str,String>, map!(recognize!(tuple!(
@@ -478,17 +482,17 @@ fn test_triples() {
 
 #[test]
 fn test_statement_triples() {
-    let v = vec![Object::Literal(Literal::XsdInteger(1))];
-    let i = IRI::IRI(String::from("urn:123"));
-    let po = vec![PredicatedObjects{verb:i.clone(),objects:v}];
+    let i = IRI::PrefixedName(String::new(),String::new());
+    let po = vec![PredicatedObjects{verb:i.clone(),objects:vec![Object::IRI(i.clone())]}];
     let t = Triples{subject:i,predicated_objects_list:po};
     let s = Statement::Triples(t);
-    assert_eq!(statement_triples("<urn:123> <urn:123> 1."), Done(&""[..],s));
+    assert_eq!(statement_triples(": : :."), Done(&""[..],s));
 }
 
 #[test]
 fn test_prefix_id() {
-    assert_eq!(prefix_id("@prefix a.b.c : <urn> ."), Done(&""[..],Statement::Prefix(String::from("a.b.c"),String::from("urn"))));
+    assert_eq!(prefix_id("@prefix a.b.c: <urn> ."), Done(&""[..],Statement::Prefix(String::from("a.b.c"),String::from("urn"))));
+    assert_eq!(prefix_id("@prefix : <urn> ."), Done(&""[..],Statement::Prefix(String::from(""),String::from("urn"))));
 }
 
 #[test]
@@ -503,10 +507,5 @@ fn test_sparql_base() {
 
 #[test]
 fn test_sparql_prefix() {
-    assert_eq!(sparql_prefix("PREFIX a.b.c : <urn>"), Done(&""[..],Statement::Prefix(String::from("a.b.c"),String::from("urn"))));
-}
-
-#[test]
-fn test_comment() {
-    assert_eq!(comment("#\r\n"), Done(&""[..],()));
+    assert_eq!(sparql_prefix("PREFIX a.b.c: <urn>"), Done(&""[..],Statement::Prefix(String::from("a.b.c"),String::from("urn"))));
 }

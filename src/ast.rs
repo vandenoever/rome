@@ -1,9 +1,9 @@
-#[derive(Clone)]
+#[derive(Debug,PartialEq,Eq,Clone)]
 pub enum Subject {
     IRI(String),
     BlankNode(String),
 }
-
+#[derive(Debug,PartialEq,Clone)]
 pub enum Object {
     IRI(String),
     BlankNode(String),
@@ -15,9 +15,12 @@ pub enum Object {
     XsdBoolean(bool),
     TypedLiteral(String, String),
 }
-
+#[derive(Debug,PartialEq,Eq,Clone)]
 pub struct Triple {
     pub subject: Subject,
     pub predicate: String,
     pub object: Object,
 }
+
+// explicit implementation of Eq because f64 does not have that
+impl Eq for Object {}
