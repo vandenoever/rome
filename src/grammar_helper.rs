@@ -29,8 +29,12 @@ pub fn string_literal(str: &str,
             return IResult::Incomplete(Needed::Unknown);
         }
     }
-    match unescape(&hay[..offset]) {
-        Some(result) => IResult::Done(&hay[offset + ql..], result),
+    nom_unescape(&hay[offset + ql..], &hay[..offset])
+}
+
+fn nom_unescape<'a>(left: &'a str, data: &str) -> IResult<&'a str, String> {
+    match unescape(data) {
+        Some(result) => IResult::Done(left, result),
         None => return IResult::Error(ErrorKind::Custom(0)),
     }
 }
@@ -43,38 +47,62 @@ fn escaped(hay: &[u8], offset: usize) -> bool {
     (offset - p) % 2 == 1
 }
 
-fn acc(acc: Option<u32>, c: char) -> Option<u32> {
-    acc.and_then(|acc| c.to_digit(16).and_then(|c| Some(16 * acc + c)))
+fn acc(acc: Option<(u32, u8)>, c: char) -> Option<(u32, u8)> {
+    acc.and_then(|(acc, n)| c.to_digit(16).and_then(|c| Some(((acc << 4) + c, n + 1))))
 }
 
-fn hex_to_char(chars: &mut Chars, n: usize) -> Option<char> {
+fn hex_to_char(chars: &mut Chars, n: u8) -> Option<char> {
     chars.by_ref()
-        .take(n)
-        .fold(Some(0), acc)
-        .and_then(char::from_u32)
+        .take(n as usize)
+        .fold(Some((0, 0)), acc)
+        .and_then(|(ch, count)| if count == n { char::from_u32(ch) } else { None })
 }
 
-fn unescape(s: &str) -> Option<String> {
+/// [26] UCHAR ::= '\u' HEX HEX HEX HEX | '\U' HEX HEX HEX HEX HEX HEX HEX HEX
+/// [159s] ECHAR ::= '\' [tbnrf"'\]
+pub fn unescape(s: &str) -> Option<String> {
     let mut result = String::with_capacity(s.len());
     let mut chars = s.chars();
     while let Some(ch) = chars.next() {
-        if ch != '\\' {
-            result.push(ch)
-        } else {
+        if ch == '\\' {
             let r = match chars.next() {
                 Some('u') => hex_to_char(&mut chars, 4),
                 Some('U') => hex_to_char(&mut chars, 8),
+                Some('t') => Some('\t'),
                 Some('b') => Some('\x08'),
-                Some('f') => Some('\x0c'),
                 Some('n') => Some('\n'),
                 Some('r') => Some('\r'),
-                Some('t') => Some('\t'),
-                ch => ch,
+                Some('f') => Some('\x0c'),
+                ch => ch, // ', " and \ are simply copied
             };
             match r {
                 Some(v) => result.push(v),
                 None => return None,
             }
+        } else {
+            result.push(ch)
+        }
+    }
+    Some(result)
+}
+
+pub fn pn_local_unescape(s: &str) -> Option<String> {
+    let mut result = String::with_capacity(s.len());
+    let mut chars = s.chars();
+    while let Some(ch) = chars.next() {
+        if ch == '\\' {
+            // simply remove \
+            match chars.next() {
+                Some(v) => result.push(v),
+                None => return None,
+            }
+        } else if ch == '%' {
+            match hex_to_char(&mut chars, 2) {
+                Some(v) => result.push(v),
+                None => return None,
+            }
+        } else {
+            result.push(ch)
         }
     }
     Some(result)

@@ -264,9 +264,9 @@ named!(blank_node<&str,BlankNode>, alt!(blank_node_label | anon));
 /// #x00=NULL #01-#x1F=control codes #x20=space
 named!(iri_ref<&str,String>, delimited!(
     tag_s!("<"),
-    map!(
+    map_opt!(
         take_while_s!(is_iri_ref),
-        String::from),
+        unescape),
     tag_s!(">")
 ));
 
@@ -417,14 +417,14 @@ named!(pn_prefix<&str,&str>, recognize!(tuple!(
 
 /// [168s] PN_LOCAL ::= (PN_CHARS_U | ':' | [0-9] | PLX)
 ///           ((PN_CHARS | '.' | ':' | PLX)* (PN_CHARS | ':' | PLX))?
-named!(pn_local<&str,String>, map!(recognize!(tuple!(
+named!(pn_local<&str,String>, map_opt!(recognize!(tuple!(
     alt!(one_if!(is_pn_local_start) | plx),
     fold_many0!(alt!(pn_chars_colon | plx),(),|_,_|()),
     many0!(tuple!(
         tag_s!("."),
         fold_many0!(alt!(pn_chars_colon | plx),(),|_,_|())
     ))
-)), String::from));
+)), pn_local_unescape));
 
 named!(pn_chars_colon<&str,&str>, take_while1_s!(is_pn_chars_colon));
 
