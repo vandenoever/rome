@@ -9,7 +9,7 @@ macro_rules! one_if (
     {
       if let Some(c) =  $i.chars().next() {
         if $f(c) {
-          IResult::Done(&$i[1..], c)
+          IResult::Done(&$i[1..], &$i[..1])
         } else {
           IResult::Error(error_position!($crate::ErrorKind::OneOf, $i))
         }
@@ -277,6 +277,8 @@ named!(pname_ns<&str,&str>, do_parse!(
 ));
 
 /// [140s] PNAME_LN ::= PNAME_NS PN_LOCAL
+/// see prefixed_name
+
 /// [141s] BLANK_NODE_LABEL ::= '_:' (PN_CHARS_U | [0-9]) ((PN_CHARS | '.')* PN_CHARS)?
 named!(blank_node_label<&str,BlankNode>, do_parse!(
     tag!("_:") >>
@@ -379,7 +381,34 @@ fn is_string_literal_long_quote(chr: char) -> bool {
 }
 
 /// [26] UCHAR ::= '\u' HEX HEX HEX HEX | '\U' HEX HEX HEX HEX HEX HEX HEX HEX
+named!(uchar<&str,&str>, alt!(uchar1 | uchar2));
+
+named!(uchar1<&str,&str>, recognize!(tuple!(
+    tag_s!("\\u"),
+    one_if!(is_hex),
+    one_if!(is_hex),
+    one_if!(is_hex),
+    one_if!(is_hex)
+)));
+
+named!(uchar2<&str,&str>, recognize!(tuple!(
+    tag_s!("\\U"),
+    one_if!(is_hex),
+    one_if!(is_hex),
+    one_if!(is_hex),
+    one_if!(is_hex),
+    one_if!(is_hex),
+    one_if!(is_hex),
+    one_if!(is_hex),
+    one_if!(is_hex)
+)));
+
 /// [159s] ECHAR ::= '\' [tbnrf"'\]
+named!(echar<&str,&str>, recognize!(tuple!(
+    tag_s!("\\"),
+    one_if!(|c| "tbnrf\"'".contains(c))
+)));
+
 /// [161s] WS ::= #x20 | #x9 | #xD | #xA
 /// /* #x20=space #x9=character tabulation #xD=carriage return #xA=new line */
 fn is_ws(c: char) -> bool {
@@ -426,20 +455,44 @@ named!(pn_prefix<&str,&str>, recognize!(tuple!(
     ))
 )));
 
-/// [168s] PN_LOCAL ::= (PN_CHARS_U | ':' | [0-9] | PLX) ((PN_CHARS | '.' | ':'
-/// | PLX)* (PN_CHARS | ':' | PLX))?
+/// [168s] PN_LOCAL ::= (PN_CHARS_U | ':' | [0-9] | PLX)
+///           ((PN_CHARS | '.' | ':' | PLX)* (PN_CHARS | ':' | PLX))?
 named!(pn_local<&str,String>, map!(recognize!(tuple!(
-    one_if!(is_pn_chars_u),
-    take_while_s!(is_alphanum)
+    alt!(one_if!(is_pn_local_start) | plx),
+    fold_many0!(alt!(pn_chars_colon | plx),(),|_,_|()),
+    many0!(tuple!(
+        tag_s!("."),
+        fold_many0!(alt!(pn_chars_colon | plx),(),|_,_|())
+    ))
 )), String::from));
 
+named!(pn_chars_colon<&str,&str>, take_while1_s!(is_pn_chars_colon));
+
+fn is_pn_local_start(c: char) -> bool {
+	c == ':' || is_digit(c) || is_pn_chars_u(c)
+}
+
+fn is_pn_chars_colon(c: char) -> bool {
+	c == ':' || is_pn_chars(c)
+}
+
 /// [169s] PLX ::= PERCENT | PN_LOCAL_ESC
+named!(plx<&str,&str>, alt!(percent | pn_local_esc));
+
 /// [170s] PERCENT ::= '%' HEX HEX
 /// [171s] HEX ::= [0-9] | [A-F] | [a-f]
+named!(percent<&str,&str>, recognize!(tuple!(
+    tag_s!("%"),
+    one_if!(is_hex),
+    one_if!(is_hex)
+)));
+
 /// [172s] PN_LOCAL_ESC ::= '\' ('_' | '~' | '.' | '-' | '!' | '$' | '&' | "'"
 /// | '(' | ')' | '*' | '+' | ',' | ';' | '=' | '/' | '?' | '#' | '@' | '%')
-// named!(pn_local_esc<&str,&str>, recognize!(tuple!(
-//    char!("\\"), one_of!("_~.-!$&'()*+,;=/?#@%"))));
+named!(pn_local_esc<&str,&str>, recognize!(tuple!(
+    tag_s!("\\"),
+    one_if!(|c| "_~.-!$&'()*+,;=/?#@%".contains(c))
+)));
 
 fn is_alpha(c: char) -> bool {
     (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
@@ -451,6 +504,10 @@ fn is_alphanum(c: char) -> bool {
 
 fn is_digit(c: char) -> bool {
     c >= '0' && c <= '9'
+}
+
+fn is_hex(c: char) -> bool {
+	is_digit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')
 }
 
 fn in_range(c: char, lower: u32, upper: u32) -> bool {
