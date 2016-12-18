@@ -51,8 +51,7 @@ fn tws(mut str: &str) -> IResult<&str, ()> {
 named!(pub turtle<&str,Vec<Statement>>, do_parse!(
     tws >>
     s: many0!(do_parse!(
-        s: statement >>
-        tws >>
+        s: statement >> tws >>
         (s))) >>
     (s)
 ));
@@ -63,48 +62,39 @@ named!(statement<&str,Statement>, alt!(prefix_id | base | sparql_prefix
         | sparql_base | statement_triples));
 
 named!(statement_triples<&str,Statement>, do_parse!(
-    triples: triples >>
-    tws >>
+    triples: triples >> tws >>
     tag_s!(".") >>
     (Statement::Triples(triples))
 ));
 
 /// [4] prefixID ::= '@prefix' PNAME_NS IRIREF '.'
 named!(prefix_id<&str,Statement>, do_parse!(
-    tag_s!("@prefix") >>
-    tws >>
-    pname_ns: pname_ns >>
-    tws >>
-    iri_ref: iri_ref >>
-    tws >>
+    tag_s!("@prefix") >> tws >>
+    pname_ns: pname_ns >> tws >>
+    iri_ref: iri_ref >> tws >>
     tag_s!(".") >>
     (Statement::Prefix(String::from(pname_ns), iri_ref))
 ));
 
 /// [5] base ::= '@base' IRIREF '.'
 named!(base<&str,Statement>, do_parse!(
-    tag_s!("@base") >>
-    tws >>
-    iri_ref: iri_ref >>
-    tws >>
+    tag_s!("@base") >> tws >>
+    iri_ref: iri_ref >> tws >>
     tag_s!(".") >>
     (Statement::Base(iri_ref))
 ));
 
 /// [5s] sparqlBase ::= "BASE" IRIREF
 named!(sparql_base<&str,Statement>, do_parse!(
-    tag_s!("BASE") >>
-    tws >>
+    tag_s!("BASE") >> tws >>
     iri_ref: iri_ref >>
     (Statement::Base(iri_ref))
 ));
 
 /// [6s] sparqlPrefix ::= "PREFIX" PNAME_NS IRIREF
 named!(sparql_prefix<&str,Statement>, do_parse!(
-    tag_s!("PREFIX") >>
-    tws >>
-    pname_ns: pname_ns >>
-    tws >>
+    tag_s!("PREFIX") >> tws >>
+    pname_ns: pname_ns >> tws >>
     iri_ref: iri_ref >>
     (Statement::Prefix(String::from(pname_ns), iri_ref))
 ));
@@ -113,8 +103,7 @@ named!(sparql_prefix<&str,Statement>, do_parse!(
 named!(triples<&str,Triples>, alt!(triples_subject | triples_blank));
 
 named!(triples_subject<&str,Triples>, do_parse!(
-    subject: subject >>
-    tws >>
+    subject: subject >> tws >>
     predicated_objects_list: predicated_objects_list >>
     (Triples{
         subject: subject,
@@ -152,11 +141,7 @@ fn triples_blank(str: &str) -> IResult<&str, Triples> {
 /// [7] predicateObjectList ::= verb objectList (';' (verb objectList)?)*
 named!(predicated_objects_list<&str,Vec<PredicatedObjects>>,
     separated_nonempty_list!(
-        tuple!(
-            tws,
-            tag_s!(";"),
-            tws
-        ),
+        tuple!(tws, tag_s!(";"), tws),
         do_parse!(
             verb: verb >>
             tws >>
@@ -171,11 +156,7 @@ named!(predicated_objects_list<&str,Vec<PredicatedObjects>>,
 
 /// [8] objectList ::= object (',' object)*
 named!(object_list<&str,Vec<Object>>, separated_nonempty_list!(
-    tuple!(
-        tws,
-        tag_s!(","),
-        tws
-    ),
+    tuple!(tws, tag_s!(","), tws),
     object
 ));
 
@@ -208,10 +189,8 @@ named!(literal<&str,Literal>, alt!(rdfliteral | boolean | integer));
 
 /// [14] blankNodePropertyList ::= '[' predicateObjectList ']'
 named!(blank_node_property_list<&str,Vec<PredicatedObjects>>, do_parse!(
-    tag_s!("[") >>
-    tws >>
-    pol: predicated_objects_list >>
-    tws >>
+    tag_s!("[") >> tws >>
+    pol: predicated_objects_list >> tws >>
     tag_s!("]") >> (pol)
 ));
 
