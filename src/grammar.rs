@@ -25,12 +25,14 @@ named!(comment<&str,()>, value!((), tuple!(
     take_until_either_and_consume!("\r\n")
 )));
 
+named!(tws<&str,()>, value!((), take_while_s!(is_ws)));
+
 /// [1] turtleDoc ::= statement*
 named!(pub turtle<&str,Vec<Statement>>, do_parse!(
-    take_while_s!(is_ws) >>
+    tws >>
     s: many0!(do_parse!(
         s: statement >>
-        take_while_s!(is_ws) >>
+        tws >>
         (s))) >>
     (s)
 ));
@@ -40,7 +42,7 @@ named!(statement<&str,Statement>, alt!(statement_triples | prefix_id | base | sp
 
 named!(statement_triples<&str,Statement>, do_parse!(
     triples: triples >>
-    take_while_s!(is_ws) >>
+    tws >>
     tag_s!(".") >>
     (Statement::Triples(triples))
 ));
@@ -48,11 +50,11 @@ named!(statement_triples<&str,Statement>, do_parse!(
 /// [4] prefixID ::= '@prefix' PNAME_NS IRIREF '.'
 named!(prefix_id<&str,Statement>, do_parse!(
     tag_s!("@prefix") >>
-    take_while_s!(is_ws) >>
+    tws >>
     pname_ns: pname_ns >>
-    take_while_s!(is_ws) >>
+    tws >>
     iri_ref: iri_ref >>
-    take_while_s!(is_ws) >>
+    tws >>
     tag_s!(".") >>
     (Statement::Prefix(String::from(pname_ns), iri_ref))
 ));
@@ -60,9 +62,9 @@ named!(prefix_id<&str,Statement>, do_parse!(
 /// [5] base ::= '@base' IRIREF '.'
 named!(base<&str,Statement>, do_parse!(
     tag_s!("@base") >>
-    take_while_s!(is_ws) >>
+    tws >>
     iri_ref: iri_ref >>
-    take_while_s!(is_ws) >>
+    tws >>
     tag_s!(".") >>
     (Statement::Base(iri_ref))
 ));
@@ -70,7 +72,7 @@ named!(base<&str,Statement>, do_parse!(
 /// [5s] sparqlBase ::= "BASE" IRIREF
 named!(sparql_base<&str,Statement>, do_parse!(
     tag_s!("BASE") >>
-    take_while1_s!(is_ws) >>
+    tws >>
     iri_ref: iri_ref >>
     (Statement::Base(iri_ref))
 ));
@@ -78,9 +80,9 @@ named!(sparql_base<&str,Statement>, do_parse!(
 /// [6s] sparqlPrefix ::= "PREFIX" PNAME_NS IRIREF
 named!(sparql_prefix<&str,Statement>, do_parse!(
     tag_s!("PREFIX") >>
-    take_while1_s!(is_ws) >>
+    tws >>
     pname_ns: pname_ns >>
-    take_while_s!(is_ws) >>
+    tws >>
     iri_ref: iri_ref >>
     (Statement::Prefix(String::from(pname_ns), iri_ref))
 ));
@@ -88,7 +90,7 @@ named!(sparql_prefix<&str,Statement>, do_parse!(
 /// [6] triples ::= subject predicateObjectList | blankNodePropertyList predicateObjectList?
 named!(triples<&str,Triples>, do_parse!(
     subject: iri >>
-    take_while_s!(is_ws) >>
+    tws >>
     predicated_objects_list: predicated_objects_list >>
     (Triples{
         subject: subject,
@@ -100,9 +102,9 @@ named!(triples<&str,Triples>, do_parse!(
 named!(predicated_objects_list<&str,Vec<PredicatedObjects>>,
     separated_nonempty_list!(
         tuple!(
-            take_while_s!(is_ws),
+            tws,
             tag_s!(";"),
-            take_while_s!(is_ws)
+            tws
         ),
         predicated_objects
     )
@@ -110,7 +112,7 @@ named!(predicated_objects_list<&str,Vec<PredicatedObjects>>,
 
 named!(predicated_objects<&str,PredicatedObjects>, do_parse!(
     verb: verb >>
-    take_while_s!(is_ws) >>
+    tws >>
     objects: object_list >>
     (PredicatedObjects{
         verb:verb,
@@ -121,9 +123,9 @@ named!(predicated_objects<&str,PredicatedObjects>, do_parse!(
 /// [8] objectList ::= object (',' object)*
 named!(object_list<&str,Vec<Object>>, separated_nonempty_list!(
     tuple!(
-        take_while_s!(is_ws),
+        tws,
         tag_s!(","),
-        take_while_s!(is_ws)
+        tws
     ),
     object
 ));
