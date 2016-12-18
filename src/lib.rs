@@ -56,9 +56,12 @@ fn make_subject(subject: &IRI,
     Ok(ast::Subject::IRI(iri))
 }
 
-fn make_object(object: Object,
+fn make_object(triples: &mut Vec<ast::Triple>,
+               object: Object,
                base: &String,
-               prefixes: &HashMap<String, String>)
+               prefixes: &HashMap<String, String>,
+               blank_nodes: &mut HashMap<String, usize>,
+               blank_node_count: &mut usize)
                -> Result<ast::Object, String> {
     let o = match object {
         Object::IRI(ref iri) => ast::Object::IRI(try!(resolve_iri(&iri, base, prefixes))),
@@ -72,22 +75,42 @@ fn make_object(object: Object,
             let datatype = try!(resolve_iri(&t, base, prefixes));
             ast::Object::TypedLiteral(v, datatype)
         }
+        Object::BlankNodePropertyList(predicated_objects_list) => {
+            let blank = ast::Object::BlankNode(*blank_node_count);
+            let subject = ast::Subject::BlankNode(*blank_node_count);
+            *blank_node_count += 1;
+            try!(add_predicated_objects(triples,
+                                        subject,
+                                        predicated_objects_list,
+                                        base,
+                                        prefixes,
+                                        blank_nodes,
+                                        blank_node_count));
+            blank
+        }
     };
     Ok(o)
 }
 
-fn add_triples(triples: &mut Vec<ast::Triple>,
-               new_triples: Triples,
-               base: &String,
-               prefixes: &HashMap<String, String>)
-               -> Result<(), String> {
-    let subject = try!(make_subject(&new_triples.subject, base, prefixes));
-    for po in new_triples.predicated_objects_list {
+fn add_predicated_objects(triples: &mut Vec<ast::Triple>,
+                          subject: ast::Subject,
+                          predicated_objects_list: Vec<PredicatedObjects>,
+                          base: &String,
+                          prefixes: &HashMap<String, String>,
+                          blank_nodes: &mut HashMap<String, usize>,
+                          blank_node_count: &mut usize)
+                          -> Result<(), String> {
+    for po in predicated_objects_list {
         for o in po.objects.into_iter() {
             let triple = ast::Triple {
                 subject: subject.clone(),
                 predicate: try!(resolve_iri(&po.verb, base, prefixes)),
-                object: try!(make_object(o, base, prefixes)),
+                object: try!(make_object(triples,
+                                         o,
+                                         base,
+                                         prefixes,
+                                         blank_nodes,
+                                         blank_node_count)),
             };
             triples.push(triple);
         }
@@ -95,11 +118,30 @@ fn add_triples(triples: &mut Vec<ast::Triple>,
     Ok(())
 }
 
+fn add_triples(triples: &mut Vec<ast::Triple>,
+               new_triples: Triples,
+               base: &String,
+               prefixes: &HashMap<String, String>,
+               blank_nodes: &mut HashMap<String, usize>,
+               blank_node_count: &mut usize)
+               -> Result<(), String> {
+    let subject = try!(make_subject(&new_triples.subject, base, prefixes));
+    add_predicated_objects(triples,
+                           subject,
+                           new_triples.predicated_objects_list,
+                           base,
+                           prefixes,
+                           blank_nodes,
+                           blank_node_count)
+}
+
 pub fn parse(data: &str) -> Result<Vec<ast::Triple>, String> {
     let statements = try!(parse_nom(data));
     let mut triples = vec![];
     let mut base = String::new();
     let mut prefixes = HashMap::new();
+    let mut blank_nodes = HashMap::new();
+    let mut blank_node_count = 0;
     for statement in statements {
         match statement {
             Statement::Prefix(prefix, iri) => {
@@ -109,7 +151,12 @@ pub fn parse(data: &str) -> Result<Vec<ast::Triple>, String> {
                 base = new_base;
             }
             Statement::Triples(new_triples) => {
-                try!(add_triples(&mut triples, new_triples, &base, &prefixes));
+                try!(add_triples(&mut triples,
+                                 new_triples,
+                                 &base,
+                                 &prefixes,
+                                 &mut blank_nodes,
+                                 &mut blank_node_count));
             }
         }
     }

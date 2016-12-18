@@ -26,6 +26,7 @@ pub enum Literal {
 pub enum Object {
     IRI(IRI),
     Literal(Literal),
+    BlankNodePropertyList(Vec<PredicatedObjects>),
 }
 
 #[derive(Debug,PartialEq)]

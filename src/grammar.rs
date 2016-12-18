@@ -57,8 +57,9 @@ named!(pub turtle<&str,Vec<Statement>>, do_parse!(
 ));
 
 /// [2] statement ::= directive | triples '.'
-named!(statement<&str,Statement>, alt!(statement_triples
-        | prefix_id | base | sparql_base | sparql_prefix));
+/// [3] directive ::= prefixID | base | sparqlPrefix | sparqlBase
+named!(statement<&str,Statement>, alt!(prefix_id | base | sparql_prefix
+		| sparql_base | statement_triples));
 
 named!(statement_triples<&str,Statement>, do_parse!(
     triples: triples >>
@@ -165,13 +166,22 @@ named!(a<&str,IRI>, value!(
 /// [12] object ::= iri | BlankNode | collection | blankNodePropertyList | literal
 named!(object<&str,Object>, alt!(
     map!(literal, Object::Literal) |
-    map!(iri, Object::IRI)
+    map!(iri, Object::IRI) |
+    map!(blank_node_property_list, Object::BlankNodePropertyList)
 ));
 
 /// [13] literal ::= RDFLiteral | NumericLiteral | BooleanLiteral
 named!(literal<&str,Literal>, alt!(rdfliteral | boolean | integer));
 
 /// [14] blankNodePropertyList ::= '[' predicateObjectList ']'
+named!(blank_node_property_list<&str,Vec<PredicatedObjects>>, do_parse!(
+    tag_s!("[") >>
+    tws >>
+    pol: predicated_objects_list >>
+    tws >>
+    tag_s!("]") >> (pol)
+));
+
 /// [15] collection ::= '(' object* ')'
 /// [16] NumericLiteral ::= INTEGER | DECIMAL | DOUBLE
 

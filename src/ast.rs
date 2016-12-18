@@ -1,12 +1,12 @@
 #[derive(Debug,PartialEq,Eq,Clone)]
 pub enum Subject {
     IRI(String),
-    BlankNode(String),
+    BlankNode(usize),
 }
 #[derive(Debug,PartialEq,Clone)]
 pub enum Object {
     IRI(String),
-    BlankNode(String),
+    BlankNode(usize),
     LangString(String, String),
     XsdString(String),
     XsdInteger(i64),
