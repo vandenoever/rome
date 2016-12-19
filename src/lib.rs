@@ -13,6 +13,8 @@ pub mod triple_stream;
 mod grammar;
 mod grammar_structs;
 mod grammar_helper;
+pub mod graph;
+pub mod mem_graph;
 
 use grammar::turtle;
 use grammar_structs::*;
