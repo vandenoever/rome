@@ -14,12 +14,6 @@ impl MemGraph {
             triples: HashSet::new(),
         }
     }
-    pub fn iter(&self) -> TripleIterator {
-        TripleIterator {
-            graph_id: self.graph_id,
-            iter: self.triples.iter(),
-        }
-    }
 }
 
 #[derive(PartialEq,Eq,Hash)]
@@ -70,7 +64,7 @@ fn to_triple(graph_id: usize, o: &(Node1, String, Node2)) -> Triple {
     }
 }
 
-impl<'a> Graph for MemGraph {
+impl Graph for MemGraph {
     fn add_triple_si_oi(&mut self, s: &str, p: &str, o: &str) {
         self.triples
             .insert((Node1::IRI(String::from(s)), String::from(p), Node2::IRI(String::from(o))));
@@ -81,11 +75,11 @@ impl<'a> Graph for MemGraph {
                      String::from(triple.predicate),
                      from_object(&triple.object)));
     }
-    fn get_triple(&self) -> Option<Triple> {
-        match self.triples.iter().next() {
-            None => None,
-            Some(o) => Some(to_triple(self.graph_id, o)),
-        }
+    fn iter<'a>(&'a self) -> Box<Iterator<Item = Triple> + 'a> {
+        Box::new(TripleIterator {
+            graph_id: self.graph_id,
+            iter: self.triples.iter(),
+        })
     }
 }
 
@@ -98,5 +92,15 @@ impl<'a> Iterator for TripleIterator<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next().and_then(|r| Some(to_triple(self.graph_id, r)))
+    }
+}
+
+#[test]
+fn iter() {
+    let a = MemGraph::new();
+    let mut b = MemGraph::new();
+    let it = a.iter();
+    for i in it {
+        b.add_triple(&i);
     }
 }

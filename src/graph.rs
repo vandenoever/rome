@@ -2,7 +2,7 @@
 pub trait Graph {
     fn add_triple_si_oi(&mut self, s: &str, p: &str, o: &str);
     fn add_triple(&mut self, triple: &Triple);
-    fn get_triple(&self) -> Option<Triple>;
+    fn iter<'a>(&'a self) -> Box<Iterator<Item = Triple> + 'a>;
 }
 
 pub struct Triple<'a> {
