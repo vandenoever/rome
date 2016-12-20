@@ -7,6 +7,8 @@ pub trait Graph {
     fn remove_triple(&mut self, triple: &Triple);
     fn iter<'a>(&'a self) -> Box<Iterator<Item = Triple> + 'a>;
     fn create_blank_node(&mut self) -> BlankNode;
+    /// Retains only the triples specified by the function.
+    fn retain<F>(&mut self, f: F) where F: FnMut(&Triple) -> bool;
 }
 
 pub type BlankNode = (usize, usize);

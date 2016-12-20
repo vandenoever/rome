@@ -6,6 +6,7 @@ use std::rc::Rc;
 use std::borrow::Borrow;
 use std::hash::{Hash, Hasher};
 use rand;
+use std::iter::FromIterator;
 
 struct StringKey {
     key: Rc<String>,
@@ -65,6 +66,11 @@ impl Literal {
     }
 }
 
+struct Blank {
+    subject_count: usize,
+    object_count: usize,
+}
+
 enum Which {
     Subject,
     Predicate,
@@ -76,9 +82,10 @@ type MemTriple = (Node1, Rc<String>, Node2);
 pub struct MemGraph {
     iris: HashMap<StringKey, Iri>,
     literals: HashMap<StringKey, Literal>,
+    blanks: Vec<Blank>,
+    unused_blanks: Vec<usize>,
     graph_id: usize,
     triples: HashSet<MemTriple>,
-    blank_node_count: usize,
 }
 
 fn up_use(iri: &mut Iri, which: Which) {
@@ -89,8 +96,12 @@ fn up_use(iri: &mut Iri, which: Which) {
     }
 }
 
-fn use_count(iri: &Iri) -> usize {
+fn iri_use_count(iri: &Iri) -> usize {
     iri.subject_count + iri.predicate_count + iri.object_count
+}
+
+fn blank_use_count(blank: &Blank) -> usize {
+    blank.subject_count + blank.object_count
 }
 
 impl MemGraph {
@@ -98,9 +109,10 @@ impl MemGraph {
         MemGraph {
             iris: HashMap::new(),
             literals: HashMap::new(),
+            blanks: Vec::new(),
+            unused_blanks: Vec::new(),
             graph_id: rand::random::<usize>(),
             triples: HashSet::new(),
-            blank_node_count: 0,
         }
     }
     fn register_iri(&mut self, iri: &str, which: Which) -> Rc<String> {
@@ -214,19 +226,25 @@ impl MemGraph {
         match *subject {
             Node1::IRI(ref iri) => {
                 if let Some(i) = self.iris.get_mut(iri) {
-                    if use_count(i) > 1 {
+                    if iri_use_count(i) > 1 {
                         i.subject_count -= 1;
                         return;
                     }
                 }
                 self.iris.remove(iri).unwrap();
             }
-            Node1::BlankNode(_) => {}
+            Node1::BlankNode(n) => {
+                let b = &mut self.blanks[n];
+                b.subject_count -= 1;
+                if blank_use_count(b) == 0 {
+                    self.unused_blanks.push(n);
+                }
+            }
         }
     }
     fn remove_predicate(&mut self, predicate: &Rc<String>) {
         if let Some(i) = self.iris.get_mut(predicate) {
-            if use_count(i) > 1 {
+            if iri_use_count(i) > 1 {
                 i.predicate_count -= 1;
                 return;
             }
@@ -237,14 +255,20 @@ impl MemGraph {
         match *object {
             Node2::IRI(ref iri) => {
                 if let Some(i) = self.iris.get_mut(iri) {
-                    if use_count(i) > 1 {
+                    if iri_use_count(i) > 1 {
                         i.object_count -= 1;
                         return;
                     }
                 }
                 self.iris.remove(iri).unwrap();
             }
-            Node2::BlankNode(_) => {}
+            Node2::BlankNode(n) => {
+                let b = &mut self.blanks[n];
+                b.object_count -= 1;
+                if blank_use_count(b) == 0 {
+                    self.unused_blanks.push(n);
+                }
+            }
             Node2::Literal(ref literal) => {
                 if let Some(l) = self.literals.get_mut(literal) {
                     if l.count > 1 {
@@ -297,9 +321,20 @@ impl Graph for MemGraph {
         })
     }
     fn create_blank_node(&mut self) -> BlankNode {
-        let bn = (self.blank_node_count, self.graph_id);
-        self.blank_node_count += 1;
+        if let Some(blank) = self.unused_blanks.pop() {
+            let b = &self.blanks[blank];
+            assert!(b.subject_count == 0 && b.object_count == 0);
+            return (blank, self.graph_id);
+        }
+        let bn = (self.blanks.len(), self.graph_id);
+        self.blanks.push(Blank {
+            subject_count: 0,
+            object_count: 0,
+        });
         bn
+    }
+    fn retain<F>(&mut self, f: F) where F: FnMut(&Triple) -> bool {
+    // TODO
     }
 }
 
@@ -315,6 +350,18 @@ impl<'a> Iterator for TripleIterator<'a> {
     }
 }
 
+impl<'a> FromIterator<Triple<'a>> for MemGraph {
+    fn from_iter<T>(iter: T) -> Self
+        where T: IntoIterator<Item = Triple<'a>>
+    {
+        let mut g = MemGraph::new();
+        for triple in iter {
+            g.add_triple(&triple);
+        }
+        g
+    }
+}
+
 #[test]
 fn iter() {
     let a = MemGraph::new();
@@ -324,4 +371,10 @@ fn iter() {
         b.add_triple(&i);
         b.remove_triple(&i);
     }
+}
+
+#[test]
+fn from_iter() {
+    let a = MemGraph::new();
+    let b = MemGraph::from_iter(a.iter());
 }
