@@ -115,7 +115,7 @@ impl MemGraph {
             triples: HashSet::new(),
         }
     }
-    fn register_iri(&mut self, iri: &str, which: Which) -> Rc<String> {
+    fn register_iri(&mut self, iri: &Rc<String>, which: Which) -> Rc<String> {
         if let Some(iri) = self.iris.get_mut(iri) {
             up_use(iri, which);
             return iri.iri.clone();
@@ -138,41 +138,41 @@ impl MemGraph {
     }
     fn from_subject(&mut self, subject: &Subject) -> Node1 {
         match *subject {
-            Subject::IRI(iri) => Node1::IRI(self.register_iri(iri, Which::Subject)),
+            Subject::IRI(ref iri) => Node1::IRI(self.register_iri(iri, Which::Subject)),
             Subject::BlankNode((n, _)) => Node1::BlankNode(n),
         }
     }
     fn from_object(&mut self, object: &Object) -> Node2 {
         match *object {
-            Object::IRI(iri) => Node2::IRI(self.register_iri(iri, Which::Object)),
+            Object::IRI(ref iri) => Node2::IRI(self.register_iri(iri, Which::Object)),
             Object::BlankNode((n, _)) => Node2::BlankNode(n),
-            Object::Literal(l) => Node2::Literal(self.register_literal(l)),
+            Object::Literal(ref l) => Node2::Literal(self.register_literal(l)),
         }
     }
-    fn to_subject<'a>(&self, s: &'a Node1) -> Subject<'a> {
+    fn to_subject<'a>(&self, s: &'a Node1) -> Subject {
         match *s {
-            Node1::IRI(ref n) => Subject::IRI(n.as_str()),
+            Node1::IRI(ref n) => Subject::IRI(n.clone()),
             Node1::BlankNode(n) => Subject::BlankNode((n, self.graph_id)),
         }
     }
-    fn to_object<'a>(&self, s: &'a Node2) -> Object<'a> {
+    fn to_object<'a>(&self, s: &'a Node2) -> Object {
         match *s {
-            Node2::IRI(ref n) => Object::IRI(n.as_str()),
+            Node2::IRI(ref n) => Object::IRI(n.clone()),
             Node2::BlankNode(n) => Object::BlankNode((n, self.graph_id)),
-            Node2::Literal(ref n) => Object::Literal(n.as_str()),
+            Node2::Literal(ref n) => Object::Literal(n.clone()),
         }
     }
-    fn to_triple<'a>(&self, o: &'a MemTriple) -> Triple<'a> {
+    fn to_triple<'a>(&self, o: &'a MemTriple) -> Triple {
         Triple {
             subject: self.to_subject(&o.0),
-            predicate: &o.1.as_str(),
+            predicate: o.1.clone(),
             object: self.to_object(&o.2),
         }
     }
     fn as_subject(&self, subject: &Subject) -> Option<Node1> {
         match *subject {
-            Subject::IRI(iri) => {
-                if let Some(iri) = self.iris.get(iri) {
+            Subject::IRI(ref iri) => {
+                if let Some(ref iri) = self.iris.get(iri) {
                     Some(Node1::IRI(iri.iri.clone()))
                 } else {
                     None
@@ -191,7 +191,7 @@ impl MemGraph {
     }
     fn as_object(&self, object: &Object) -> Option<Node2> {
         match *object {
-            Object::IRI(iri) => {
+            Object::IRI(ref iri) => {
                 if let Some(iri) = self.iris.get(iri) {
                     Some(Node2::IRI(iri.iri.clone()))
                 } else {
@@ -199,7 +199,7 @@ impl MemGraph {
                 }
             }
             Object::BlankNode((n, graph)) if self.graph_id == graph => Some(Node2::BlankNode(n)),
-            Object::Literal(literal) => {
+            Object::Literal(ref literal) => {
                 if let Some(literal) = self.literals.get(literal) {
                     Some(Node2::IRI(literal.literal.clone()))
                 } else {
@@ -211,7 +211,7 @@ impl MemGraph {
     }
     fn find_triple(&self, triple: &Triple) -> Option<MemTriple> {
         if let Some(subject) = self.as_subject(&triple.subject) {
-            if let Some(predicate) = self.as_predicate(triple.predicate) {
+            if let Some(predicate) = self.as_predicate(&triple.predicate) {
                 if let Some(object) = self.as_object(&triple.object) {
                     let triple = (subject, predicate, object);
                     if self.triples.contains(&triple) {
@@ -295,14 +295,14 @@ enum Node2 {
 }
 
 impl Graph for MemGraph {
-    fn add_triple_si_oi(&mut self, s: &str, p: &str, o: &str) {
+    fn add_triple_si_oi(&mut self, s: &Rc<String>, p: &Rc<String>, o: &Rc<String>) {
         let s = self.register_iri(s, Which::Subject);
         let p = self.register_iri(p, Which::Predicate);
         let o = self.register_iri(o, Which::Object);
         self.triples.insert((Node1::IRI(s), p, Node2::IRI(o)));
     }
     fn add_triple(&mut self, triple: &Triple) {
-        let p = self.register_iri(triple.predicate, Which::Predicate);
+        let p = self.register_iri(&triple.predicate, Which::Predicate);
         let t = (self.from_subject(&triple.subject), p, self.from_object(&triple.object));
         self.triples.insert(t);
     }
@@ -333,8 +333,10 @@ impl Graph for MemGraph {
         });
         bn
     }
-    fn retain<F>(&mut self, f: F) where F: FnMut(&Triple) -> bool {
-    // TODO
+    fn retain<F>(&mut self, f: F)
+        where F: FnMut(&Triple) -> bool
+    {
+        // TODO
     }
 }
 
@@ -343,16 +345,16 @@ pub struct TripleIterator<'a> {
     iter: hash_set::Iter<'a, MemTriple>,
 }
 impl<'a> Iterator for TripleIterator<'a> {
-    type Item = Triple<'a>;
+    type Item = Triple;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next().and_then(|r| Some(self.graph.to_triple(r)))
     }
 }
 
-impl<'a> FromIterator<Triple<'a>> for MemGraph {
+impl FromIterator<Triple> for MemGraph {
     fn from_iter<T>(iter: T) -> Self
-        where T: IntoIterator<Item = Triple<'a>>
+        where T: IntoIterator<Item = Triple>
     {
         let mut g = MemGraph::new();
         for triple in iter {

@@ -1,6 +1,7 @@
+use std::rc::Rc;
 
 pub trait Graph {
-    fn add_triple_si_oi(&mut self, s: &str, p: &str, o: &str);
+    fn add_triple_si_oi(&mut self, s: &Rc<String>, p: &Rc<String>, o: &Rc<String>);
     /// Add a new triple
     /// This can fail if an incoming blank node is invalid
     fn add_triple(&mut self, triple: &Triple);
@@ -13,19 +14,19 @@ pub trait Graph {
 
 pub type BlankNode = (usize, usize);
 
-pub struct Triple<'a> {
-    pub subject: Subject<'a>,
-    pub predicate: &'a str,
-    pub object: Object<'a>,
+pub struct Triple {
+    pub subject: Subject,
+    pub predicate: Rc<String>,
+    pub object: Object,
 }
 
-pub enum Subject<'a> {
-    IRI(&'a str),
+pub enum Subject {
+    IRI(Rc<String>),
     BlankNode(BlankNode),
 }
 
-pub enum Object<'a> {
-    IRI(&'a str),
+pub enum Object {
+    IRI(Rc<String>),
     BlankNode(BlankNode),
-    Literal(&'a str),
+    Literal(Rc<String>),
 }
