@@ -3,37 +3,8 @@ use std::collections::HashSet;
 use std::collections::hash_set;
 use graph::*;
 use std::rc::Rc;
-use std::borrow::Borrow;
-use std::hash::{Hash, Hasher};
 use rand;
 use std::iter::FromIterator;
-
-struct StringKey {
-    key: Rc<String>,
-}
-
-impl Hash for StringKey {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.key.hash(state)
-    }
-}
-impl PartialEq for StringKey {
-    fn eq(&self, rhs: &StringKey) -> bool {
-        self.key.eq(&rhs.key)
-    }
-}
-impl Eq for StringKey {}
-
-impl Borrow<str> for StringKey {
-    fn borrow(&self) -> &str {
-        self.key.as_str()
-    }
-}
-impl Borrow<Rc<String>> for StringKey {
-    fn borrow(&self) -> &Rc<String> {
-        &self.key
-    }
-}
 
 struct Iri {
     iri: Rc<String>,
@@ -80,8 +51,8 @@ enum Which {
 type MemTriple = (Node1, Rc<String>, Node2);
 
 pub struct MemGraph {
-    iris: HashMap<StringKey, Iri>,
-    literals: HashMap<StringKey, Literal>,
+    iris: HashMap<Rc<String>, Iri>,
+    literals: HashMap<Rc<String>, Literal>,
     blanks: Vec<Blank>,
     unused_blanks: Vec<usize>,
     graph_id: usize,
@@ -123,17 +94,17 @@ impl MemGraph {
         let mut value = Iri::new(iri);
         up_use(&mut value, which);
         let r = value.iri.clone();
-        self.iris.insert(StringKey { key: value.iri.clone() }, value);
+        self.iris.insert(value.iri.clone(), value);
         r
     }
-    fn register_literal(&mut self, literal: &str) -> Rc<String> {
+    fn register_literal(&mut self, literal: &Rc<String>) -> Rc<String> {
         if let Some(literal) = self.literals.get_mut(literal) {
             literal.count += 1;
             return literal.literal.clone();
         }
         let value = Literal::new(literal);
         let r = value.literal.clone();
-        self.literals.insert(StringKey { key: value.literal.clone() }, value);
+        self.literals.insert(value.literal.clone(), value);
         r
     }
     fn from_subject(&mut self, subject: &Subject) -> Node1 {
@@ -182,7 +153,7 @@ impl MemGraph {
             _ => None,
         }
     }
-    fn as_predicate(&self, predicate: &str) -> Option<Rc<String>> {
+    fn as_predicate(&self, predicate: &Rc<String>) -> Option<Rc<String>> {
         if let Some(iri) = self.iris.get(predicate) {
             Some(iri.iri.clone())
         } else {
