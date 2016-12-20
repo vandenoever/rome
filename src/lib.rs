@@ -1,5 +1,6 @@
 #[macro_use]
 extern crate nom;
+extern crate rand;
 use nom::IResult;
 use nom::ErrorKind;
 use nom::IResult::Done;

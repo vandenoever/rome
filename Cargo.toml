@@ -7,6 +7,7 @@ build = "build.rs"
 [dependencies]
 nom = "*"
 walkdir = "*"
+rand = "*"
 
 [dependencies.lalrpop-util]
 version = "0.12.4"
