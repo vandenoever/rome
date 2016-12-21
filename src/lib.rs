@@ -15,7 +15,9 @@ mod grammar_structs;
 mod grammar_helper;
 pub mod graph;
 pub mod mem_graph;
+pub mod index_graph;
 pub mod ntriples_writer;
+mod string_store;
 
 use grammar::turtle;
 use grammar_structs::*;
@@ -208,9 +210,10 @@ fn add_triples(new_triples: Triples, state: &mut State) -> Result<(), String> {
     add_predicated_objects(subject, new_triples.predicated_objects_list, state)
 }
 
-pub fn parse(data: &str) -> Result<MemGraph, String> {
+pub fn parse(data: &str) -> Result<(MemGraph, HashMap<String, String>), String> {
     let statements = try!(parse_nom(data));
     let mut graph = MemGraph::new();
+    let prefixes;
     {
         let mut state = State::new(&mut graph);
         for statement in statements {
@@ -226,8 +229,9 @@ pub fn parse(data: &str) -> Result<MemGraph, String> {
                 }
             }
         }
+        prefixes = state.prefixes;
     }
-    Ok(graph)
+    Ok((graph, prefixes))
 }
 
 pub fn run(path: &str) -> io::Result<()> {
@@ -235,7 +239,7 @@ pub fn run(path: &str) -> io::Result<()> {
     let mut f = try!(File::open(path));
     try!(f.read_to_string(&mut s));
     match parse(s.as_str()) {
-        Ok(graph) => {
+        Ok((graph, _)) => {
             let stdout = io::stdout();
             let mut handle = stdout.lock();
             try!(ntriples_writer::write_ntriples(&graph, &mut handle));

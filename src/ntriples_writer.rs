@@ -2,7 +2,7 @@ use std::io::{Result, Write};
 use graph::*;
 use std::rc::Rc;
 
-struct Writer<'a, W>
+struct NTripleWriter<'a, W>
     where W: Write + 'a
 {
     buffer: Vec<u8>,
@@ -14,7 +14,7 @@ pub fn write_ntriples<G, W>(triples: &G, writer: &mut W) -> Result<()>
     where G: Graph,
           W: Write
 {
-    let mut writer = Writer {
+    let mut writer = NTripleWriter {
         buffer: Vec::new(),
         writer: writer,
     };
@@ -24,7 +24,7 @@ pub fn write_ntriples<G, W>(triples: &G, writer: &mut W) -> Result<()>
     Ok(())
 }
 
-impl<'a, W> Writer<'a, W>
+impl<'a, W> NTripleWriter<'a, W>
     where W: Write + 'a
 {
     fn write_iri(&mut self, iri: &Rc<String>) -> Result<()> {
