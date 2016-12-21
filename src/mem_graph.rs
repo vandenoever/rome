@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::collections::hash_map::Entry;
-use std::collections::hash_set;
+use std::collections::btree_map::Entry;
+use std::collections::btree_set;
+use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 use graph::*;
 use std::rc::Rc;
 use rand;
@@ -44,11 +46,11 @@ enum Which {
 }
 
 pub struct MemGraph {
-    strings: HashMap<Rc<String>, StringUsage>,
+    strings: BTreeMap<Rc<String>, StringUsage>,
     blanks: Vec<Blank>,
     unused_blanks: Vec<usize>,
     graph_id: usize,
-    triples: HashSet<Triple>,
+    triples: BTreeSet<Triple>,
 }
 
 fn up_use(iri: &mut StringUsage, which: Which) {
@@ -85,16 +87,15 @@ fn blank_use_count(blank: &Blank) -> usize {
 impl MemGraph {
     pub fn new() -> MemGraph {
         MemGraph {
-            strings: HashMap::new(),
+            strings: BTreeMap::new(),
             blanks: Vec::new(),
             unused_blanks: Vec::new(),
             graph_id: rand::random::<usize>(),
-            triples: HashSet::new(),
+            triples: BTreeSet::new(),
         }
     }
     /// deduplicate the string
-    /// look up the string in the hashmap and pass back the string from the
-    /// hashmap
+    /// look up the string in the map and pass back the string from the map
     fn register_string(&mut self, str: &Rc<String>, which: Which) -> Rc<String> {
         match self.strings.entry(str.clone()) {
             Entry::Occupied(ref mut o) => {
@@ -255,7 +256,7 @@ impl WritableGraph for MemGraph {
 
 pub struct TripleIterator<'a> {
     graph: &'a MemGraph,
-    iter: hash_set::Iter<'a, Triple>,
+    iter: btree_set::Iter<'a, Triple>,
 }
 impl<'a> Iterator for TripleIterator<'a> {
     type Item = &'a Triple;
