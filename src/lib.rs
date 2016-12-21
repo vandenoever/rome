@@ -16,6 +16,7 @@ mod grammar_structs;
 mod grammar_helper;
 pub mod graph;
 pub mod mem_graph;
+pub mod ntriples_writer;
 
 use grammar::turtle;
 use grammar_structs::*;

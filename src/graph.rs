@@ -4,6 +4,8 @@ use std::cmp::Ordering;
 
 pub trait Graph {
     fn iter<'a>(&'a self) -> Box<Iterator<Item = &Triple> + 'a>;
+    /// return the number of triples in the graph
+    fn len(&self) -> usize;
 }
 
 pub trait WritableGraph: Graph {

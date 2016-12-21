@@ -209,6 +209,9 @@ impl Graph for MemGraph {
             iter: self.triples.iter(),
         })
     }
+    fn len(&self) -> usize {
+        self.triples.len()
+    }
 }
 
 impl WritableGraph for MemGraph {
