@@ -1,6 +1,8 @@
+use std::rc::Rc;
+
 #[derive(Debug,PartialEq,Eq,Clone)]
 pub enum Subject {
-    IRI(String),
+    IRI(Rc<String>),
     BlankNode(usize),
 }
 #[derive(Debug,PartialEq,Clone)]

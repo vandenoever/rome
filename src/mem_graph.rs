@@ -1,38 +1,30 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::collections::hash_map::Entry;
 use std::collections::hash_set;
 use graph::*;
 use std::rc::Rc;
 use rand;
 use std::iter::FromIterator;
 
-struct Iri {
-    iri: Rc<String>,
+struct StringUsage {
     subject_count: usize,
     predicate_count: usize,
     object_count: usize,
+    datatype_count: usize,
+    literal_count: usize,
+    langtag_count: usize,
 }
 
-impl Iri {
-    fn new(iri: &str) -> Iri {
-        Iri {
-            iri: Rc::new(String::from(iri)),
+impl StringUsage {
+    fn new() -> StringUsage {
+        StringUsage {
             subject_count: 0,
             predicate_count: 0,
             object_count: 0,
-        }
-    }
-}
-
-struct Literal {
-    literal: Rc<String>,
-    count: usize,
-}
-impl Literal {
-    fn new(literal: &str) -> Literal {
-        Literal {
-            literal: Rc::new(String::from(literal)),
-            count: 0,
+            datatype_count: 0,
+            literal_count: 0,
+            langtag_count: 0,
         }
     }
 }
@@ -46,29 +38,44 @@ enum Which {
     Subject,
     Predicate,
     Object,
+    Datatype,
+    Literal,
+    LangTag,
 }
 
-type MemTriple = (Node1, Rc<String>, Node2);
-
 pub struct MemGraph {
-    iris: HashMap<Rc<String>, Iri>,
-    literals: HashMap<Rc<String>, Literal>,
+    strings: HashMap<Rc<String>, StringUsage>,
     blanks: Vec<Blank>,
     unused_blanks: Vec<usize>,
     graph_id: usize,
-    triples: HashSet<MemTriple>,
+    triples: HashSet<Triple>,
 }
 
-fn up_use(iri: &mut Iri, which: Which) {
+fn up_use(iri: &mut StringUsage, which: Which) {
     match which {
         Which::Subject => iri.subject_count += 1,
         Which::Predicate => iri.predicate_count += 1,
         Which::Object => iri.object_count += 1,
+        Which::Datatype => iri.datatype_count += 1,
+        Which::Literal => iri.literal_count += 1,
+        Which::LangTag => iri.langtag_count += 1,
     }
 }
 
-fn iri_use_count(iri: &Iri) -> usize {
-    iri.subject_count + iri.predicate_count + iri.object_count
+fn down_use(iri: &mut StringUsage, which: Which) {
+    match which {
+        Which::Subject => iri.subject_count -= 1,
+        Which::Predicate => iri.predicate_count -= 1,
+        Which::Object => iri.object_count -= 1,
+        Which::Datatype => iri.datatype_count -= 1,
+        Which::Literal => iri.literal_count -= 1,
+        Which::LangTag => iri.langtag_count -= 1,
+    }
+}
+
+fn use_count(u: &StringUsage) -> usize {
+    u.subject_count + u.predicate_count + u.object_count + u.datatype_count + u.literal_count +
+    u.langtag_count
 }
 
 fn blank_use_count(blank: &Blank) -> usize {
@@ -78,214 +85,145 @@ fn blank_use_count(blank: &Blank) -> usize {
 impl MemGraph {
     pub fn new() -> MemGraph {
         MemGraph {
-            iris: HashMap::new(),
-            literals: HashMap::new(),
+            strings: HashMap::new(),
             blanks: Vec::new(),
             unused_blanks: Vec::new(),
             graph_id: rand::random::<usize>(),
             triples: HashSet::new(),
         }
     }
-    fn register_iri(&mut self, iri: &Rc<String>, which: Which) -> Rc<String> {
-        if let Some(iri) = self.iris.get_mut(iri) {
-            up_use(iri, which);
-            return iri.iri.clone();
+    /// deduplicate the string
+    /// look up the string in the hashmap and pass back the string from the
+    /// hashmap
+    fn register_string(&mut self, str: &Rc<String>, which: Which) -> Rc<String> {
+        match self.strings.entry(str.clone()) {
+            Entry::Occupied(ref mut o) => {
+                up_use(o.get_mut(), which);
+                return o.key().clone();
+            }
+            Entry::Vacant(v) => {
+                let key = v.key().clone();
+                let usage = v.insert(StringUsage::new());
+                up_use(usage, which);
+                return key;
+            }
         }
-        let mut value = Iri::new(iri);
-        up_use(&mut value, which);
-        let r = value.iri.clone();
-        self.iris.insert(value.iri.clone(), value);
-        r
     }
-    fn register_literal(&mut self, literal: &Rc<String>) -> Rc<String> {
-        if let Some(literal) = self.literals.get_mut(literal) {
-            literal.count += 1;
-            return literal.literal.clone();
+    fn unregister_string(&mut self, str: &Rc<String>, which: Which) {
+        match self.strings.entry(str.clone()) {
+            Entry::Occupied(mut o) => {
+                if use_count(o.get()) > 0 {
+                    down_use(o.get_mut(), which);
+                } else {
+                    o.remove_entry();
+                }
+            }
+            Entry::Vacant(_) => {}
         }
-        let value = Literal::new(literal);
-        let r = value.literal.clone();
-        self.literals.insert(value.literal.clone(), value);
-        r
     }
-    fn from_subject(&mut self, subject: &Subject) -> Node1 {
+    fn register_subject(&mut self, subject: &Subject) -> Subject {
         match *subject {
-            Subject::IRI(ref iri) => Node1::IRI(self.register_iri(iri, Which::Subject)),
-            Subject::BlankNode((n, _)) => Node1::BlankNode(n),
+            Subject::IRI(ref iri) => Subject::IRI(self.register_string(iri, Which::Subject)),
+            ref s => s.clone(),
         }
     }
-    fn from_object(&mut self, object: &Object) -> Node2 {
+    fn register_literal_extra(&mut self, extra: &LiteralExtra) -> LiteralExtra {
+        match *extra {
+            LiteralExtra::LanguageTag(ref langtag) => {
+                LiteralExtra::LanguageTag(self.register_string(langtag, Which::LangTag))
+            }
+            ref e => e.clone(),
+        }
+    }
+    fn register_object(&mut self, object: &Object) -> Object {
         match *object {
-            Object::IRI(ref iri) => Node2::IRI(self.register_iri(iri, Which::Object)),
-            Object::BlankNode((n, _)) => Node2::BlankNode(n),
-            Object::Literal(ref l) => Node2::Literal(self.register_literal(l)),
+            Object::IRI(ref iri) => Object::IRI(self.register_string(iri, Which::Object)),
+            Object::BlankNode(b) => Object::BlankNode(b),
+            Object::Literal(ref l) => {
+                Object::Literal(Literal {
+                    lexical: self.register_string(&l.lexical, Which::Literal),
+                    datatype: self.register_string(&l.datatype, Which::Datatype),
+                    extra: self.register_literal_extra(&l.extra),
+                })
+            }
         }
     }
-    fn to_subject<'a>(&self, s: &'a Node1) -> Subject {
-        match *s {
-            Node1::IRI(ref n) => Subject::IRI(n.clone()),
-            Node1::BlankNode(n) => Subject::BlankNode((n, self.graph_id)),
-        }
-    }
-    fn to_object<'a>(&self, s: &'a Node2) -> Object {
-        match *s {
-            Node2::IRI(ref n) => Object::IRI(n.clone()),
-            Node2::BlankNode(n) => Object::BlankNode((n, self.graph_id)),
-            Node2::Literal(ref n) => Object::Literal(n.clone()),
-        }
-    }
-    fn to_triple<'a>(&self, o: &'a MemTriple) -> Triple {
+    fn register_triple(&mut self, triple: &Triple) -> Triple {
         Triple {
-            subject: self.to_subject(&o.0),
-            predicate: o.1.clone(),
-            object: self.to_object(&o.2),
+            subject: self.register_subject(&triple.subject),
+            predicate: self.register_string(&triple.predicate, Which::Predicate),
+            object: self.register_object(&triple.object),
         }
     }
-    fn as_subject(&self, subject: &Subject) -> Option<Node1> {
+    fn unregister_subject(&mut self, subject: &Subject) {
         match *subject {
             Subject::IRI(ref iri) => {
-                if let Some(ref iri) = self.iris.get(iri) {
-                    Some(Node1::IRI(iri.iri.clone()))
-                } else {
-                    None
-                }
+                self.unregister_string(iri, Which::Subject);
             }
-            Subject::BlankNode((n, graph)) if self.graph_id == graph => Some(Node1::BlankNode(n)),
-            _ => None,
-        }
-    }
-    fn as_predicate(&self, predicate: &Rc<String>) -> Option<Rc<String>> {
-        if let Some(iri) = self.iris.get(predicate) {
-            Some(iri.iri.clone())
-        } else {
-            None
-        }
-    }
-    fn as_object(&self, object: &Object) -> Option<Node2> {
-        match *object {
-            Object::IRI(ref iri) => {
-                if let Some(iri) = self.iris.get(iri) {
-                    Some(Node2::IRI(iri.iri.clone()))
-                } else {
-                    None
-                }
-            }
-            Object::BlankNode((n, graph)) if self.graph_id == graph => Some(Node2::BlankNode(n)),
-            Object::Literal(ref literal) => {
-                if let Some(literal) = self.literals.get(literal) {
-                    Some(Node2::IRI(literal.literal.clone()))
-                } else {
-                    None
-                }
-            }
-            _ => None,
-        }
-    }
-    fn find_triple(&self, triple: &Triple) -> Option<MemTriple> {
-        if let Some(subject) = self.as_subject(&triple.subject) {
-            if let Some(predicate) = self.as_predicate(&triple.predicate) {
-                if let Some(object) = self.as_object(&triple.object) {
-                    let triple = (subject, predicate, object);
-                    if self.triples.contains(&triple) {
-                        return Some(triple);
-                    }
-                }
-            }
-        }
-        None
-    }
-    fn remove_subject(&mut self, subject: &Node1) {
-        match *subject {
-            Node1::IRI(ref iri) => {
-                if let Some(i) = self.iris.get_mut(iri) {
-                    if iri_use_count(i) > 1 {
-                        i.subject_count -= 1;
-                        return;
-                    }
-                }
-                self.iris.remove(iri).unwrap();
-            }
-            Node1::BlankNode(n) => {
-                let b = &mut self.blanks[n];
+            Subject::BlankNode(n) => {
+                let b = &mut self.blanks[n.0];
                 b.subject_count -= 1;
                 if blank_use_count(b) == 0 {
-                    self.unused_blanks.push(n);
+                    self.unused_blanks.push(n.0);
                 }
             }
         }
     }
-    fn remove_predicate(&mut self, predicate: &Rc<String>) {
-        if let Some(i) = self.iris.get_mut(predicate) {
-            if iri_use_count(i) > 1 {
-                i.predicate_count -= 1;
-                return;
-            }
-        }
-        self.iris.remove(predicate).unwrap();
+    fn unregister_predicate(&mut self, predicate: &Rc<String>) {
+        self.unregister_string(predicate, Which::Predicate);
     }
-    fn remove_object(&mut self, object: &Node2) {
+    fn unregister_literal_extra(&mut self, extra: &LiteralExtra) {
+        match *extra {
+            LiteralExtra::LanguageTag(ref langtag) => {
+                self.unregister_string(langtag, Which::LangTag);
+            }
+            _ => (),
+        }
+    }
+    fn unregister_object(&mut self, object: &Object) {
         match *object {
-            Node2::IRI(ref iri) => {
-                if let Some(i) = self.iris.get_mut(iri) {
-                    if iri_use_count(i) > 1 {
-                        i.object_count -= 1;
-                        return;
-                    }
-                }
-                self.iris.remove(iri).unwrap();
+            Object::IRI(ref iri) => {
+                self.unregister_string(iri, Which::Object);
             }
-            Node2::BlankNode(n) => {
-                let b = &mut self.blanks[n];
+            Object::BlankNode(n) => {
+                let b = &mut self.blanks[n.0];
                 b.object_count -= 1;
                 if blank_use_count(b) == 0 {
-                    self.unused_blanks.push(n);
+                    self.unused_blanks.push(n.0);
                 }
             }
-            Node2::Literal(ref literal) => {
-                if let Some(l) = self.literals.get_mut(literal) {
-                    if l.count > 1 {
-                        l.count -= 1;
-                        return;
-                    }
-                }
-                self.literals.remove(literal).unwrap();
+            Object::Literal(ref literal) => {
+                self.unregister_string(&literal.lexical, Which::Literal);
+                self.unregister_string(&literal.datatype, Which::Datatype);
+                self.unregister_literal_extra(&literal.extra);
             }
         }
     }
-}
-
-#[derive(PartialEq,Eq,Hash)]
-enum Node1 {
-    IRI(Rc<String>),
-    BlankNode(usize),
-}
-#[derive(PartialEq,Eq,Hash)]
-enum Node2 {
-    IRI(Rc<String>),
-    BlankNode(usize),
-    Literal(Rc<String>),
 }
 
 impl Graph for MemGraph {
     fn add_triple_si_oi(&mut self, s: &Rc<String>, p: &Rc<String>, o: &Rc<String>) {
-        let s = self.register_iri(s, Which::Subject);
-        let p = self.register_iri(p, Which::Predicate);
-        let o = self.register_iri(o, Which::Object);
-        self.triples.insert((Node1::IRI(s), p, Node2::IRI(o)));
+        let s = self.register_string(s, Which::Subject);
+        let p = self.register_string(p, Which::Predicate);
+        let o = self.register_string(o, Which::Object);
+        self.triples.insert(Triple {
+            subject: Subject::IRI(s),
+            predicate: p,
+            object: Object::IRI(o),
+        });
     }
     fn add_triple(&mut self, triple: &Triple) {
-        let p = self.register_iri(&triple.predicate, Which::Predicate);
-        let t = (self.from_subject(&triple.subject), p, self.from_object(&triple.object));
+        let t = self.register_triple(&triple);
         self.triples.insert(t);
     }
     fn remove_triple(&mut self, triple: &Triple) {
-        if let Some(triple) = self.find_triple(triple) {
-            self.triples.remove(&triple); // TODO: dimish use
-            self.remove_subject(&triple.0);
-            self.remove_predicate(&triple.1);
-            self.remove_object(&triple.2);
+        if self.triples.remove(&triple) {
+            self.unregister_subject(&triple.subject);
+            self.unregister_predicate(&triple.predicate);
+            self.unregister_object(&triple.object);
         }
     }
-    fn iter<'b>(&'b self) -> Box<Iterator<Item = Triple> + 'b> {
+    fn iter<'b>(&'b self) -> Box<Iterator<Item = &Triple> + 'b> {
         Box::new(TripleIterator {
             graph: self,
             iter: self.triples.iter(),
@@ -304,28 +242,29 @@ impl Graph for MemGraph {
         });
         bn
     }
-    fn retain<F>(&mut self, f: F)
-        where F: FnMut(&Triple) -> bool
-    {
-        // TODO
-    }
+    // fn retain<F>(&mut self, f: F)
+    // where F: FnMut(&Triple) -> bool
+    // {
+    // TODO
+    // }
+    //
 }
 
 pub struct TripleIterator<'a> {
     graph: &'a MemGraph,
-    iter: hash_set::Iter<'a, MemTriple>,
+    iter: hash_set::Iter<'a, Triple>,
 }
 impl<'a> Iterator for TripleIterator<'a> {
-    type Item = Triple;
+    type Item = &'a Triple;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().and_then(|r| Some(self.graph.to_triple(r)))
+        self.iter.next()
     }
 }
 
-impl FromIterator<Triple> for MemGraph {
+impl<'a> FromIterator<&'a Triple> for MemGraph {
     fn from_iter<T>(iter: T) -> Self
-        where T: IntoIterator<Item = Triple>
+        where T: IntoIterator<Item = &'a Triple>
     {
         let mut g = MemGraph::new();
         for triple in iter {

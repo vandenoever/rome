@@ -1,7 +1,8 @@
+use std::rc::Rc;
 
 #[derive(Debug,PartialEq,Eq,Clone)]
 pub enum IRI {
-    IRI(String),
+    IRI(Rc<String>),
     PrefixedName(String, String),
 }
 
@@ -12,14 +13,20 @@ pub enum RDFLiteralType {
 }
 
 #[derive(Debug,PartialEq)]
-pub enum Literal {
-    LangString(String, String),
-    XsdString(String),
-    XsdInteger(i64),
+pub struct Literal {
+    pub lexical: String,
+    pub datatype: IRI,
+    pub extra: LiteralExtra,
+}
+
+#[derive(Debug,PartialEq)]
+pub enum LiteralExtra {
+    None,
+    LanguageTag(String),
+    XsdBoolean(bool),
     XsdDecimal(f64),
     XsdDouble(f64),
-    XsdBoolean(bool),
-    TypedLiteral(String, IRI),
+    XsdInteger(i64),
 }
 
 #[derive(Debug,PartialEq,Eq)]
