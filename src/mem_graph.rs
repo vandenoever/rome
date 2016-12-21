@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-use std::collections::HashSet;
 use std::collections::btree_map::Entry;
 use std::collections::btree_set;
 use std::collections::BTreeMap;
@@ -205,7 +203,6 @@ impl MemGraph {
 impl Graph for MemGraph {
     fn iter<'b>(&'b self) -> Box<Iterator<Item = &Triple> + 'b> {
         Box::new(TripleIterator {
-            graph: self,
             iter: self.triples.iter(),
         })
     }
@@ -258,7 +255,6 @@ impl WritableGraph for MemGraph {
 }
 
 pub struct TripleIterator<'a> {
-    graph: &'a MemGraph,
     iter: btree_set::Iter<'a, Triple>,
 }
 impl<'a> Iterator for TripleIterator<'a> {

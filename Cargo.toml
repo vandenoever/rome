@@ -2,15 +2,8 @@
 name = "rdfio"
 version = "0.1.0"
 authors = ["Jos van den Oever <jos@vandenoever.info>"]
-build = "build.rs"
 
 [dependencies]
 nom = "*"
 walkdir = "*"
 rand = "*"
-
-[dependencies.lalrpop-util]
-version = "0.12.4"
-
-[build-dependencies.lalrpop]
-version = "0.12.4"

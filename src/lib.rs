@@ -3,7 +3,6 @@ extern crate nom;
 extern crate rand;
 use nom::IResult;
 use nom::ErrorKind;
-use nom::IResult::Done;
 use nom::Needed;
 use std::io;
 use std::io::Read;
