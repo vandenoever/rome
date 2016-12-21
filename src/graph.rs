@@ -71,13 +71,11 @@ impl PartialEq for LiteralExtra {
     // the language tag is the only significant content in LiteralExtra
     // the other differences should be triggered by lexical and datatype
     fn eq(&self, other: &LiteralExtra) -> bool {
-        match *self {
-            LiteralExtra::LanguageTag(ref langtag1) => {
-                match *other {
-                    LiteralExtra::LanguageTag(ref langtag2) => langtag1 == langtag2,
-                    _ => true,
-                }
-            }
+        match (self, other) {
+            (&LiteralExtra::LanguageTag(ref langtag1),
+             &LiteralExtra::LanguageTag(ref langtag2)) => langtag1 == langtag2,
+            (&LiteralExtra::LanguageTag(_), _) => false,
+            (_, &LiteralExtra::LanguageTag(_)) => false,
             _ => true,
         }
     }
