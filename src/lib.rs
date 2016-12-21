@@ -235,15 +235,15 @@ pub fn run(path: &str) -> io::Result<()> {
     let mut s = String::new();
     let mut f = try!(File::open(path));
     try!(f.read_to_string(&mut s));
-    let r = turtle(s.as_str());
-    println!("{}", s);
-    if let Done(a, b) = r {
-        println!("=== LEFT OVER ===");
-        println!("{}", a);
-        println!("=================");
-        println!("{:?}", b);
-    } else {
-        println!("{:?}", r);
+    match parse(s.as_str()) {
+        Ok(graph) => {
+            let stdout = io::stdout();
+            let mut handle = stdout.lock();
+            try!(ntriples_writer::write_ntriples(&graph, &mut handle));
+        }
+        Err(e) => {
+            println!("{}", e);
+        }
     }
     Ok(())
 }

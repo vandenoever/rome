@@ -10,7 +10,7 @@ struct Writer<'a, W>
 }
 
 /// write an RDF 1.1 N-Triples file in canonical form
-pub fn write_ntriples<G, W>(triples: &Graph, writer: &mut W) -> Result<()>
+pub fn write_ntriples<G, W>(triples: &G, writer: &mut W) -> Result<()>
     where G: Graph,
           W: Write
 {
