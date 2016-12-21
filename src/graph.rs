@@ -83,8 +83,10 @@ impl PartialEq for LiteralExtra {
     }
 }
 impl PartialOrd for LiteralExtra {
+    // the language tag is the only significant content in LiteralExtra
+    // the other differences should be triggered by lexical and datatype
     fn partial_cmp(&self, other: &LiteralExtra) -> Option<Ordering> {
-        None
+        Some(self.cmp(other))
     }
 }
 impl Eq for LiteralExtra {}
@@ -93,9 +95,8 @@ impl Ord for LiteralExtra {
     // the other differences should be triggered by lexical and datatype
     fn cmp(&self, other: &Self) -> Ordering {
         match (self, other) {
-            (&LiteralExtra::LanguageTag(ref langtag1), &LiteralExtra::LanguageTag(ref langtag2)) => {
-                langtag1.cmp(&langtag2)
-            }
+            (&LiteralExtra::LanguageTag(ref langtag1),
+             &LiteralExtra::LanguageTag(ref langtag2)) => langtag1.cmp(&langtag2),
             (&LiteralExtra::LanguageTag(_), _) => Ordering::Greater,
             (_, &LiteralExtra::LanguageTag(_)) => Ordering::Less,
             _ => Ordering::Equal,
