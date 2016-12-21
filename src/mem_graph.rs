@@ -202,6 +202,15 @@ impl MemGraph {
 }
 
 impl Graph for MemGraph {
+    fn iter<'b>(&'b self) -> Box<Iterator<Item = &Triple> + 'b> {
+        Box::new(TripleIterator {
+            graph: self,
+            iter: self.triples.iter(),
+        })
+    }
+}
+
+impl WritableGraph for MemGraph {
     fn add_triple_si_oi(&mut self, s: &Rc<String>, p: &Rc<String>, o: &Rc<String>) {
         let s = self.register_string(s, Which::Subject);
         let p = self.register_string(p, Which::Predicate);
@@ -222,12 +231,6 @@ impl Graph for MemGraph {
             self.unregister_predicate(&triple.predicate);
             self.unregister_object(&triple.object);
         }
-    }
-    fn iter<'b>(&'b self) -> Box<Iterator<Item = &Triple> + 'b> {
-        Box::new(TripleIterator {
-            graph: self,
-            iter: self.triples.iter(),
-        })
     }
     fn create_blank_node(&mut self) -> BlankNode {
         if let Some(blank) = self.unused_blanks.pop() {

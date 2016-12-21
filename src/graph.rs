@@ -2,12 +2,15 @@ use std::rc::Rc;
 use std::hash::{Hash, Hasher};
 
 pub trait Graph {
+    fn iter<'a>(&'a self) -> Box<Iterator<Item = &Triple> + 'a>;
+}
+
+pub trait WritableGraph: Graph {
     fn add_triple_si_oi(&mut self, s: &Rc<String>, p: &Rc<String>, o: &Rc<String>);
     /// Add a new triple
     /// This can fail if an incoming blank node is invalid
     fn add_triple(&mut self, triple: &Triple);
     fn remove_triple(&mut self, triple: &Triple);
-    fn iter<'a>(&'a self) -> Box<Iterator<Item = &Triple> + 'a>;
     fn create_blank_node(&mut self) -> BlankNode;
     // Retains only the triples specified by the function.
     // fn retain<F>(&mut self, f: F) where F: FnMut(&Triple) -> bool;

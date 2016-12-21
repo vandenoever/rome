@@ -19,7 +19,7 @@ pub mod mem_graph;
 
 use grammar::turtle;
 use grammar_structs::*;
-use graph::{Graph, Triple};
+use graph::{WritableGraph, Triple};
 use mem_graph::MemGraph;
 use std::collections::HashMap;
 
@@ -38,14 +38,14 @@ fn resolve_iri_ref(iri: &String, base: &str) -> String {
 }
 
 struct State<'a> {
-    graph: &'a mut Graph,
+    graph: &'a mut WritableGraph,
     base: String,
     prefixes: HashMap<String, String>,
     blank_nodes: HashMap<String, graph::BlankNode>,
 }
 
 impl<'a> State<'a> {
-    fn new(graph: &'a mut Graph) -> State {
+    fn new(graph: &'a mut WritableGraph) -> State {
         State {
             graph: graph,
             base: String::new(),
