@@ -9,6 +9,7 @@ use std::io::Read;
 use std::fs::File;
 use std::rc::Rc;
 
+mod unsafe_key;
 pub mod triple_stream;
 mod grammar;
 mod grammar_structs;
@@ -18,6 +19,9 @@ pub mod mem_graph;
 pub mod index_graph;
 pub mod ntriples_writer;
 mod string_store;
+mod unsafe_graph;
+mod graph_writer;
+mod string_collector;
 
 use grammar::turtle;
 use grammar_structs::*;

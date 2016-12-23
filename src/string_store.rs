@@ -29,8 +29,15 @@ impl Borrow<str> for StoreString {
         self.string.as_str()
     }
 }
-#[derive(Clone,Copy)]
-struct StringId {
+
+impl Borrow<Rc<String>> for StoreString {
+    fn borrow(&self) -> &Rc<String> {
+        &self.string
+    }
+}
+
+#[derive(Clone,Copy,PartialEq,Eq,PartialOrd,Ord)]
+pub struct StringId {
     index: usize,
 }
 
@@ -44,12 +51,9 @@ impl<T> StringStore<T>
             index: BTreeMap::new(),
         }
     }
-    pub fn register_string(&mut self, s: &str) -> StringId {
-        if let Some(s) = self.index.get(s) {
-            return *s;
-        }
+    fn add_string(&mut self, s: Rc<String>) -> StringId {
         let item = StringStoreItem {
-            string: StoreString { string: Rc::new(String::from(s)) },
+            string: StoreString { string: s },
             item: T::default(),
         };
         let index;
@@ -61,6 +65,18 @@ impl<T> StringStore<T>
             self.store.push(item);
         }
         StringId { index: index }
+    }
+    pub fn register_string(&mut self, s: &Rc<String>) -> StringId {
+        if let Some(s) = self.index.get(s) {
+            return *s;
+        }
+        self.add_string(s.clone())
+    }
+    pub fn register_str(&mut self, s: &str) -> StringId {
+        if let Some(s) = self.index.get(s) {
+            return *s;
+        }
+        self.add_string(Rc::new(String::from(s)))
     }
     pub fn unregister_string(&mut self, id: StringId) {
         self.index.remove(&self.store[id.index].string);
