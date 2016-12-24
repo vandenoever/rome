@@ -250,21 +250,21 @@ named!(rdfliteral<&str,Literal>, do_parse!(
                 Literal {
                     lexical: string,
                     datatype: c(RDF_LANG_STRING),
-                    extra: LiteralExtra::LanguageTag(langtag.to_lowercase())
+                    language: Some(langtag.to_lowercase())
                 }
             },
             Some(RDFLiteralType::DataType(datatype)) => {
                 Literal {
                     lexical: string,
                     datatype: datatype,
-                    extra: LiteralExtra::None
+                    language: None
                 }
             },
             None => {
                 Literal {
                     lexical: string,
                     datatype: c(XSD_STRING),
-                    extra: LiteralExtra::None
+                    language: None
                 }
             }
         }
@@ -283,7 +283,7 @@ named!(boolean<&str,Literal>, do_parse!(
     (Literal {
         lexical: String::from(b),
         datatype: c(XSD_BOOLEAN),
-        extra: LiteralExtra::XsdBoolean(b == "true")
+        language: None
     })
 ));
 
@@ -359,14 +359,10 @@ named!(langtag<&str,RDFLiteralType>, do_parse!(
 named!(integer<&str,Literal>, map!(recognize!(tuple!(
     opt!(alt!(tag_s!("+") | tag_s!("-"))), digit)),
     (|digit|{
-        let extra = match i64::from_str_radix(digit, 10) {
-            Ok(v) => LiteralExtra::XsdInteger(v),
-            _ => LiteralExtra::None
-        };
         Literal {
             lexical: String::from(digit),
             datatype: c(XSD_INTEGER),
-            extra: extra
+            language: None
         }
     })
 ));
@@ -587,7 +583,7 @@ fn test_rdfliteral() {
     let r = Literal {
         lexical: String::new(),
         datatype: c(XSD_STRING),
-        extra: LiteralExtra::None,
+        language: None,
     };
     assert_eq!(rdfliteral("'' "), Done(&" "[..], r));
 }
@@ -596,21 +592,21 @@ fn literal_true() -> Literal {
     Literal {
         lexical: String::from("true"),
         datatype: c(XSD_BOOLEAN),
-        extra: LiteralExtra::XsdBoolean(true),
+        language: None,
     }
 }
 fn literal_false() -> Literal {
     Literal {
         lexical: String::from("false"),
         datatype: c(XSD_BOOLEAN),
-        extra: LiteralExtra::XsdBoolean(false),
+        language: None,
     }
 }
 fn literal_1() -> Literal {
     Literal {
         lexical: String::from("1"),
         datatype: c(XSD_INTEGER),
-        extra: LiteralExtra::XsdInteger(1),
+        language: None,
     }
 }
 
@@ -620,11 +616,11 @@ fn test_integer() {
     assert_eq!(integer("+1"), Done(&""[..], Literal{
             lexical:String::from("+1"),
             datatype: c(XSD_INTEGER),
-            extra: LiteralExtra::XsdInteger(1)}));
+            language: None}));
     assert_eq!(integer("-1"), Done(&""[..], Literal{
      lexical:String::from("-1"),
      datatype: c(XSD_INTEGER),
-     extra: LiteralExtra::XsdInteger(-1)}));
+     language: None}));
 }
 
 #[test]
@@ -653,7 +649,7 @@ fn test_predicated_objects() {
     let v = vec![Object::Literal(Literal{
             lexical:String::from("1"),
             datatype: c(XSD_INTEGER),
-            extra: LiteralExtra::XsdInteger(1)})];
+            language: None})];
     let po = PredicatedObjects {
         verb: IRI::IRI(Rc::new(String::from("urn:123"))),
         objects: v,
@@ -666,7 +662,7 @@ fn test_triples() {
     let v = vec![Object::Literal(Literal{
             lexical:String::from("1"),
             datatype: c(XSD_INTEGER),
-            extra: LiteralExtra::XsdInteger(1)})];
+            language: None})];
     let i = IRI::IRI(Rc::new(String::from("urn:123")));
     let s = Subject::IRI(i.clone());
     let po = vec![PredicatedObjects{verb:i.clone(),objects:v}];

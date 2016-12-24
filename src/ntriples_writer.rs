@@ -59,7 +59,7 @@ impl<'a, W> NTripleWriter<'a, W>
         try!(self.writer.write_all(b"\""));
         try!(self.write_literal_value(&literal.lexical));
         try!(self.writer.write_all(b"\""));
-        if let LiteralExtra::LanguageTag(ref langtag) = literal.extra {
+        if let Some(ref langtag) = literal.language {
             try!(self.writer.write_all(b"@"));
             try!(self.writer.write_all(langtag.as_bytes()));
         } else if literal.datatype.as_str() != "http://www.w3.org/2001/XMLSchema#string" {

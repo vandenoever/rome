@@ -174,14 +174,7 @@ fn make_object(object: Object, state: &mut State) -> Result<graph::Object, Strin
             graph::Object::Literal(graph::Literal {
                 lexical: Rc::new(l.lexical),
                 datatype: try!(resolve_iri(&l.datatype, state)),
-                extra: match l.extra {
-                    LiteralExtra::None => graph::LiteralExtra::None,
-                    LiteralExtra::LanguageTag(v) => graph::LiteralExtra::LanguageTag(Rc::new(v)),
-                    LiteralExtra::XsdBoolean(v) => graph::LiteralExtra::XsdBoolean(v),
-                    LiteralExtra::XsdDecimal(v) => graph::LiteralExtra::XsdDecimal(v),
-                    LiteralExtra::XsdDouble(v) => graph::LiteralExtra::XsdDouble(v),
-                    LiteralExtra::XsdInteger(v) => graph::LiteralExtra::XsdInteger(v),
-                },
+                language: l.language.map(Rc::new),
             })
         }
         Object::BlankNodePropertyList(predicated_objects_list) => {

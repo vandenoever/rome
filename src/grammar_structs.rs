@@ -16,17 +16,7 @@ pub enum RDFLiteralType {
 pub struct Literal {
     pub lexical: String,
     pub datatype: IRI,
-    pub extra: LiteralExtra,
-}
-
-#[derive(Debug,PartialEq)]
-pub enum LiteralExtra {
-    None,
-    LanguageTag(String),
-    XsdBoolean(bool),
-    XsdDecimal(f64),
-    XsdDouble(f64),
-    XsdInteger(i64),
+    pub language: Option<String>,
 }
 
 #[derive(Debug,PartialEq,Eq)]

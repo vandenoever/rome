@@ -38,17 +38,7 @@ pub enum Subject {
 pub struct Literal {
     pub lexical: Rc<String>,
     pub datatype: Rc<String>,
-    pub extra: LiteralExtra,
-}
-
-#[derive(Clone)]
-pub enum LiteralExtra {
-    None,
-    LanguageTag(Rc<String>),
-    XsdInteger(i64),
-    XsdDecimal(f64),
-    XsdDouble(f64),
-    XsdBoolean(bool),
+    pub language: Option<Rc<String>>,
 }
 
 #[derive(PartialEq,Eq,Hash,PartialOrd,Ord)]
@@ -56,50 +46,4 @@ pub enum Object {
     IRI(Rc<String>),
     BlankNode(BlankNode),
     Literal(Literal),
-}
-
-impl Hash for LiteralExtra {
-    // the language tag is the only significant content in LiteralExtra
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        match *self {
-            LiteralExtra::LanguageTag(ref langtag) => {
-                langtag.hash(state);
-            }
-            _ => {}
-        }
-    }
-}
-impl PartialEq for LiteralExtra {
-    // the language tag is the only significant content in LiteralExtra
-    // the other differences should be triggered by lexical and datatype
-    fn eq(&self, other: &LiteralExtra) -> bool {
-        match (self, other) {
-            (&LiteralExtra::LanguageTag(ref langtag1),
-             &LiteralExtra::LanguageTag(ref langtag2)) => langtag1 == langtag2,
-            (&LiteralExtra::LanguageTag(_), _) => false,
-            (_, &LiteralExtra::LanguageTag(_)) => false,
-            _ => true,
-        }
-    }
-}
-impl PartialOrd for LiteralExtra {
-    // the language tag is the only significant content in LiteralExtra
-    // the other differences should be triggered by lexical and datatype
-    fn partial_cmp(&self, other: &LiteralExtra) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-impl Eq for LiteralExtra {}
-impl Ord for LiteralExtra {
-    // the language tag is the only significant content in LiteralExtra
-    // the other differences should be triggered by lexical and datatype
-    fn cmp(&self, other: &Self) -> Ordering {
-        match (self, other) {
-            (&LiteralExtra::LanguageTag(ref langtag1),
-             &LiteralExtra::LanguageTag(ref langtag2)) => langtag1.cmp(&langtag2),
-            (&LiteralExtra::LanguageTag(_), _) => Ordering::Greater,
-            (_, &LiteralExtra::LanguageTag(_)) => Ordering::Less,
-            _ => Ordering::Equal,
-        }
-    }
 }

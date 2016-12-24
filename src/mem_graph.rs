@@ -126,14 +126,6 @@ impl MemGraph {
             ref s => s.clone(),
         }
     }
-    fn register_literal_extra(&mut self, extra: &LiteralExtra) -> LiteralExtra {
-        match *extra {
-            LiteralExtra::LanguageTag(ref langtag) => {
-                LiteralExtra::LanguageTag(self.register_string(langtag, Which::LangTag))
-            }
-            ref e => e.clone(),
-        }
-    }
     fn register_object(&mut self, object: &Object) -> Object {
         match *object {
             Object::IRI(ref iri) => Object::IRI(self.register_string(iri, Which::Object)),
@@ -142,7 +134,7 @@ impl MemGraph {
                 Object::Literal(Literal {
                     lexical: self.register_string(&l.lexical, Which::Literal),
                     datatype: self.register_string(&l.datatype, Which::Datatype),
-                    extra: self.register_literal_extra(&l.extra),
+                    language: l.language.as_ref().map(|l| self.register_string(l, Which::LangTag)),
                 })
             }
         }
@@ -171,14 +163,6 @@ impl MemGraph {
     fn unregister_predicate(&mut self, predicate: &Rc<String>) {
         self.unregister_string(predicate, Which::Predicate);
     }
-    fn unregister_literal_extra(&mut self, extra: &LiteralExtra) {
-        match *extra {
-            LiteralExtra::LanguageTag(ref langtag) => {
-                self.unregister_string(langtag, Which::LangTag);
-            }
-            _ => (),
-        }
-    }
     fn unregister_object(&mut self, object: &Object) {
         match *object {
             Object::IRI(ref iri) => {
@@ -194,7 +178,7 @@ impl MemGraph {
             Object::Literal(ref literal) => {
                 self.unregister_string(&literal.lexical, Which::Literal);
                 self.unregister_string(&literal.datatype, Which::Datatype);
-                self.unregister_literal_extra(&literal.extra);
+                literal.language.as_ref().map(|l| self.unregister_string(l, Which::LangTag));
             }
         }
     }
@@ -202,9 +186,7 @@ impl MemGraph {
 
 impl Graph for MemGraph {
     fn iter<'b>(&'b self) -> Box<Iterator<Item = &Triple> + 'b> {
-        Box::new(TripleIterator {
-            iter: self.triples.iter(),
-        })
+        Box::new(TripleIterator { iter: self.triples.iter() })
     }
     fn len(&self) -> usize {
         self.triples.len()
