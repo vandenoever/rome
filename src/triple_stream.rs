@@ -68,7 +68,6 @@ impl<'a> Iterator for StatementIterator<'a> {
     }
 }
 
-
 pub struct TripleIterator<'a> {
     statement_iterator: StatementIterator<'a>,
     base: String,
@@ -109,6 +108,7 @@ impl<'a> TripleIterator<'a> {
                 }
                 Ok(Statement::Triples(new_triples)) => {
                     try!(add_triples(new_triples, self));
+                    return Ok(self.triple_buffer.len());
                 }
                 Err(e) => return Err(e),
             }

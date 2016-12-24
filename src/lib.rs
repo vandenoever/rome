@@ -1,13 +1,10 @@
 #[macro_use]
 extern crate nom;
 extern crate rand;
-use nom::IResult;
 use nom::ErrorKind;
-use nom::Needed;
 use std::io;
 use std::io::Read;
 use std::fs::File;
-use std::rc::Rc;
 
 mod unsafe_key;
 pub mod triple_stream;
@@ -25,11 +22,9 @@ mod string_collector;
 pub mod triple_to_uint;
 
 use triple_stream::*;
-use graph::WritableGraph;
+use graph::{WritableGraph,Graph};
 use mem_graph::MemGraph;
 use std::collections::HashMap;
-
-
 
 pub fn parse(data: &str) -> Result<(MemGraph, HashMap<String, String>), String> {
     let mut graph = MemGraph::new();
@@ -40,7 +35,7 @@ pub fn parse(data: &str) -> Result<(MemGraph, HashMap<String, String>), String> 
     Ok((graph, triples.prefixes().clone()))
 }
 
-pub fn run(path: &str) -> io::Result<()> {
+pub fn run(path: &str) -> io::Result<MemGraph> {
     let mut s = String::new();
     let mut f = try!(File::open(path));
     try!(f.read_to_string(&mut s));
@@ -49,19 +44,25 @@ pub fn run(path: &str) -> io::Result<()> {
             let stdout = io::stdout();
             let mut handle = stdout.lock();
             try!(ntriples_writer::write_ntriples(&graph, &mut handle));
+            Ok(graph)
         }
         Err(e) => {
             println!("{}", e);
+            Err(io::Error::new(io::ErrorKind::Other, e))
         }
     }
-    Ok(())
 }
 
 #[test]
 fn test_run() {
-    let path = "/tmp/tracker/tests/libtracker-data/update/delete-insert-where-1.ontology";
-    if let Err(e) = run(&path) {
-        println!("{:?}", e);
+    let path = "/home/oever/koop/projects/tooi/tooi-repo/transactions/oo.ttl";
+    match run(&path) {
+        Err(e) => {
+            println!("{:?}", e);
+        }
+        Ok(graph) => {
+            println!("got graph with {} triples", graph.len());
+        }
     }
 }
 
