@@ -40,7 +40,7 @@ named!(comment<&str,()>, value!((), tuple!(
 )));
 
 /// whitespace that may contain comments
-fn tws(mut str: &str) -> IResult<&str, ()> {
+pub fn tws(mut str: &str) -> IResult<&str, ()> {
     loop {
         match comment(str) {
             Done(left, _) => {
@@ -91,7 +91,7 @@ pub fn turtle(mut str: &str) -> IResult<&str, Vec<Statement>> {
 
 /// [2] statement ::= directive | triples '.'
 /// [3] directive ::= prefixID | base | sparqlPrefix | sparqlBase
-named!(statement<&str,Statement>, alt!(prefix_id | base | sparql_prefix
+named!(pub statement<&str,Statement>, alt!(prefix_id | base | sparql_prefix
         | sparql_base | statement_triples));
 
 named!(statement_triples<&str,Statement>, do_parse!(
