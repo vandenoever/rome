@@ -152,7 +152,7 @@ fn test_triple3() {
     assert_eq!(t.subject_is_iri(), false);
     assert_eq!(t.subject(), 1);
     assert_eq!(t.predicate(), 2);
-    assert_eq!(t.object_is_blank_node(), true);
+    assert_eq!(t.object_is_blank_node(), false);
     assert_eq!(t.object_is_iri(), false);
     assert_eq!(t.has_language(), false);
     assert_eq!(t.object(), 3);
@@ -165,7 +165,7 @@ fn test_triple4() {
     assert_eq!(t.subject_is_iri(), false);
     assert_eq!(t.subject(), 1);
     assert_eq!(t.predicate(), 2);
-    assert_eq!(t.object_is_blank_node(), true);
+    assert_eq!(t.object_is_blank_node(), false);
     assert_eq!(t.object_is_iri(), false);
     assert_eq!(t.has_language(), true);
     assert_eq!(t.object(), 3);
