@@ -61,13 +61,33 @@ fn tws(mut str: &str) -> IResult<&str, ()> {
 }
 
 /// [1] turtleDoc ::= statement*
-named!(pub turtle<&str,Vec<Statement>>, do_parse!(
-    tws >>
-    s: many0!(do_parse!(
-        s: statement >> tws >>
-        (s))) >>
-    (s)
-));
+pub fn turtle(mut str: &str) -> IResult<&str, Vec<Statement>> {
+    let mut v = Vec::new();
+    match tws(str) {
+        Done(left, _) => {
+            str = left;
+        }
+        IResult::Error(e) => return IResult::Error(e),
+        IResult::Incomplete(_) => return Done(str, v),
+    }
+    loop {
+        match statement(str) {
+            Done(left, s) => {
+                v.push(s);
+                str = left;
+            }
+            IResult::Error(_) => {}
+            IResult::Incomplete(_) => return Done(str, v),
+        }
+        match tws(str) {
+            Done(left, _) => {
+                str = left;
+            }
+            IResult::Error(e) => return IResult::Error(e),
+            IResult::Incomplete(_) => return Done(str, v),
+        }
+    }
+}
 
 /// [2] statement ::= directive | triples '.'
 /// [3] directive ::= prefixID | base | sparqlPrefix | sparqlBase
