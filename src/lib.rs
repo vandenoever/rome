@@ -20,8 +20,9 @@ pub mod index_graph;
 pub mod ntriples_writer;
 mod string_store;
 mod unsafe_graph;
-mod graph_writer;
+pub mod graph_writer;
 mod string_collector;
+pub mod triple_to_uint;
 
 use grammar::turtle;
 use grammar_structs::*;

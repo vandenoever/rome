@@ -10,7 +10,7 @@ struct StringRef {
 // is just like sorting by the underlying strings.
 #[derive (Debug,PartialEq,Eq,PartialOrd,Ord,Clone,Copy)]
 pub struct StringId {
-    id: u32,
+    pub id: u32,
 }
 
 pub struct StringCollector {

@@ -2,42 +2,9 @@ use std::mem;
 use std::cmp::Ordering;
 
 use string_collector::*;
-
-#[derive (PartialEq,Eq,PartialOrd,Ord)]
-struct InnerTriple {
-    subject: InnerSubject,
-    predicate: StringId,
-    object: InnerObject,
-}
+use triple_to_uint::*;
 
 pub type BlankNode = (u32, u32);
-
-#[derive (PartialEq,Eq,PartialOrd,Ord)]
-enum InnerSubject {
-    IRI(StringId),
-    BlankNode(BlankNode),
-}
-#[derive (PartialEq,Eq,PartialOrd,Ord)]
-pub struct InnerLiteral {
-    lexical: StringId,
-    datatype: StringId,
-    extra: InnerLiteralExtra,
-}
-#[derive(Clone,Copy)]
-pub enum InnerLiteralExtra {
-    None,
-    LanguageTag(StringId),
-    XsdInteger(i64),
-    XsdDecimal(f64),
-    XsdDouble(f64),
-    XsdBoolean(bool),
-}
-#[derive (PartialEq,Eq,PartialOrd,Ord)]
-enum InnerObject {
-    IRI(StringId),
-    BlankNode(BlankNode),
-    Literal(InnerLiteral),
-}
 
 #[derive (PartialEq,Eq,PartialOrd,Ord)]
 pub struct Triple<'a> {
@@ -108,146 +75,130 @@ impl<'a> Ord for LiteralExtra<'a> {
         }
     }
 }
-impl PartialEq for InnerLiteralExtra {
-    // the language tag is the only significant content in LiteralExtra
-    // the other differences should be triggered by lexical and datatype
-    fn eq(&self, other: &InnerLiteralExtra) -> bool {
-        match (self, other) {
-            (&InnerLiteralExtra::LanguageTag(ref langtag1),
-             &InnerLiteralExtra::LanguageTag(ref langtag2)) => langtag1 == langtag2,
-            (&InnerLiteralExtra::LanguageTag(_), _) => false,
-            (_, &InnerLiteralExtra::LanguageTag(_)) => false,
-            _ => true,
-        }
-    }
-}
-impl PartialOrd for InnerLiteralExtra {
-    // the language tag is the only significant content in LiteralExtra
-    // the other differences should be triggered by lexical and datatype
-    fn partial_cmp(&self, other: &InnerLiteralExtra) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-impl Eq for InnerLiteralExtra {}
-impl Ord for InnerLiteralExtra {
-    // the language tag is the only significant content in LiteralExtra
-    // the other differences should be triggered by lexical and datatype
-    fn cmp(&self, other: &Self) -> Ordering {
-        match (self, other) {
-            (&InnerLiteralExtra::LanguageTag(ref langtag1),
-             &InnerLiteralExtra::LanguageTag(ref langtag2)) => langtag1.cmp(&langtag2),
-            (&InnerLiteralExtra::LanguageTag(_), _) => Ordering::Greater,
-            (_, &InnerLiteralExtra::LanguageTag(_)) => Ordering::Less,
-            _ => Ordering::Equal,
-        }
-    }
-}
 
-struct GraphWriter {
+pub struct GraphWriter {
     string_collector: StringCollector,
-    triples: Vec<InnerTriple>,
+    datatype_lang_collector: StringCollector,
+    triples: Vec<Triple64>,
     prev_subject_iri: Option<(String, StringId)>,
     prev_predicate: Option<(String, StringId)>,
+    prev_datatype: Option<(String, StringId)>,
+    prev_lang: Option<(String, StringId)>,
 }
-struct Graph {
+pub struct Graph {
     strings: StringCollection,
-    triples: Vec<InnerTriple>,
+    triples: Vec<Triple64>,
 }
 
-fn subject<'a>(s: &InnerSubject, strings: &'a StringCollection) -> Subject<'a> {
-    match *s {
-        InnerSubject::IRI(iri) => Subject::IRI(strings.get(iri)),
-        InnerSubject::BlankNode(n) => Subject::BlankNode(n),
+fn translate<T>(t: &mut T, translation: &Vec<StringId>)
+    where T: CompactTriple<u32>
+{
+    if t.subject_is_iri() {
+        let subject = t.subject() as usize;
+        t.set_subject(translation[subject].id);
     }
-}
-fn object<'a>(o: &InnerObject, strings: &'a StringCollection) -> Object<'a> {
-    match *o {
-        InnerObject::IRI(iri) => Object::IRI(strings.get(iri)),
-        InnerObject::BlankNode(n) => Object::BlankNode(n),
-        InnerObject::Literal(ref l) => {
-            Object::Literal(Literal {
-                lexical: strings.get(l.lexical),
-                datatype: strings.get(l.datatype),
-                extra: match l.extra {
-                    InnerLiteralExtra::None => LiteralExtra::None,
-                    InnerLiteralExtra::LanguageTag(lang) => {
-                        LiteralExtra::LanguageTag(strings.get(lang))
-                    }
-                    InnerLiteralExtra::XsdInteger(v) => LiteralExtra::XsdInteger(v),
-                    InnerLiteralExtra::XsdDecimal(v) => LiteralExtra::XsdDecimal(v),
-                    InnerLiteralExtra::XsdDouble(v) => LiteralExtra::XsdDouble(v),
-                    InnerLiteralExtra::XsdBoolean(v) => LiteralExtra::XsdBoolean(v),
-                },
-            })
+    let predicate = t.predicate() as usize;
+    t.set_predicate(translation[predicate].id);
+    if !t.object_is_blank_node() {
+        let object = t.object() as usize;
+        t.set_object(translation[object].id);
+        if !t.object_is_iri() {
+            let datatype_or_lang = t.datatype_or_lang() as usize;
+            t.set_datatype_or_lang(translation[datatype_or_lang].id);
         }
     }
 }
-fn triple<'a>(t: &InnerTriple, strings: &'a StringCollection) -> Triple<'a> {
-    Triple {
-        subject: subject(&t.subject, strings),
-        predicate: strings.get(t.predicate),
-        object: object(&t.object, strings),
-    }
-}
-fn translate_subject(s: &InnerSubject, translation: &Vec<StringId>) -> InnerSubject {
-    match *s {
-        InnerSubject::IRI(iri) => InnerSubject::IRI(translation[iri]),
-        InnerSubject::BlankNode(b) => InnerSubject::BlankNode(b),
-    }
-}
-fn translate_object(o: &InnerObject, translation: &Vec<StringId>) -> InnerObject {
-    match *o {
-        InnerObject::IRI(iri) => InnerObject::IRI(translation[iri]),
-        InnerObject::BlankNode(b) => InnerObject::BlankNode(b),
-        InnerObject::Literal(ref l) => {
-            InnerObject::Literal(InnerLiteral {
-                lexical: translation[l.lexical],
-                datatype: translation[l.datatype],
-                extra: match l.extra {
-                    InnerLiteralExtra::LanguageTag(lang) => {
-                        InnerLiteralExtra::LanguageTag(translation[lang])
-                    }
-                    o => o,
-                },
-            })
+/// check if the new string is the same as the string from the previous triple
+/// if the string is the same, use the re-use the id
+fn check_prev(string: &str,
+              prev: &mut Option<(String, StringId)>,
+              string_collector: &mut StringCollector)
+              -> StringId {
+    let id;
+    if let Some((mut prev_string, prev_id)) = prev.take() {
+        if string == prev_string {
+            id = prev_id;
+        } else {
+            id = string_collector.add_string(string);
+            prev_string.clear();
+            prev_string.push_str(string);
         }
+        *prev = Some((prev_string, id));
+    } else {
+        id = string_collector.add_string(string);
+        *prev = Some((String::from(string), id));
     }
+    id
 }
 impl GraphWriter {
     pub fn with_capacity(capacity: usize) -> GraphWriter {
         GraphWriter {
             string_collector: StringCollector::with_capacity(capacity),
+            datatype_lang_collector: StringCollector::with_capacity(capacity),
             triples: Vec::new(),
             prev_subject_iri: None,
             prev_predicate: None,
+            prev_datatype: None,
+            prev_lang: None,
         }
     }
-    pub fn add(&mut self, subject: &str, predicate: &str, object: &str) {
-        if let Some((str, id)) = self.prev_subject_iri.take() {
-
-        }
-        let required = subject.len() + predicate.len() + object.len();
-        if self.string_collector.space() < required {
-            // handling a full buffer is not implemented yet
-            unimplemented!();
-        }
-        let s = self.string_collector.add_string(subject);
-        let p = self.string_collector.add_string(predicate);
+    fn add_s_iri(&mut self, s: &str, p: &str, ot: TripleObjectType, o: u32, d: u32) {
+        let s = check_prev(s, &mut self.prev_subject_iri, &mut self.string_collector);
+        let p = check_prev(p, &mut self.prev_predicate, &mut self.string_collector);
+        let t = Triple64::triple(true, s.id, p.id, ot, o, d);
+        self.triples.push(t);
+    }
+    pub fn add_iri_blank(&mut self, subject: &str, predicate: &str, object: u32) {
+        self.add_s_iri(subject, predicate, TripleObjectType::BlankNode, object, 0);
+    }
+    pub fn add_iri_iri(&mut self, subject: &str, predicate: &str, object: &str) {
         let o = self.string_collector.add_string(object);
-        self.triples.push(InnerTriple {
-            subject: InnerSubject::IRI(s),
-            predicate: p,
-            object: InnerObject::IRI(o),
-        });
+        self.add_s_iri(subject, predicate, TripleObjectType::IRI, o.id, 0);
+    }
+    pub fn add_iri_lit(&mut self, subject: &str, predicate: &str, object: &str, datatype: &str) {
+        let o = self.string_collector.add_string(object);
+        let d = check_prev(datatype,
+                           &mut self.prev_datatype,
+                           &mut self.datatype_lang_collector)
+            .id;
+        self.add_s_iri(subject, predicate, TripleObjectType::Literal, o.id, d);
+    }
+    pub fn add_iri_lit_lang(&mut self, subject: &str, predicate: &str, object: &str, lang: &str) {
+        let o = self.string_collector.add_string(object);
+        let l = check_prev(lang, &mut self.prev_lang, &mut self.datatype_lang_collector).id;
+        self.add_s_iri(subject, predicate, TripleObjectType::LiteralLang, o.id, l);
+    }
+    fn add_s_blank(&mut self, s: u32, p: &str, ot: TripleObjectType, o: u32, d: u32) {
+        let p = check_prev(p, &mut self.prev_predicate, &mut self.string_collector);
+        let t = Triple64::triple(false, s, p.id, ot, o, d);
+        self.triples.push(t);
+    }
+    pub fn add_blank_blank(&mut self, subject: u32, predicate: &str, object: u32) {
+        self.add_s_blank(subject, predicate, TripleObjectType::BlankNode, object, 0);
+    }
+    pub fn add_blank_iri(&mut self, subject: u32, predicate: &str, object: &str) {
+        let o = self.string_collector.add_string(object);
+        self.add_s_blank(subject, predicate, TripleObjectType::IRI, o.id, 0);
+    }
+    pub fn add_blank_lit(&mut self, subject: u32, predicate: &str, object: &str, datatype: &str) {
+        let o = self.string_collector.add_string(object);
+        let d = check_prev(datatype,
+                           &mut self.prev_datatype,
+                           &mut self.datatype_lang_collector)
+            .id;
+        self.add_s_blank(subject, predicate, TripleObjectType::Literal, o.id, d);
+    }
+    pub fn add_blank_lit_lang(&mut self, subject: u32, predicate: &str, object: &str, lang: &str) {
+        let o = self.string_collector.add_string(object);
+        let l = check_prev(lang, &mut self.prev_lang, &mut self.datatype_lang_collector).id;
+        self.add_s_blank(subject, predicate, TripleObjectType::LiteralLang, o.id, l);
     }
     pub fn collect(&mut self) -> Graph {
         let (translation, string_collection) = self.string_collector.collect();
         let mut triples = Vec::new();
         mem::swap(&mut triples, &mut self.triples);
         for t in triples.iter_mut() {
-            t.subject = translate_subject(&t.subject, &translation);
-            t.predicate = translation[t.predicate];
-            t.object = translate_object(&t.object, &translation);
+            translate(t, &translation);
         }
         // sort according to StringId, which is sorted alphabetically
         triples.sort();
