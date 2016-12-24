@@ -19,7 +19,7 @@ impl<'a> StatementIterator<'a> {
                     done: false,
                 })
             }
-            IResult::Error(e) => return Err(String::from("cannot start parsing")),
+            IResult::Error(_) => return Err(String::from("cannot start parsing")),
             IResult::Incomplete(_) => {
                 return Ok(StatementIterator {
                     src: src,

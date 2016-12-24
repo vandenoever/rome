@@ -60,35 +60,6 @@ pub fn tws(mut str: &str) -> IResult<&str, ()> {
     }
 }
 
-/// [1] turtleDoc ::= statement*
-pub fn turtle(mut str: &str) -> IResult<&str, Vec<Statement>> {
-    let mut v = Vec::new();
-    match tws(str) {
-        Done(left, _) => {
-            str = left;
-        }
-        IResult::Error(e) => return IResult::Error(e),
-        IResult::Incomplete(_) => return Done(str, v),
-    }
-    loop {
-        match statement(str) {
-            Done(left, s) => {
-                v.push(s);
-                str = left;
-            }
-            IResult::Error(_) => {}
-            IResult::Incomplete(_) => return Done(str, v),
-        }
-        match tws(str) {
-            Done(left, _) => {
-                str = left;
-            }
-            IResult::Error(e) => return IResult::Error(e),
-            IResult::Incomplete(_) => return Done(str, v),
-        }
-    }
-}
-
 /// [2] statement ::= directive | triples '.'
 /// [3] directive ::= prefixID | base | sparqlPrefix | sparqlBase
 named!(pub statement<&str,Statement>, alt!(prefix_id | base | sparql_prefix
@@ -587,7 +558,7 @@ fn test_rdfliteral() {
     };
     assert_eq!(rdfliteral("'' "), Done(&" "[..], r));
 }
-
+#[cfg(test)]
 fn literal_true() -> Literal {
     Literal {
         lexical: String::from("true"),
@@ -595,6 +566,7 @@ fn literal_true() -> Literal {
         language: None,
     }
 }
+#[cfg(test)]
 fn literal_false() -> Literal {
     Literal {
         lexical: String::from("false"),
@@ -602,6 +574,7 @@ fn literal_false() -> Literal {
         language: None,
     }
 }
+#[cfg(test)]
 fn literal_1() -> Literal {
     Literal {
         lexical: String::from("1"),

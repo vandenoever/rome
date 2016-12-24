@@ -1,6 +1,4 @@
 use std::rc::Rc;
-use std::hash::{Hash, Hasher};
-use std::cmp::Ordering;
 
 pub trait Graph {
     fn iter<'a>(&'a self) -> Box<Iterator<Item = &Triple> + 'a>;

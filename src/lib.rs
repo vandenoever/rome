@@ -55,7 +55,7 @@ pub fn run(path: &str) -> io::Result<MemGraph> {
 
 #[test]
 fn test_run() {
-    let path = "/home/oever/koop/projects/tooi/tooi-repo/transactions/oo.ttl";
+    let path = "/tmp/tracker/tests/libtracker-data/update/delete-insert-where-1.ontology";
     match run(&path) {
         Err(e) => {
             println!("{:?}", e);
@@ -64,20 +64,4 @@ fn test_run() {
             println!("got graph with {} triples", graph.len());
         }
     }
-}
-
-#[test]
-fn test_short() {
-    let r1 = parse("@prefix:<>.").unwrap();
-    // assert_eq!(r1, vec![]);
-    // let r2 = parse("<><><>.").unwrap();
-    // let t = ast::Triple {
-    // subject: ast::Subject::IRI(Rc::new(String::new())),
-    // predicate: String::new(),
-    // object: ast::Object::IRI(String::new()),
-    // };
-    // assert_eq!(r2, vec![t.clone()]);
-    // let r3 = parse("@prefix:<>.: : :.").unwrap();
-    // assert_eq!(r3, vec![t]);
-    //
 }

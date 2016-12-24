@@ -274,4 +274,5 @@ fn iter() {
 fn from_iter() {
     let a = MemGraph::new();
     let b = MemGraph::from_iter(a.iter());
+    assert_eq!(b.len(),0);
 }
