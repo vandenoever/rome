@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 pub trait Graph {
     fn iter<'a>(&'a self) -> Box<Iterator<Item = &Triple> + 'a>;
     /// return the number of triples in the graph
@@ -7,7 +5,7 @@ pub trait Graph {
 }
 
 pub trait WritableGraph: Graph {
-    fn add_triple_si_oi(&mut self, s: &Rc<String>, p: &Rc<String>, o: &Rc<String>);
+    fn add_triple_si_oi(&mut self, s: &String, p: &String, o: &String);
     /// Add a new triple
     /// This can fail if an incoming blank node is invalid
     fn add_triple(&mut self, triple: &Triple);
@@ -22,26 +20,26 @@ pub type BlankNode = (usize, usize);
 #[derive(PartialEq,Eq,Hash,PartialOrd,Ord)]
 pub struct Triple {
     pub subject: Subject,
-    pub predicate: Rc<String>,
+    pub predicate: String,
     pub object: Object,
 }
 
 #[derive(PartialEq,Eq,Hash,Clone,PartialOrd,Ord)]
 pub enum Subject {
-    IRI(Rc<String>),
+    IRI(String),
     BlankNode(BlankNode),
 }
 
 #[derive(PartialEq,Eq,Hash,PartialOrd,Ord)]
 pub struct Literal {
-    pub lexical: Rc<String>,
-    pub datatype: Rc<String>,
-    pub language: Option<Rc<String>>,
+    pub lexical: String,
+    pub datatype: String,
+    pub language: Option<String>,
 }
 
 #[derive(PartialEq,Eq,Hash,PartialOrd,Ord)]
 pub enum Object {
-    IRI(Rc<String>),
+    IRI(String),
     BlankNode(BlankNode),
     Literal(Literal),
 }

@@ -3,7 +3,6 @@ use grammar::*;
 use std::collections::HashMap;
 use nom::IResult;
 use graph;
-use std::rc::Rc;
 
 struct StatementIterator<'a> {
     src: &'a str,
@@ -136,7 +135,7 @@ impl<'a> TripleIterator<'a> {
     }
 }
 
-fn resolve_iri(iri: &IRI, state: &TripleIterator) -> Result<Rc<String>, String> {
+fn resolve_iri(iri: &IRI, state: &TripleIterator) -> Result<String, String> {
     let i = match *iri {
         IRI::IRI(ref iri) => state.resolve_iri_ref(iri),
         IRI::PrefixedName(ref prefix, ref local) => {
@@ -147,7 +146,7 @@ fn resolve_iri(iri: &IRI, state: &TripleIterator) -> Result<Rc<String>, String> 
             base + local
         }
     };
-    Ok(Rc::new(i))
+    Ok(i)
 }
 
 fn make_blank(blank_node: BlankNode, state: &mut TripleIterator) -> graph::BlankNode {
@@ -157,16 +156,16 @@ fn make_blank(blank_node: BlankNode, state: &mut TripleIterator) -> graph::Blank
     }
 }
 
-fn r(str: &str) -> Rc<String> {
-    Rc::new(String::from(str))
+fn r(str: &str) -> String {
+    String::from(str)
 }
-fn rdf_first() -> Rc<String> {
+fn rdf_first() -> String {
     r("http://www.w3.org/1999/02/22-rdf-syntax-ns#first")
 }
-fn rdf_rest() -> Rc<String> {
+fn rdf_rest() -> String {
     r("http://www.w3.org/1999/02/22-rdf-syntax-ns#rest")
 }
-fn rdf_nil() -> Rc<String> {
+fn rdf_nil() -> String {
     r("http://www.w3.org/1999/02/22-rdf-syntax-ns#nil")
 }
 
@@ -221,9 +220,9 @@ fn make_object(object: Object, state: &mut TripleIterator) -> Result<graph::Obje
         }
         Object::Literal(l) => {
             graph::Object::Literal(graph::Literal {
-                lexical: Rc::new(l.lexical),
+                lexical: l.lexical,
                 datatype: try!(resolve_iri(&l.datatype, state)),
-                language: l.language.map(Rc::new),
+                language: l.language,
             })
         }
         Object::BlankNodePropertyList(predicated_objects_list) => {

@@ -3,7 +3,6 @@ use std::collections::btree_set;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use graph::*;
-use std::rc::Rc;
 use rand;
 use std::iter::FromIterator;
 
@@ -44,7 +43,7 @@ enum Which {
 }
 
 pub struct MemGraph {
-    strings: BTreeMap<Rc<String>, StringUsage>,
+    strings: BTreeMap<String, StringUsage>,
     blanks: Vec<Blank>,
     unused_blanks: Vec<usize>,
     graph_id: usize,
@@ -94,7 +93,7 @@ impl MemGraph {
     }
     /// deduplicate the string
     /// look up the string in the map and pass back the string from the map
-    fn register_string(&mut self, str: &Rc<String>, which: Which) -> Rc<String> {
+    fn register_string(&mut self, str: &String, which: Which) -> String {
         match self.strings.entry(str.clone()) {
             Entry::Occupied(ref mut o) => {
                 up_use(o.get_mut(), which);
@@ -108,7 +107,7 @@ impl MemGraph {
             }
         }
     }
-    fn unregister_string(&mut self, str: &Rc<String>, which: Which) {
+    fn unregister_string(&mut self, str: &String, which: Which) {
         match self.strings.entry(str.clone()) {
             Entry::Occupied(mut o) => {
                 if use_count(o.get()) > 0 {
@@ -160,7 +159,7 @@ impl MemGraph {
             }
         }
     }
-    fn unregister_predicate(&mut self, predicate: &Rc<String>) {
+    fn unregister_predicate(&mut self, predicate: &String) {
         self.unregister_string(predicate, Which::Predicate);
     }
     fn unregister_object(&mut self, object: &Object) {
@@ -194,7 +193,7 @@ impl Graph for MemGraph {
 }
 
 impl WritableGraph for MemGraph {
-    fn add_triple_si_oi(&mut self, s: &Rc<String>, p: &Rc<String>, o: &Rc<String>) {
+    fn add_triple_si_oi(&mut self, s: &String, p: &String, o: &String) {
         let s = self.register_string(s, Which::Subject);
         let p = self.register_string(p, Which::Predicate);
         let o = self.register_string(o, Which::Object);
@@ -228,12 +227,6 @@ impl WritableGraph for MemGraph {
         });
         bn
     }
-    // fn retain<F>(&mut self, f: F)
-    // where F: FnMut(&Triple) -> bool
-    // {
-    // TODO
-    // }
-    //
 }
 
 pub struct TripleIterator<'a> {
@@ -274,5 +267,5 @@ fn iter() {
 fn from_iter() {
     let a = MemGraph::new();
     let b = MemGraph::from_iter(a.iter());
-    assert_eq!(b.len(),0);
+    assert_eq!(b.len(), 0);
 }

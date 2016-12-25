@@ -22,7 +22,7 @@ mod string_collector;
 pub mod triple_to_uint;
 
 use triple_stream::*;
-use graph::{WritableGraph,Graph};
+use graph::{WritableGraph, Graph};
 use mem_graph::MemGraph;
 use std::collections::HashMap;
 

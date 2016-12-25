@@ -27,7 +27,7 @@ pub fn write_ntriples<G, W>(triples: &G, writer: &mut W) -> Result<()>
 impl<'a, W> NTripleWriter<'a, W>
     where W: Write + 'a
 {
-    fn write_iri(&mut self, iri: &Rc<String>) -> Result<()> {
+    fn write_iri(&mut self, iri: &String) -> Result<()> {
         try!(self.writer.write_all(b"<"));
         self.buffer.clear();
         for b in iri.as_bytes() {
@@ -45,7 +45,7 @@ impl<'a, W> NTripleWriter<'a, W>
         try!(write!(self.writer, "{}_{}", blank_node.1, blank_node.0));
         Ok(())
     }
-    fn write_literal_value(&mut self, value: &Rc<String>) -> Result<()> {
+    fn write_literal_value(&mut self, value: &String) -> Result<()> {
         self.buffer.clear();
         for b in value.as_bytes() {
             if *b == 0x22 || *b == 0x5C || *b == 0x0A || *b == 0x0D {
@@ -75,7 +75,7 @@ impl<'a, W> NTripleWriter<'a, W>
             &Subject::BlankNode(blank_node) => self.write_blank_node(&blank_node),
         }
     }
-    fn write_predicate(&mut self, predicate: &Rc<String>) -> Result<()> {
+    fn write_predicate(&mut self, predicate: &String) -> Result<()> {
         self.write_iri(predicate)
     }
     fn write_object(&mut self, object: &Object) -> Result<()> {
