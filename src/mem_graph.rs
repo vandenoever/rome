@@ -2,9 +2,40 @@ use std::collections::btree_map::Entry;
 use std::collections::btree_set;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
-use graph::*;
 use rand;
 use std::iter::FromIterator;
+use graph;
+use graph::{Triple, Graph, WritableGraph};
+use std::rc::Rc;
+
+pub type BlankNode = (usize, usize);
+
+#[derive(PartialEq,Eq,Hash,PartialOrd,Ord)]
+pub struct MemGraphTriple {
+    pub subject: Subject,
+    pub predicate: Rc<String>,
+    pub object: Object,
+}
+
+#[derive(PartialEq,Eq,Hash,Clone,PartialOrd,Ord)]
+pub enum Subject {
+    IRI(Rc<String>),
+    BlankNode(BlankNode),
+}
+
+#[derive(PartialEq,Eq,Hash,PartialOrd,Ord)]
+pub struct Literal {
+    pub lexical: Rc<String>,
+    pub datatype: Rc<String>,
+    pub language: Option<Rc<String>>,
+}
+
+#[derive(PartialEq,Eq,Hash,PartialOrd,Ord)]
+pub enum Object {
+    IRI(Rc<String>),
+    BlankNode(BlankNode),
+    Literal(Literal),
+}
 
 struct StringUsage {
     subject_count: usize,
@@ -43,11 +74,11 @@ enum Which {
 }
 
 pub struct MemGraph {
-    strings: BTreeMap<String, StringUsage>,
+    strings: BTreeMap<Rc<String>, StringUsage>,
     blanks: Vec<Blank>,
     unused_blanks: Vec<usize>,
     graph_id: usize,
-    triples: BTreeSet<Triple>,
+    triples: BTreeSet<MemGraphTriple>,
 }
 
 fn up_use(iri: &mut StringUsage, which: Which) {
@@ -81,6 +112,30 @@ fn blank_use_count(blank: &Blank) -> usize {
     blank.subject_count + blank.object_count
 }
 
+impl MemGraphTriple {
+    fn new(triple: &graph::Triple) -> MemGraphTriple {
+        MemGraphTriple {
+            subject: match triple.subject() {
+                graph::Subject::IRI(iri) => Subject::IRI(Rc::new(String::from(iri))),
+                graph::Subject::BlankNode(n) => Subject::BlankNode(n),
+            },
+            predicate: Rc::new(String::from(triple.predicate())),
+            object: match triple.object() {
+                graph::Object::IRI(iri) => Object::IRI(Rc::new(String::from(iri))),
+                graph::Object::BlankNode(n) => Object::BlankNode(n),
+                graph::Object::Literal(ref l) => {
+                    Object::Literal(Literal {
+                        lexical: Rc::new(String::from(l.lexical)),
+                        datatype: Rc::new(String::from(l.datatype)),
+                        language: l.language
+                            .map(|l| Rc::new(String::from(l))),
+                    })
+                }
+            },
+        }
+    }
+}
+
 impl MemGraph {
     pub fn new() -> MemGraph {
         MemGraph {
@@ -93,8 +148,8 @@ impl MemGraph {
     }
     /// deduplicate the string
     /// look up the string in the map and pass back the string from the map
-    fn register_string(&mut self, str: &String, which: Which) -> String {
-        match self.strings.entry(str.clone()) {
+    fn register_string(&mut self, str: &str, which: Which) -> Rc<String> {
+        match self.strings.entry(Rc::new(String::from(str))) {
             Entry::Occupied(ref mut o) => {
                 up_use(o.get_mut(), which);
                 return o.key().clone();
@@ -107,7 +162,7 @@ impl MemGraph {
             }
         }
     }
-    fn unregister_string(&mut self, str: &String, which: Which) {
+    fn unregister_string(&mut self, str: &Rc<String>, which: Which) {
         match self.strings.entry(str.clone()) {
             Entry::Occupied(mut o) => {
                 if use_count(o.get()) > 0 {
@@ -119,17 +174,17 @@ impl MemGraph {
             Entry::Vacant(_) => {}
         }
     }
-    fn register_subject(&mut self, subject: &Subject) -> Subject {
+    fn register_subject(&mut self, subject: &graph::Subject) -> Subject {
         match *subject {
-            Subject::IRI(ref iri) => Subject::IRI(self.register_string(iri, Which::Subject)),
-            ref s => s.clone(),
+            graph::Subject::IRI(ref iri) => Subject::IRI(self.register_string(iri, Which::Subject)),
+            graph::Subject::BlankNode(b) => Subject::BlankNode(b),
         }
     }
-    fn register_object(&mut self, object: &Object) -> Object {
+    fn register_object(&mut self, object: &graph::Object) -> Object {
         match *object {
-            Object::IRI(ref iri) => Object::IRI(self.register_string(iri, Which::Object)),
-            Object::BlankNode(b) => Object::BlankNode(b),
-            Object::Literal(ref l) => {
+            graph::Object::IRI(ref iri) => Object::IRI(self.register_string(iri, Which::Object)),
+            graph::Object::BlankNode(b) => Object::BlankNode(b),
+            graph::Object::Literal(ref l) => {
                 Object::Literal(Literal {
                     lexical: self.register_string(&l.lexical, Which::Literal),
                     datatype: self.register_string(&l.datatype, Which::Datatype),
@@ -138,11 +193,13 @@ impl MemGraph {
             }
         }
     }
-    fn register_triple(&mut self, triple: &Triple) -> Triple {
-        Triple {
-            subject: self.register_subject(&triple.subject),
-            predicate: self.register_string(&triple.predicate, Which::Predicate),
-            object: self.register_object(&triple.object),
+    fn register_triple<T>(&mut self, triple: &T) -> MemGraphTriple
+        where T: graph::Triple
+    {
+        MemGraphTriple {
+            subject: self.register_subject(&triple.subject()),
+            predicate: self.register_string(&triple.predicate(), Which::Predicate),
+            object: self.register_object(&triple.object()),
         }
     }
     fn unregister_subject(&mut self, subject: &Subject) {
@@ -159,7 +216,7 @@ impl MemGraph {
             }
         }
     }
-    fn unregister_predicate(&mut self, predicate: &String) {
+    fn unregister_predicate(&mut self, predicate: &Rc<String>) {
         self.unregister_string(predicate, Which::Predicate);
     }
     fn unregister_object(&mut self, object: &Object) {
@@ -183,31 +240,38 @@ impl MemGraph {
     }
 }
 
-impl Graph for MemGraph {
-    fn iter<'b>(&'b self) -> Box<Iterator<Item = &Triple> + 'b> {
-        Box::new(TripleIterator { iter: self.triples.iter() })
+impl graph::Graph for MemGraph {
+    type Triple = MemGraphTriple;
+    fn iter<'a>(&'a self) -> Box<Iterator<Item = &MemGraphTriple> + 'a> {
+        let i = TripleIterator { iter: self.triples.iter() };
+        Box::new(i)
     }
     fn len(&self) -> usize {
         self.triples.len()
     }
 }
 
-impl WritableGraph for MemGraph {
+impl graph::WritableGraph for MemGraph {
     fn add_triple_si_oi(&mut self, s: &String, p: &String, o: &String) {
         let s = self.register_string(s, Which::Subject);
         let p = self.register_string(p, Which::Predicate);
         let o = self.register_string(o, Which::Object);
-        self.triples.insert(Triple {
+        self.triples.insert(MemGraphTriple {
             subject: Subject::IRI(s),
             predicate: p,
             object: Object::IRI(o),
         });
     }
-    fn add_triple(&mut self, triple: &Triple) {
-        let t = self.register_triple(&triple);
+    fn add_triple<T>(&mut self, triple: &T)
+        where T: graph::Triple
+    {
+        let t = self.register_triple(triple);
         self.triples.insert(t);
     }
-    fn remove_triple(&mut self, triple: &Triple) {
+    fn remove_triple<T>(&mut self, triple: &T)
+        where T: graph::Triple
+    {
+        let triple = MemGraphTriple::new(triple);
         if self.triples.remove(&triple) {
             self.unregister_subject(&triple.subject);
             self.unregister_predicate(&triple.predicate);
@@ -230,25 +294,39 @@ impl WritableGraph for MemGraph {
 }
 
 pub struct TripleIterator<'a> {
-    iter: btree_set::Iter<'a, Triple>,
+    iter: btree_set::Iter<'a, MemGraphTriple>,
 }
-impl<'a> Iterator for TripleIterator<'a> {
-    type Item = &'a Triple;
 
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next()
+impl Triple for MemGraphTriple {
+    fn subject(&self) -> graph::Subject {
+        match self.subject {
+            Subject::IRI(ref iri) => graph::Subject::IRI(iri.as_str()),
+            Subject::BlankNode(n) => graph::Subject::BlankNode(n),
+        }
+    }
+    fn predicate(&self) -> &str {
+        self.predicate.as_str()
+    }
+    fn object(&self) -> graph::Object {
+        match self.object {
+            Object::IRI(ref iri) => graph::Object::IRI(iri.as_str()),
+            Object::BlankNode(n) => graph::Object::BlankNode(n),
+            Object::Literal(ref l) => {
+                graph::Object::Literal(graph::Literal {
+                    lexical: l.lexical.as_str(),
+                    datatype: l.datatype.as_str(),
+                    language: l.language.as_ref().map(|l| l.as_str()),
+                })
+            }
+        }
     }
 }
 
-impl<'a> FromIterator<&'a Triple> for MemGraph {
-    fn from_iter<T>(iter: T) -> Self
-        where T: IntoIterator<Item = &'a Triple>
-    {
-        let mut g = MemGraph::new();
-        for triple in iter {
-            g.add_triple(&triple);
-        }
-        g
+impl<'a> Iterator for TripleIterator<'a> {
+    type Item = &'a MemGraphTriple;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next()
     }
 }
 
@@ -258,14 +336,27 @@ fn iter() {
     let mut b = MemGraph::new();
     let it = a.iter();
     for i in it {
-        b.add_triple(&i);
-        b.remove_triple(&i);
+        b.add_triple(i);
+        b.remove_triple(i);
     }
 }
 
-#[test]
-fn from_iter() {
-    let a = MemGraph::new();
-    let b = MemGraph::from_iter(a.iter());
-    assert_eq!(b.len(), 0);
-}
+// impl<'a, T> FromIterator<T> for MemGraph
+//    where T: Triple
+//
+//    fn from_iter<I>(iter: I) -> Self
+//        where I: IntoIterator<Item = T>
+//    {
+//        let mut g = MemGraph::new();
+//        for triple in iter {
+//            g.add_triple(&triple);
+//        }
+//        g
+//    }
+//
+// [test]
+// fn from_iter() {
+//    let a = MemGraph::new();
+//    let b = MemGraph::from_iter(a.iter());
+//    assert_eq!(b.len(), 0);
+//

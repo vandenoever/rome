@@ -3,7 +3,6 @@ use grammar_helper::*;
 use nom::IResult;
 use nom::IResult::Done;
 use nom::Needed;
-use std::rc::Rc;
 
 /// Take one character if it fits the function
 macro_rules! one_if (
@@ -21,10 +20,6 @@ macro_rules! one_if (
     }
   );
 );
-
-fn c(str: &str) -> IRI {
-    IRI::IRI(Rc::new(String::from(str)))
-}
 
 const RDF_LANG_STRING: &'static str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString";
 const XSD_STRING: &'static str = "http://www.w3.org/2001/XMLSchema#string";
@@ -77,7 +72,7 @@ named!(prefix_id<&str,Statement>, do_parse!(
     pname_ns: pname_ns >> tws >>
     iri_ref: iri_ref >> tws >>
     tag_s!(".") >>
-    (Statement::Prefix(String::from(pname_ns), iri_ref))
+    (Statement::Prefix(pname_ns, iri_ref))
 ));
 
 /// [5] base ::= '@base' IRIREF '.'
@@ -100,7 +95,7 @@ named!(sparql_prefix<&str,Statement>, do_parse!(
     tag_s!("PREFIX") >> tws >>
     pname_ns: pname_ns >> tws >>
     iri_ref: iri_ref >>
-    (Statement::Prefix(String::from(pname_ns), iri_ref))
+    (Statement::Prefix(pname_ns, iri_ref))
 ));
 
 /// [6] triples ::= subject predicateObjectList | blankNodePropertyList predicateObjectList?
@@ -168,7 +163,7 @@ named!(object_list<&str,Vec<Object>>, separated_nonempty_list!(
 named!(verb<&str,IRI>, alt!(iri|a));
 
 named!(a<&str,IRI>, value!(
-    c(RDF_TYPE),
+    IRI::IRI(RDF_TYPE),
     tag_s!("a")
 ));
 
@@ -191,7 +186,7 @@ named!(object<&str,Object>, alt!(
 ));
 
 /// [13] literal ::= RDFLiteral | NumericLiteral | BooleanLiteral
-named!(literal<&str,Literal>, alt!(rdfliteral | boolean | integer));
+named!(literal<&str,Literal>, alt!(rdfliteral | boolean | double | decimal | integer));
 
 /// [14] blankNodePropertyList ::= '[' predicateObjectList ']'
 named!(blank_node_property_list<&str,Vec<PredicatedObjects>>, do_parse!(
@@ -220,8 +215,8 @@ named!(rdfliteral<&str,Literal>, do_parse!(
             Some(RDFLiteralType::LangTag(langtag)) => {
                 Literal {
                     lexical: string,
-                    datatype: c(RDF_LANG_STRING),
-                    language: Some(langtag.to_lowercase())
+                    datatype: IRI::IRI(RDF_LANG_STRING),
+                    language: Some(langtag)
                 }
             },
             Some(RDFLiteralType::DataType(datatype)) => {
@@ -234,7 +229,7 @@ named!(rdfliteral<&str,Literal>, do_parse!(
             None => {
                 Literal {
                     lexical: string,
-                    datatype: c(XSD_STRING),
+                    datatype: IRI::IRI(XSD_STRING),
                     language: None
                 }
             }
@@ -252,15 +247,15 @@ named!(iri_ref_literal<&str,RDFLiteralType>, do_parse!(
 named!(boolean<&str,Literal>, do_parse!(
     b: alt!(tag_s!("true") | tag_s!("false")) >>
     (Literal {
-        lexical: String::from(b),
-        datatype: c(XSD_BOOLEAN),
+        lexical: b,
+        datatype: IRI::IRI(XSD_BOOLEAN),
         language: None
     })
 ));
 
 /// [17] String ::= STRING_LITERAL_QUOTE | STRING_LITERAL_SINGLE_QUOTE
 ///                 | STRING_LITERAL_LONG_SINGLE_QUOTE | STRING_LITERAL_LONG_QUOTE
-named!(string<&str,String>, alt!(string_literal_quote | string_literal_single_quote
+named!(string<&str,&str>, alt!(string_literal_quote | string_literal_single_quote
     | string_literal_long_single_quote | string_literal_long_quote));
 
 /// [135s] iri ::= IRIREF | PrefixedName
@@ -272,8 +267,8 @@ named!(prefixed_name<&str,IRI>, do_parse!(
     tag_s!(":") >>
     pn_local: opt!(pn_local) >>
     (IRI::PrefixedName(
-        String::from(pn_prefix.unwrap_or("")),
-        pn_local.unwrap_or(String::new())
+        pn_prefix.unwrap_or(""),
+        pn_local.unwrap_or("")
     ))
 ));
 
@@ -282,12 +277,8 @@ named!(blank_node<&str,BlankNode>, alt!(blank_node_label | anon));
 
 /// [18] IRIREF ::= '<' ([^#x00-#x20<>"{}|^`\] | UCHAR)* '>'
 /// #x00=NULL #01-#x1F=control codes #x20=space
-named!(iri_ref<&str,String>, delimited!(
-    tag_s!("<"),
-    map_opt!(
-        take_while_s!(is_iri_ref),
-        unescape),
-    tag_s!(">")
+named!(iri_ref<&str,&str>, delimited!(
+    tag_s!("<"),take_while_s!(is_iri_ref),tag_s!(">")
 ));
 
 /// [139s] PNAME_NS ::= PN_PREFIX? ':'
@@ -309,7 +300,7 @@ named!(blank_node_label<&str,BlankNode>, do_parse!(
             tag!("."),
             take_while_s!(is_pn_chars)
         ),(),|_,_|())
-    )) >> (BlankNode::BlankNode(String::from(label)))
+    )) >> (BlankNode::BlankNode(label))
 ));
 
 fn is_pn_chars_u_digit(c: char) -> bool {
@@ -323,28 +314,58 @@ named!(langtag<&str,RDFLiteralType>, do_parse!(
         alpha,
         opt!(tuple!(tag_s!("-"), alphanumeric))
     )) >>
-    (RDFLiteralType::LangTag(String::from(langtag)))
+    (RDFLiteralType::LangTag(langtag))
 ));
 
 /// [19] INTEGER ::= [+-]? [0-9]+
 named!(integer<&str,Literal>, map!(recognize!(tuple!(
     opt!(alt!(tag_s!("+") | tag_s!("-"))), digit)),
-    (|digit|{
+    (|integer|{
         Literal {
-            lexical: String::from(digit),
-            datatype: c(XSD_INTEGER),
+            lexical: integer,
+            datatype: IRI::IRI(XSD_INTEGER),
             language: None
         }
     })
 ));
 
 /// [20] DECIMAL ::= [+-]? [0-9]* '.' [0-9]+
+named!(decimal<&str,Literal>, map!(recognize!(tuple!(
+    opt!(alt!(tag_s!("+") | tag_s!("-"))), opt_digit, tag_s!("."), digit)),
+    (|decimal|{
+        Literal {
+            lexical: decimal,
+            datatype: IRI::IRI(XSD_DECIMAL),
+            language: None
+        }
+    })
+));
+
 /// [21] DOUBLE ::= [+-]? ([0-9]+ '.' [0-9]* EXPONENT | '.' [0-9]+ EXPONENT | [0-9]+ EXPONENT)
+named!(double<&str,Literal>, map!(recognize!(tuple!(
+    opt!(alt!(tag_s!("+") | tag_s!("-"))),
+    alt!(
+        recognize!(tuple!(digit,tag_s!("."), opt_digit, exponent)) |
+        recognize!(tuple!(opt!(tag_s!(".")), digit, exponent))
+    ))),
+    (|double|{
+        Literal {
+            lexical: double,
+            datatype: IRI::IRI(XSD_DOUBLE),
+            language: None
+        }
+    })
+));
+
 /// [154s] EXPONENT ::= [eE] [+-]? [0-9]+
+named!(exponent<&str,()>, map!(tuple!(
+    alt!(tag_s!("E") | tag_s!("e")),opt!(alt!(tag_s!("+") | tag_s!("-"))), digit),
+    (|_|())
+));
 
 /// [22] STRING_LITERAL_QUOTE ::= '"' ([^#x22#x5C#xA#xD] | ECHAR | UCHAR)* '"'
 /// /* #x22=" #x5C=\ #xA=new line #xD=carriage return */
-fn string_literal_quote(str: &str) -> IResult<&str, String> {
+fn string_literal_quote(str: &str) -> IResult<&str, &str> {
     string_literal(str, 1, start_quote, find_quote)
 }
 fn start_quote(s: &str) -> bool {
@@ -356,7 +377,7 @@ fn find_quote(s: &str) -> Option<usize> {
 
 /// [23] STRING_LITERAL_SINGLE_QUOTE ::= "'" ([^#x27#x5C#xA#xD] | ECHAR | UCHAR)* "'"
 /// /* #x27=' #x5C=\ #xA=new line #xD=carriage return */
-fn string_literal_single_quote(str: &str) -> IResult<&str, String> {
+fn string_literal_single_quote(str: &str) -> IResult<&str, &str> {
     string_literal(str, 1, start_single_quote, find_single_quote)
 }
 fn start_single_quote(s: &str) -> bool {
@@ -367,7 +388,7 @@ fn find_single_quote(s: &str) -> Option<usize> {
 }
 
 /// [24] STRING_LITERAL_LONG_SINGLE_QUOTE ::= "'''" (("'" | "''")? ([^'\] | ECHAR | UCHAR))* "'''"
-fn string_literal_long_single_quote(str: &str) -> IResult<&str, String> {
+fn string_literal_long_single_quote(str: &str) -> IResult<&str, &str> {
     string_literal(str, 3, start_long_single_quote, find_long_single_quote)
 }
 fn start_long_single_quote(s: &str) -> bool {
@@ -378,7 +399,7 @@ fn find_long_single_quote(s: &str) -> Option<usize> {
 }
 
 /// [25] STRING_LITERAL_LONG_QUOTE ::= '"""' (('"' | '""')? ([^"\] | ECHAR | UCHAR))* '"""'
-fn string_literal_long_quote(str: &str) -> IResult<&str, String> {
+fn string_literal_long_quote(str: &str) -> IResult<&str, &str> {
     string_literal(str, 3, start_long_quote, find_long_quote)
 }
 fn start_long_quote(s: &str) -> bool {
@@ -439,14 +460,14 @@ named!(pn_prefix<&str,&str>, recognize!(tuple!(
 
 /// [168s] PN_LOCAL ::= (PN_CHARS_U | ':' | [0-9] | PLX)
 ///           ((PN_CHARS | '.' | ':' | PLX)* (PN_CHARS | ':' | PLX))?
-named!(pn_local<&str,String>, map_opt!(recognize!(tuple!(
+named!(pn_local<&str,&str>, recognize!(tuple!(
     alt!(one_if!(is_pn_local_start) | plx),
     fold_many0!(alt!(pn_chars_colon | plx),(),|_,_|()),
     fold_many0!(tuple!(
         tag_s!("."),
         fold_many0!(alt!(pn_chars_colon | plx),(),|_,_|())
     ),(),|_,_|())
-)), pn_local_unescape));
+)));
 
 named!(pn_chars_colon<&str,&str>, take_while1_s!(is_pn_chars_colon));
 
@@ -499,100 +520,126 @@ fn in_range(c: char, lower: u32, upper: u32) -> bool {
 #[test]
 fn test_prefixed_name() {
     assert_eq!(prefixed_name("a:a"), Done(&""[..],
-            IRI::PrefixedName(String::from("a"),String::from("a"))));
+            IRI::PrefixedName("a","a")));
     assert_eq!(prefixed_name(": "), Done(&" "[..],
-            IRI::PrefixedName(String::new(),String::new())));
+            IRI::PrefixedName("","")));
 }
 
 named!(alpha<&str,&str>, take_while1_s!(is_alpha));
 named!(alphanumeric<&str,&str>, take_while1_s!(is_alphanum));
 named!(digit<&str,&str>, take_while1_s!(is_digit));
+named!(opt_digit<&str,&str>, take_while_s!(is_digit));
 
 #[inline]
 fn is_iri_ref(chr: char) -> bool {
     chr > ' ' && "<>\"{}|^`".find(chr) == None
 }
 
-named!(iri_iri<&str,IRI>, map!(iri_ref, |v| IRI::IRI(Rc::new(v))));
+named!(iri_iri<&str,IRI>, map!(iri_ref, |v| IRI::IRI(v)));
 
 #[test]
 fn test_iri() {
-    assert_eq!(iri("<urn:123>"), Done(&""[..],IRI::IRI(Rc::new(String::from("urn:123")))));
+    assert_eq!(iri("<urn:123>"), Done(&""[..],IRI::IRI("urn:123")));
 }
 
 #[test]
 fn test_string_literal_quote() {
-    assert_eq!(string_literal_quote("\"\\\\\""), Done(&""[..], String::from("\\")));
+    assert_eq!(string_literal_quote("\"\\\\\""), Done(&""[..], "\\\\"));
 }
 
 #[test]
 fn test_string_literal_single_quote() {
-    assert_eq!(string_literal_single_quote("''"), Done(&""[..], String::new()));
+    assert_eq!(string_literal_single_quote("''"), Done(&""[..], ""));
 }
 
 #[test]
 fn test_string_literal_long_single_quote() {
-    assert_eq!(string_literal_long_single_quote("''''''"), Done(&""[..], String::new()));
+    assert_eq!(string_literal_long_single_quote("''''''"), Done(&""[..], ""));
 }
 
 #[test]
 fn test_string_literal_long_quote() {
     assert_eq!(string_literal_long_quote("\"\"\"\\U0001f435\"\"\""), Done(&""[..],
-            String::from("🐵")));
+            "\\U0001f435"));
 }
 
 #[test]
 fn test_langtag() {
     assert_eq!(langtag("@nl "), Done(&" "[..],
-            RDFLiteralType::LangTag(String::from("nl"))));
+            RDFLiteralType::LangTag("nl")));
     assert_eq!(langtag("@nl-NL "), Done(&" "[..],
-            RDFLiteralType::LangTag(String::from("nl-NL"))));
+            RDFLiteralType::LangTag("nl-NL")));
 }
 
 #[test]
 fn test_rdfliteral() {
     let r = Literal {
-        lexical: String::new(),
-        datatype: c(XSD_STRING),
+        lexical: "",
+        datatype: IRI::IRI(XSD_STRING),
         language: None,
     };
     assert_eq!(rdfliteral("'' "), Done(&" "[..], r));
 }
 #[cfg(test)]
-fn literal_true() -> Literal {
+fn literal_true<'a>() -> Literal<'a> {
     Literal {
-        lexical: String::from("true"),
-        datatype: c(XSD_BOOLEAN),
+        lexical: "true",
+        datatype: IRI::IRI(XSD_BOOLEAN),
         language: None,
     }
 }
 #[cfg(test)]
-fn literal_false() -> Literal {
+fn literal_false<'a>() -> Literal<'a> {
     Literal {
-        lexical: String::from("false"),
-        datatype: c(XSD_BOOLEAN),
+        lexical: "false",
+        datatype: IRI::IRI(XSD_BOOLEAN),
         language: None,
     }
 }
 #[cfg(test)]
-fn literal_1() -> Literal {
+fn literal_11<'a>() -> Literal<'a> {
     Literal {
-        lexical: String::from("1"),
-        datatype: c(XSD_INTEGER),
+        lexical: "11",
+        datatype: IRI::IRI(XSD_INTEGER),
+        language: None,
+    }
+}
+#[cfg(test)]
+fn literal_d11<'a>() -> Literal<'a> {
+    Literal {
+        lexical: "11.1",
+        datatype: IRI::IRI(XSD_DECIMAL),
         language: None,
     }
 }
 
 #[test]
 fn test_integer() {
-    assert_eq!(integer("1"), Done(&""[..], literal_1()));
-    assert_eq!(integer("+1"), Done(&""[..], Literal{
-            lexical:String::from("+1"),
-            datatype: c(XSD_INTEGER),
+    assert_eq!(literal("11 "), Done(&" "[..], literal_11()));
+    assert_eq!(literal("+1 "), Done(&" "[..], Literal{
+            lexical: "+1",
+            datatype: IRI::IRI(XSD_INTEGER),
             language: None}));
-    assert_eq!(integer("-1"), Done(&""[..], Literal{
-     lexical:String::from("-1"),
-     datatype: c(XSD_INTEGER),
+    assert_eq!(integer("-1 "), Done(&" "[..], Literal{
+     lexical: "-1",
+     datatype: IRI::IRI(XSD_INTEGER),
+     language: None}));
+}
+
+#[test]
+fn test_decimal() {
+    assert_eq!(literal("11.1 "), Done(&" "[..], literal_d11()));
+    assert_eq!(literal("+1.1 "), Done(&" "[..], Literal{
+            lexical: "+1.1",
+            datatype: IRI::IRI(XSD_DECIMAL),
+            language: None}));
+    assert_eq!(literal("-1.1 "), Done(&" "[..], Literal{
+     lexical: "-1.1",
+     datatype: IRI::IRI(XSD_DECIMAL),
+     language: None}));
+    assert_eq!(literal(".1 "), Done(&" "[..], Literal{
+     lexical: ".1",
+     datatype: IRI::IRI(XSD_DECIMAL),
      language: None}));
 }
 
@@ -612,43 +659,43 @@ fn test_literal() {
 fn test_object_list() {
     let v = vec![
     Object::Literal(literal_true()),
-    Object::Literal(literal_1()),
+    Object::Literal(literal_11()),
     Object::Literal(literal_false())];
-    assert_eq!(object_list("true, 1 , false"), Done(&""[..],v));
+    assert_eq!(object_list("true, 11 , false"), Done(&""[..],v));
 }
 
 #[test]
 fn test_predicated_objects() {
     let v = vec![Object::Literal(Literal{
-            lexical:String::from("1"),
-            datatype: c(XSD_INTEGER),
+            lexical: "1",
+            datatype: IRI::IRI(XSD_INTEGER),
             language: None})];
     let po = PredicatedObjects {
-        verb: IRI::IRI(Rc::new(String::from("urn:123"))),
+        verb: IRI::IRI("urn:123"),
         objects: v,
     };
-    assert_eq!(predicated_objects_list("<urn:123> 1"), Done(&""[..],vec![po]));
+    assert_eq!(predicated_objects_list("<urn:123> 1 "), Done(&" "[..],vec![po]));
 }
 
 #[test]
 fn test_triples() {
     let v = vec![Object::Literal(Literal{
-            lexical:String::from("1"),
-            datatype: c(XSD_INTEGER),
+            lexical: "1",
+            datatype: IRI::IRI(XSD_INTEGER),
             language: None})];
-    let i = IRI::IRI(Rc::new(String::from("urn:123")));
+    let i = IRI::IRI("urn:123");
     let s = Subject::IRI(i.clone());
     let po = vec![PredicatedObjects{verb:i.clone(),objects:v}];
     let t = Triples {
         subject: s,
         predicated_objects_list: po,
     };
-    assert_eq!(triples("<urn:123> <urn:123> 1"), Done(&""[..],t));
+    assert_eq!(triples("<urn:123> <urn:123> 1 "), Done(&" "[..],t));
 }
 
 #[test]
 fn test_statement_triples() {
-    let i = IRI::PrefixedName(String::new(), String::new());
+    let i = IRI::PrefixedName("", "");
     let s = Subject::IRI(i.clone());
     let po = vec![PredicatedObjects{verb:i.clone(),objects:vec![Object::IRI(i.clone())]}];
     let t = Triples {
@@ -662,23 +709,23 @@ fn test_statement_triples() {
 #[test]
 fn test_prefix_id() {
     assert_eq!(prefix_id("@prefix a.b.c: <urn> ."),
-        Done(&""[..],Statement::Prefix(String::from("a.b.c"),String::from("urn"))));
+        Done(&""[..],Statement::Prefix("a.b.c","urn")));
     assert_eq!(prefix_id("@prefix : <urn> ."),
-        Done(&""[..],Statement::Prefix(String::from(""),String::from("urn"))));
+        Done(&""[..],Statement::Prefix("","urn")));
 }
 
 #[test]
 fn test_base() {
-    assert_eq!(base("@base <urn> ."), Done(&""[..],Statement::Base(String::from("urn"))));
+    assert_eq!(base("@base <urn> ."), Done(&""[..],Statement::Base("urn")));
 }
 
 #[test]
 fn test_sparql_base() {
-    assert_eq!(sparql_base("BASE <urn>"), Done(&""[..],Statement::Base(String::from("urn"))));
+    assert_eq!(sparql_base("BASE <urn>"), Done(&""[..],Statement::Base("urn")));
 }
 
 #[test]
 fn test_sparql_prefix() {
     assert_eq!(sparql_prefix("PREFIX a.b.c: <urn>"),
-        Done(&""[..],Statement::Prefix(String::from("a.b.c"),String::from("urn"))));
+        Done(&""[..],Statement::Prefix("a.b.c","urn")));
 }

@@ -26,7 +26,7 @@ use graph::{WritableGraph, Graph};
 use mem_graph::MemGraph;
 use std::collections::HashMap;
 
-pub fn parse(data: &str) -> Result<(MemGraph, HashMap<String, String>), String> {
+pub fn parse(data: &str) -> Result<(MemGraph, HashMap<&str, String>), String> {
     let mut graph = MemGraph::new();
     let mut triples = try!(TripleIterator::new(data));
     while let Some(triple) = triples.next() {

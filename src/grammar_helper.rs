@@ -8,13 +8,13 @@ pub fn string_literal(str: &str,
                       ql: usize,
                       starts_with: fn(&str) -> bool,
                       find: fn(&str) -> Option<usize>)
-                      -> IResult<&str, String> {
+                      -> IResult<&str, &str> {
     if !starts_with(str) {
         return IResult::Error(ErrorKind::Custom(0));
     }
     let hay = &str[ql..];
     if starts_with(hay) {
-        return IResult::Done(&hay[ql..], String::new());
+        return IResult::Done(&hay[ql..], "");
     }
     let mut offset = 0;
     loop {
@@ -29,14 +29,7 @@ pub fn string_literal(str: &str,
             return IResult::Incomplete(Needed::Unknown);
         }
     }
-    nom_unescape(&hay[offset + ql..], &hay[..offset])
-}
-
-fn nom_unescape<'a>(left: &'a str, data: &str) -> IResult<&'a str, String> {
-    match unescape(data) {
-        Some(result) => IResult::Done(left, result),
-        None => return IResult::Error(ErrorKind::Custom(0)),
-    }
+    IResult::Done(&hay[offset + ql..], &hay[..offset])
 }
 
 fn escaped(hay: &[u8], offset: usize) -> bool {
@@ -60,8 +53,8 @@ fn hex_to_char(chars: &mut Chars, n: u8) -> Option<char> {
 
 /// [26] UCHAR ::= '\u' HEX HEX HEX HEX | '\U' HEX HEX HEX HEX HEX HEX HEX HEX
 /// [159s] ECHAR ::= '\' [tbnrf"'\]
-pub fn unescape(s: &str) -> Option<String> {
-    let mut result = String::with_capacity(s.len());
+pub fn unescape(s: &str, result: &mut String) -> Result<(), String> {
+    // let mut result = String::with_capacity(s.len());
     let mut chars = s.chars();
     while let Some(ch) = chars.next() {
         if ch == '\\' {
@@ -77,33 +70,32 @@ pub fn unescape(s: &str) -> Option<String> {
             };
             match r {
                 Some(v) => result.push(v),
-                None => return None,
+                None => return Err(String::from("Unclosed escape sequence")),
             }
         } else {
             result.push(ch)
         }
     }
-    Some(result)
+    Ok(())
 }
 
-pub fn pn_local_unescape(s: &str) -> Option<String> {
-    let mut result = String::with_capacity(s.len());
+pub fn pn_local_unescape(s: &str, result: &mut String) -> Result<(), String> {
     let mut chars = s.chars();
     while let Some(ch) = chars.next() {
         if ch == '\\' {
             // simply remove \
             match chars.next() {
                 Some(v) => result.push(v),
-                None => return None,
+                None => return Err(String::from("Error escaping local")),
             }
         } else if ch == '%' {
             match hex_to_char(&mut chars, 2) {
                 Some(v) => result.push(v),
-                None => return None,
+                None => return Err(String::from("Error escaping local hex")),
             }
         } else {
             result.push(ch)
         }
     }
-    Some(result)
+    Ok(())
 }

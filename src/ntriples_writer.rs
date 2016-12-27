@@ -27,7 +27,7 @@ pub fn write_ntriples<G, W>(triples: &G, writer: &mut W) -> Result<()>
 impl<'a, W> NTripleWriter<'a, W>
     where W: Write + 'a
 {
-    fn write_iri(&mut self, iri: &String) -> Result<()> {
+    fn write_iri(&mut self, iri: &str) -> Result<()> {
         try!(self.writer.write_all(b"<"));
         self.buffer.clear();
         for b in iri.as_bytes() {
@@ -45,7 +45,7 @@ impl<'a, W> NTripleWriter<'a, W>
         try!(write!(self.writer, "{}_{}", blank_node.1, blank_node.0));
         Ok(())
     }
-    fn write_literal_value(&mut self, value: &String) -> Result<()> {
+    fn write_literal_value(&mut self, value: &str) -> Result<()> {
         self.buffer.clear();
         for b in value.as_bytes() {
             if *b == 0x22 || *b == 0x5C || *b == 0x0A || *b == 0x0D {
@@ -62,7 +62,7 @@ impl<'a, W> NTripleWriter<'a, W>
         if let Some(ref langtag) = literal.language {
             try!(self.writer.write_all(b"@"));
             try!(self.writer.write_all(langtag.as_bytes()));
-        } else if literal.datatype.as_str() != "http://www.w3.org/2001/XMLSchema#string" {
+        } else if literal.datatype != "http://www.w3.org/2001/XMLSchema#string" {
             try!(self.writer.write_all(b"^^"));
             try!(self.write_iri(&literal.datatype));
         }
@@ -75,7 +75,7 @@ impl<'a, W> NTripleWriter<'a, W>
             &Subject::BlankNode(blank_node) => self.write_blank_node(&blank_node),
         }
     }
-    fn write_predicate(&mut self, predicate: &String) -> Result<()> {
+    fn write_predicate(&mut self, predicate: &str) -> Result<()> {
         self.write_iri(predicate)
     }
     fn write_object(&mut self, object: &Object) -> Result<()> {
@@ -85,12 +85,14 @@ impl<'a, W> NTripleWriter<'a, W>
             &Object::Literal(ref literal) => self.write_literal(&literal),
         }
     }
-    fn write_ntriple(&mut self, triple: &Triple) -> Result<()> {
-        try!(self.write_subject(&triple.subject));
+    fn write_ntriple<T>(&mut self, triple: &T) -> Result<()>
+        where T: Triple
+    {
+        try!(self.write_subject(&triple.subject()));
         try!(self.writer.write_all(b" "));
-        try!(self.write_predicate(&triple.predicate));
+        try!(self.write_predicate(&triple.predicate()));
         try!(self.writer.write_all(b" "));
-        try!(self.write_object(&triple.object));
+        try!(self.write_object(&triple.object()));
         self.writer.write_all(b" .\n")
     }
 }

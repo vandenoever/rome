@@ -1,63 +1,81 @@
 use std::rc::Rc;
 
+#[derive(PartialEq,Eq)]
+pub struct Triple<'a> {
+    pub subject: SingleSubject<'a>,
+    pub predicate: IRI<'a>,
+    pub object: SingleObject<'a>,
+}
+
 #[derive(Debug,PartialEq,Eq,Clone)]
-pub enum IRI {
-    IRI(Rc<String>),
-    PrefixedName(String, String),
+pub enum SingleSubject<'a> {
+    IRI(IRI<'a>),
+    BlankNode(usize),
 }
 
 #[derive(Debug,PartialEq,Eq)]
-pub enum RDFLiteralType {
-    LangTag(String),
-    DataType(IRI),
+pub enum SingleObject<'a> {
+    IRI(IRI<'a>),
+    BlankNode(usize),
+    Literal(Literal<'a>),
 }
 
-#[derive(Debug,PartialEq)]
-pub struct Literal {
-    pub lexical: String,
-    pub datatype: IRI,
-    pub language: Option<String>,
+#[derive(Debug,PartialEq,Eq,Clone)]
+pub enum IRI<'a> {
+    IRI(&'a str),
+    PrefixedName(&'a str, &'a str),
 }
 
 #[derive(Debug,PartialEq,Eq)]
-pub enum BlankNode {
+pub enum RDFLiteralType<'a> {
+    LangTag(&'a str),
+    DataType(IRI<'a>),
+}
+
+#[derive(Debug,PartialEq,Eq)]
+pub struct Literal<'a> {
+    pub lexical: &'a str,
+    pub datatype: IRI<'a>,
+    pub language: Option<&'a str>,
+}
+
+#[derive(Debug,PartialEq,Eq)]
+pub enum BlankNode<'a> {
     Anon,
-    BlankNode(String),
+    BlankNode(&'a str),
 }
 
 #[derive(Debug,PartialEq,Eq)]
-pub enum Subject {
-    IRI(IRI),
-    BlankNode(BlankNode),
-    Collection(Vec<Object>),
+pub enum Subject<'a> {
+    IRI(IRI<'a>),
+    BlankNode(BlankNode<'a>),
+    Collection(Vec<Object<'a>>),
 }
 
 #[derive(Debug,PartialEq,Eq)]
-pub enum Object {
-    IRI(IRI),
-    BlankNode(BlankNode),
-    Collection(Vec<Object>),
-    BlankNodePropertyList(Vec<PredicatedObjects>),
-    Literal(Literal),
+pub enum Object<'a> {
+    IRI(IRI<'a>),
+    BlankNode(BlankNode<'a>),
+    Collection(Vec<Object<'a>>),
+    BlankNodePropertyList(Vec<PredicatedObjects<'a>>),
+    Literal(Literal<'a>),
 }
 
 #[derive(Debug,PartialEq,Eq)]
-pub struct PredicatedObjects {
-    pub verb: IRI,
-    pub objects: Vec<Object>,
+pub struct PredicatedObjects<'a> {
+    pub verb: IRI<'a>,
+    pub objects: Vec<Object<'a>>,
 }
 
 #[derive(Debug,PartialEq,Eq)]
-pub struct Triples {
-    pub subject: Subject,
-    pub predicated_objects_list: Vec<PredicatedObjects>,
+pub struct Triples<'a> {
+    pub subject: Subject<'a>,
+    pub predicated_objects_list: Vec<PredicatedObjects<'a>>,
 }
 
 #[derive(Debug,PartialEq,Eq)]
-pub enum Statement {
-    Prefix(String, String),
-    Base(String),
-    Triples(Triples),
+pub enum Statement<'a> {
+    Prefix(&'a str, &'a str),
+    Base(&'a str),
+    Triples(Triples<'a>),
 }
-
-impl Eq for Literal {}
