@@ -1,6 +1,7 @@
 use std::mem;
 use std::slice;
 use std::rc::Rc;
+use std::iter;
 use grammar;
 use graph;
 use string_collector::*;
@@ -253,17 +254,54 @@ impl graph::Triple for GraphTriple {
     }
 }
 
+pub struct TakeWhileSubject<'a> {
+    iter: GraphIterator<'a>,
+    end: Triple64,
+}
+
+impl<'a> Iterator for TakeWhileSubject<'a> {
+    type Item = GraphTriple;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next().and_then(|t| if t.triple < self.end { Some(t) } else { None })
+    }
+}
+
 impl Graph {
-    // pub fn iter<'a>(&'a self) -> Box<Iterator<Item = &GraphTriple> + 'a> {
-    // Box::new(GraphIterator {
-    // strings: self.strings.clone(),
-    // iter: self.triples.iter(),
-    // })
-    // }
-    // pub fn len(&self) -> usize {
-    // self.triples.len()
-    // }
-    //
+    /// iterator over all triples with the same subject
+    fn iter_subject(&self, triple: Triple64) -> TakeWhileSubject {
+        let slice = match self.triples.binary_search(&triple) {
+            Ok(pos) => &self.triples[pos..pos],
+            Err(pos) => &self.triples[pos..pos],
+        };
+        let mut end = triple;
+        end.set_subject(triple.subject() + 1);
+        TakeWhileSubject {
+            iter: GraphIterator {
+                strings: self.strings.clone(),
+                iter: slice.iter(),
+            },
+            end: end,
+        }
+    }
+    /// iterator over all triples with the same subject
+    pub fn iter_subject_iri(&self, iri: &str) -> TakeWhileSubject {
+        match self.strings.find(iri) {
+            None => {
+                let end = Triple64::triple(true, 0, 0, TripleObjectType::BlankNode, 0, 0);
+                TakeWhileSubject {
+                    iter: GraphIterator {
+                        strings: self.strings.clone(),
+                        iter: self.triples[0..0].iter(),
+                    },
+                    end: end,
+                }
+            }
+            Some(id) => {
+                let triple = Triple64::triple(true, id.id, 0, TripleObjectType::BlankNode, 0, 0);
+                self.iter_subject(triple)
+            }
+        }
+    }
 }
 
 impl<'a> graph::Graph<'a> for Graph {

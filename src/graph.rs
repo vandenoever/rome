@@ -24,20 +24,20 @@ pub trait Triple {
     fn object(&self) -> Object;
 }
 
-#[derive(PartialEq,Eq,Hash,Clone,PartialOrd,Ord)]
+#[derive(PartialEq,Eq,Hash,Clone,PartialOrd,Ord,Debug)]
 pub enum Subject<'a> {
     IRI(&'a str),
     BlankNode(BlankNode),
 }
 
-#[derive(PartialEq,Eq,Hash,Clone,PartialOrd,Ord)]
+#[derive(PartialEq,Eq,Hash,Clone,PartialOrd,Ord,Debug)]
 pub struct Literal<'a> {
     pub lexical: &'a str,
     pub datatype: &'a str,
     pub language: Option<&'a str>,
 }
 
-#[derive(PartialEq,Eq,Hash,Clone,PartialOrd,Ord)]
+#[derive(PartialEq,Eq,Hash,Clone,PartialOrd,Ord,Debug)]
 pub enum Object<'a> {
     IRI(&'a str),
     BlankNode(BlankNode),
