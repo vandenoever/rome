@@ -6,7 +6,7 @@ pub type Result<T> = result::Result<T, Error>;
 #[derive (Debug)]
 pub enum Error {
     IOError(io::Error),
-    Custom(&'static str)
+    Custom(&'static str),
 }
 
 impl From<io::Error> for Error {

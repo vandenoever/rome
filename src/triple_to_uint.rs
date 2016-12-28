@@ -6,7 +6,9 @@ pub enum TripleObjectType {
     LiteralLang,
 }
 
-pub trait CompactTriple<T> {
+pub trait CompactTriple<T>
+    where T: Ord + Copy
+{
     fn triple(subject_is_iri: bool,
               subject: T,
               predicate: T,
@@ -19,6 +21,7 @@ pub trait CompactTriple<T> {
     fn subject_is_iri(&self) -> bool;
     fn object_is_blank_node(&self) -> bool;
     fn object_is_iri(&self) -> bool;
+    fn object_type(&self) -> TripleObjectType;
     fn has_language(&self) -> bool;
     fn subject(&self) -> T;
     fn predicate(&self) -> T;
@@ -131,6 +134,14 @@ impl CompactTriple<u32> for $name {
     fn object_is_blank_node(&self) -> bool {
         (self.value >> $object_type_offset) & 3 == 0
     }
+    fn object_type(&self) -> TripleObjectType {
+        match (self.value >> $object_type_offset) & 3 {
+            0 => TripleObjectType::BlankNode,
+            1 => TripleObjectType::IRI,
+            2 => TripleObjectType::Literal,
+            _ => TripleObjectType::LiteralLang,
+        }
+    }
     fn has_language(&self) -> bool {
         (self.value >> $object_type_offset) & 3 == 2
     }
@@ -151,8 +162,8 @@ impl CompactTriple<u32> for $name {
     };
 }
 
-triple64!(Triple64SPO, 45, 27,  7);
-triple64!(Triple64OPS,  7, 27, 45);
+triple64!(Triple64SPO, 45, 27, 7);
+triple64!(Triple64OPS, 7, 27, 45);
 
 #[test]
 fn test_triple1() {

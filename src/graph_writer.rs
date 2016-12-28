@@ -17,7 +17,8 @@ pub struct GraphWriter {
 }
 pub struct Graph {
     strings: Rc<StringCollection>,
-    triples: Vec<Triple64SPO>,
+    spo: Vec<Triple64SPO>,
+    ops: Vec<Triple64OPS>,
 }
 
 fn translate<T>(t: &mut T, translation: &Vec<StringId>)
@@ -184,33 +185,52 @@ impl GraphWriter {
 
     pub fn collect(&mut self) -> Graph {
         let (translation, string_collection) = self.string_collector.collect();
-        let mut triples = Vec::new();
-        mem::swap(&mut triples, &mut self.triples);
-        for t in triples.iter_mut() {
+        let mut spo = Vec::new();
+        mem::swap(&mut spo, &mut self.triples);
+        for t in spo.iter_mut() {
             translate(t, &translation);
         }
         // sort according to StringId, which is sorted alphabetically
-        triples.sort();
-        triples.dedup();
+        spo.sort();
+        spo.dedup();
+        spo.shrink_to_fit();
+        let ops = create_ops(&spo);
         Graph {
             strings: Rc::new(string_collection),
-            triples: triples,
+            spo: spo,
+            ops: ops,
         }
     }
 }
 
-pub struct GraphTriple {
-    strings: Rc<StringCollection>,
-    triple: Triple64SPO,
+fn create_ops(spo: &[Triple64SPO]) -> Vec<Triple64OPS> {
+    let mut ops = Vec::with_capacity(spo.len());
+    for t in spo {
+        ops.push(Triple64OPS::triple(t.subject_is_iri(),
+                                     t.subject(),
+                                     t.predicate(),
+                                     t.object_type(),
+                                     t.object(),
+                                     t.datatype_or_lang()));
+    }
+    ops.sort();
+    ops
 }
 
-struct GraphIterator<'a> {
+pub struct GraphTriple<T> {
     strings: Rc<StringCollection>,
-    iter: slice::Iter<'a, Triple64SPO>,
+    triple: T,
 }
 
-impl<'a> Iterator for GraphIterator<'a> {
-    type Item = GraphTriple;
+struct GraphIterator<'a, T: 'a> {
+    strings: Rc<StringCollection>,
+    iter: slice::Iter<'a, T>,
+}
+
+impl<'a, T> Iterator for GraphIterator<'a, T>
+    where T: Copy
+{
+    type Item = GraphTriple<T>;
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next().map(|t| {
             GraphTriple {
@@ -221,7 +241,9 @@ impl<'a> Iterator for GraphIterator<'a> {
     }
 }
 
-impl graph::Triple for GraphTriple {
+impl<T> graph::Triple for GraphTriple<T>
+    where T: CompactTriple<u32>
+{
     fn subject(&self) -> graph::Subject {
         if self.triple.subject_is_iri() {
             graph::Subject::IRI(self.strings.get(StringId { id: self.triple.subject() }))
@@ -253,65 +275,98 @@ impl graph::Triple for GraphTriple {
     }
 }
 
-pub struct TakeWhileSubject<'a> {
-    iter: GraphIterator<'a>,
-    end: Triple64SPO,
+pub struct TripleRangeIterator<'a, T: 'a>
+    where T: CompactTriple<u32>
+{
+    strings: Rc<StringCollection>,
+    iter: slice::Iter<'a, T>,
+    end: T,
 }
 
-impl<'a> Iterator for TakeWhileSubject<'a> {
-    type Item = GraphTriple;
+impl<'a, T> Iterator for TripleRangeIterator<'a, T>
+    where T: Ord + CompactTriple<u32> + Copy
+{
+    type Item = GraphTriple<T>;
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().and_then(|t| if t.triple < self.end { Some(t) } else { None })
+        match self.iter.next() {
+            Some(t) if *t < self.end => {
+                Some(GraphTriple {
+                    strings: self.strings.clone(),
+                    triple: *t,
+                })
+            }
+            _ => None,
+        }
     }
 }
 
 impl Graph {
-    /// iterator over all triples with the same subject
-    fn iter_subject(&self, triple: Triple64SPO) -> TakeWhileSubject {
-        let slice = match self.triples.binary_search(&triple) {
-            Ok(pos) => &self.triples[pos..pos],
-            Err(pos) => &self.triples[pos..pos],
+    fn range_iter<'a, T>(&self, index: &'a [T], start: &T, end: &T) -> TripleRangeIterator<'a, T>
+        where T: CompactTriple<u32> + Ord + Copy
+    {
+        let slice = match index.binary_search(&start) {
+            Ok(pos) => &index[pos..pos],
+            Err(pos) => &index[pos..pos],
         };
-        let mut end = triple;
-        end.set_subject(triple.subject() + 1);
-        TakeWhileSubject {
-            iter: GraphIterator {
-                strings: self.strings.clone(),
-                iter: slice.iter(),
-            },
+        TripleRangeIterator {
+            strings: self.strings.clone(),
+            iter: slice.iter(),
+            end: *end,
+        }
+    }
+    fn empty_range_iter<T>(&self) -> TripleRangeIterator<T>
+        where T: CompactTriple<u32> + Ord
+    {
+        let end = T::triple(true, 0, 0, TripleObjectType::BlankNode, 0, 0);
+        TripleRangeIterator {
+            strings: self.strings.clone(),
+            iter: [].iter(),
             end: end,
         }
     }
     /// iterator over all triples with the same subject
-    pub fn iter_subject_iri(&self, iri: &str) -> TakeWhileSubject {
+    fn iter_subject(&self, triple: Triple64SPO) -> TripleRangeIterator<Triple64SPO> {
+        let mut end = triple;
+        end.set_subject(triple.subject() + 1);
+        self.range_iter(&self.spo, &triple, &end)
+    }
+    /// iterator over all triples with the same subject
+    pub fn iter_subject_iri(&self, iri: &str) -> TripleRangeIterator<Triple64SPO> {
         match self.strings.find(iri) {
-            None => {
-                let end = Triple64SPO::triple(true, 0, 0, TripleObjectType::BlankNode, 0, 0);
-                TakeWhileSubject {
-                    iter: GraphIterator {
-                        strings: self.strings.clone(),
-                        iter: self.triples[0..0].iter(),
-                    },
-                    end: end,
-                }
-            }
+            None => self.empty_range_iter(),
             Some(id) => {
                 let triple = Triple64SPO::triple(true, id.id, 0, TripleObjectType::BlankNode, 0, 0);
                 self.iter_subject(triple)
             }
         }
     }
+    /// iterator over all triples with the same object
+    fn iter_object(&self, triple: Triple64OPS) -> TripleRangeIterator<Triple64OPS> {
+        let mut end = triple;
+        end.set_object(triple.object() + 1);
+        self.range_iter(&self.ops, &triple, &end)
+    }
+    /// iterator over all triples with the same object
+    pub fn iter_object_iri(&self, iri: &str) -> TripleRangeIterator<Triple64OPS> {
+        match self.strings.find(iri) {
+            None => self.empty_range_iter(),
+            Some(id) => {
+                let triple = Triple64OPS::triple(true, 0, 0, TripleObjectType::IRI, id.id, 0);
+                self.iter_object(triple)
+            }
+        }
+    }
 }
 
 impl<'a> graph::Graph<'a> for Graph {
-    type Triple = GraphTriple;
+    type Triple = GraphTriple<Triple64SPO>;
     fn iter(&'a self) -> Box<Iterator<Item = Self::Triple> + 'a> {
         Box::new(GraphIterator {
             strings: self.strings.clone(),
-            iter: self.triples.iter(),
+            iter: self.spo.iter(),
         })
     }
     fn len(&self) -> usize {
-        self.triples.len()
+        self.spo.len()
     }
 }
