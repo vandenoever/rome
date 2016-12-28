@@ -3,6 +3,7 @@ use nom::ErrorKind;
 use nom::Needed;
 use std::char;
 use std::str::Chars;
+use error::{Error, Result};
 
 pub fn string_literal(str: &str,
                       ql: usize,
@@ -53,7 +54,7 @@ fn hex_to_char(chars: &mut Chars, n: u8) -> Option<char> {
 
 /// [26] UCHAR ::= '\u' HEX HEX HEX HEX | '\U' HEX HEX HEX HEX HEX HEX HEX HEX
 /// [159s] ECHAR ::= '\' [tbnrf"'\]
-pub fn unescape(s: &str, result: &mut String) -> Result<(), String> {
+pub fn unescape(s: &str, result: &mut String) -> Result<()> {
     // let mut result = String::with_capacity(s.len());
     let mut chars = s.chars();
     while let Some(ch) = chars.next() {
@@ -70,7 +71,7 @@ pub fn unescape(s: &str, result: &mut String) -> Result<(), String> {
             };
             match r {
                 Some(v) => result.push(v),
-                None => return Err(String::from("Unclosed escape sequence")),
+                None => return Err(Error::Custom("Unclosed escape sequence")),
             }
         } else {
             result.push(ch)
@@ -79,19 +80,19 @@ pub fn unescape(s: &str, result: &mut String) -> Result<(), String> {
     Ok(())
 }
 
-pub fn pn_local_unescape(s: &str, result: &mut String) -> Result<(), String> {
+pub fn pn_local_unescape(s: &str, result: &mut String) -> Result<()> {
     let mut chars = s.chars();
     while let Some(ch) = chars.next() {
         if ch == '\\' {
             // simply remove \
             match chars.next() {
                 Some(v) => result.push(v),
-                None => return Err(String::from("Error escaping local")),
+                None => return Err(Error::Custom("Error escaping local")),
             }
         } else if ch == '%' {
             match hex_to_char(&mut chars, 2) {
                 Some(v) => result.push(v),
-                None => return Err(String::from("Error escaping local hex")),
+                None => return Err(Error::Custom("Error escaping local hex")),
             }
         } else {
             result.push(ch)

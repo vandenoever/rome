@@ -8,6 +8,7 @@ use std::fs::File;
 
 mod unsafe_key;
 pub mod triple_stream;
+pub mod error;
 mod grammar;
 mod grammar_structs;
 mod grammar_helper;
@@ -25,8 +26,9 @@ use triple_stream::*;
 use graph::{WritableGraph, Graph};
 use mem_graph::MemGraph;
 use std::collections::HashMap;
+pub use error::Result;
 
-pub fn parse(data: &str) -> Result<(MemGraph, HashMap<String, String>), String> {
+pub fn parse(data: &str) -> Result<(MemGraph, HashMap<String, String>)> {
     let mut graph = MemGraph::new();
     let mut triples = try!(TripleIterator::new(data));
     while let Some(triple) = triples.next() {
@@ -35,7 +37,7 @@ pub fn parse(data: &str) -> Result<(MemGraph, HashMap<String, String>), String> 
     Ok((graph, triples.prefixes()))
 }
 
-pub fn parse2(data: &str) -> Result<(graph_writer::Graph, HashMap<String, String>), String> {
+pub fn parse2(data: &str) -> Result<(graph_writer::Graph, HashMap<String, String>)> {
     let mut writer = graph_writer::GraphWriter::with_capacity(65000);
     let mut triples = try!(TripleIterator::new(data));
     while let Some(triple) = triples.next() {
@@ -44,36 +46,22 @@ pub fn parse2(data: &str) -> Result<(graph_writer::Graph, HashMap<String, String
     Ok((writer.collect(), triples.prefixes()))
 }
 
-pub fn run(path: &str) -> io::Result<graph_writer::Graph> {
+pub fn run(path: &str) -> Result<graph_writer::Graph> {
     let mut s = String::new();
     let mut f = try!(File::open(path));
     try!(f.read_to_string(&mut s));
-    match parse(s.as_str()) {
-        Ok((graph, _)) => {
-            let stdout = io::stdout();
-            let mut handle = stdout.lock();
-            try!(ntriples_writer::write_ntriples(graph.iter(), &mut handle));
-        }
-        Err(e) => {
-            println!("{}", e);
-            return Err(io::Error::new(io::ErrorKind::Other, e));
-        }
-    }
+    let (graph, _) = try!(parse(s.as_str()));
+    let stdout = io::stdout();
+    let mut handle = stdout.lock();
+    try!(ntriples_writer::write_ntriples(graph.iter(), &mut handle));
     run2(s)
 }
-fn run2(s: String) -> io::Result<graph_writer::Graph> {
-    match parse2(s.as_str()) {
-        Ok((graph, _)) => {
-            let stdout = io::stdout();
-            let mut handle = stdout.lock();
-            try!(ntriples_writer::write_ntriples(graph.iter(), &mut handle));
-            Ok(graph)
-        }
-        Err(e) => {
-            println!("{}", e);
-            Err(io::Error::new(io::ErrorKind::Other, e))
-        }
-    }
+fn run2(s: String) -> Result<graph_writer::Graph> {
+    let (graph, _) = try!(parse2(s.as_str()));
+    let stdout = io::stdout();
+    let mut handle = stdout.lock();
+    try!(ntriples_writer::write_ntriples(graph.iter(), &mut handle));
+    Ok(graph)
 }
 
 #[test]

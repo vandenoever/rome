@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use nom::IResult;
 use graph;
 use std::rc::Rc;
+use error::{Error, Result};
 
 struct StatementIterator<'a> {
     src: &'a str,
@@ -12,7 +13,7 @@ struct StatementIterator<'a> {
 }
 
 impl<'a> StatementIterator<'a> {
-    pub fn new(src: &str) -> Result<StatementIterator, String> {
+    pub fn new(src: &str) -> Result<StatementIterator> {
         match tws(src) {
             IResult::Done(left, _) => {
                 Ok(StatementIterator {
@@ -20,7 +21,7 @@ impl<'a> StatementIterator<'a> {
                     done: false,
                 })
             }
-            IResult::Error(_) => return Err(String::from("cannot start parsing")),
+            IResult::Error(_) => return Err(Error::Custom("cannot start parsing")),
             IResult::Incomplete(_) => {
                 return Ok(StatementIterator {
                     src: src,
@@ -32,7 +33,7 @@ impl<'a> StatementIterator<'a> {
 }
 
 impl<'a> Iterator for StatementIterator<'a> {
-    type Item = Result<Statement<'a>, String>;
+    type Item = Result<Statement<'a>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.done {
@@ -45,7 +46,7 @@ impl<'a> Iterator for StatementIterator<'a> {
                 self.src = left;
             }
             IResult::Error(_) => {
-                r = Some(Err(String::from("error parsing")));
+                r = Some(Err(Error::Custom("error parsing")));
                 self.done = true;
             }
             IResult::Incomplete(_) => {
@@ -58,7 +59,7 @@ impl<'a> Iterator for StatementIterator<'a> {
                 self.src = left;
             }
             IResult::Error(_) => {
-                r = Some(Err(String::from("error parsing")));
+                r = Some(Err(Error::Custom("error parsing")));
                 self.done = true;
             }
             IResult::Incomplete(_) => {
@@ -145,7 +146,7 @@ pub struct TripleIterator<'a> {
 }
 
 impl<'a> TripleIterator<'a> {
-    pub fn new(src: &str) -> Result<TripleIterator, String> {
+    pub fn new(src: &str) -> Result<TripleIterator> {
         let rc = Rc::new(String::new());
         Ok(TripleIterator {
             statement_iterator: try!(StatementIterator::new(src)),
@@ -173,7 +174,7 @@ impl<'a> TripleIterator<'a> {
         let value = resolve_iri_ref(value);
         self.prefixes.insert(prefix, value);
     }
-    fn fill_buffer(&mut self) -> Result<usize, String> {
+    fn fill_buffer(&mut self) -> Result<usize> {
         while let Some(statement) = self.statement_iterator.next() {
             match statement {
                 Ok(Statement::Prefix(prefix, iri)) => {
@@ -198,7 +199,7 @@ impl<'a> TripleIterator<'a> {
 fn resolve_triple(triple: Triple,
                   prefixes: &HashMap<&str, String>,
                   strings: &mut Strings)
-                  -> Result<IteratorTriple, String> {
+                  -> Result<IteratorTriple> {
     Ok(IteratorTriple {
         subject: match triple.subject {
             SingleSubject::IRI(iri) => {
@@ -245,16 +246,13 @@ fn resolve_triple(triple: Triple,
         },
     })
 }
-fn unescape_literal(string: &str, to: &mut Rc<String>) -> Result<(), String> {
+fn unescape_literal(string: &str, to: &mut Rc<String>) -> Result<()> {
     let p = Rc::make_mut(to);
     p.clear();
     try!(unescape(string, p));
     Ok(())
 }
-fn resolve_iri(iri: IRI,
-               prefixes: &HashMap<&str, String>,
-               to: &mut Rc<String>)
-               -> Result<(), String> {
+fn resolve_iri(iri: IRI, prefixes: &HashMap<&str, String>, to: &mut Rc<String>) -> Result<()> {
     let p = Rc::make_mut(to);
     p.clear();
     match iri {
@@ -267,7 +265,7 @@ fn resolve_iri(iri: IRI,
                     p.push_str(prefix);
                     try!(pn_local_unescape(local, p));
                 }
-                None => return Err(String::from("Cannot find prefix.")),
+                None => return Err(Error::Custom("Cannot find prefix.")),
             }
         }
     }
@@ -295,7 +293,7 @@ impl<'a> BlankNodes<'a> {
 }
 
 impl<'a> Iterator for TripleIterator<'a> {
-    type Item = Result<IteratorTriple, String>;
+    type Item = Result<IteratorTriple>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.done {
@@ -332,7 +330,7 @@ const RDF_NIL: &'static str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil";
 fn make_collection<'a>(collection: Vec<Object<'a>>,
                        blank_nodes: &mut BlankNodes<'a>,
                        triple_buffer: &mut Vec<Triple<'a>>)
-                       -> Result<usize, String> {
+                       -> Result<usize> {
     let head = blank_nodes.new_blank();
 
     let mut node = head;
@@ -362,7 +360,7 @@ fn make_collection<'a>(collection: Vec<Object<'a>>,
 fn make_subject<'a>(subject: Subject<'a>,
                     blank_nodes: &mut BlankNodes<'a>,
                     triple_buffer: &mut Vec<Triple<'a>>)
-                    -> Result<SingleSubject<'a>, String> {
+                    -> Result<SingleSubject<'a>> {
     Ok(match subject {
         Subject::IRI(iri) => SingleSubject::IRI(iri),
         Subject::BlankNode(blank) => SingleSubject::BlankNode(make_blank(blank, blank_nodes)),
@@ -375,7 +373,7 @@ fn make_subject<'a>(subject: Subject<'a>,
 fn make_object<'a>(object: Object<'a>,
                    blank_nodes: &mut BlankNodes<'a>,
                    triple_buffer: &mut Vec<Triple<'a>>)
-                   -> Result<SingleObject<'a>, String> {
+                   -> Result<SingleObject<'a>> {
     Ok(match object {
         Object::IRI(iri) => SingleObject::IRI(iri),
         Object::BlankNode(blank) => SingleObject::BlankNode(make_blank(blank, blank_nodes)),
@@ -399,7 +397,7 @@ fn add_predicated_objects<'a>(subject: SingleSubject<'a>,
                               predicated_objects_list: Vec<PredicatedObjects<'a>>,
                               blank_nodes: &mut BlankNodes<'a>,
                               triple_buffer: &mut Vec<Triple<'a>>)
-                              -> Result<(), String> {
+                              -> Result<()> {
     for po in predicated_objects_list {
         for o in po.objects.into_iter() {
             let triple = Triple {
@@ -416,7 +414,7 @@ fn add_predicated_objects<'a>(subject: SingleSubject<'a>,
 fn add_triples<'a>(new_triples: Triples<'a>,
                    blank_nodes: &mut BlankNodes<'a>,
                    triple_buffer: &mut Vec<Triple<'a>>)
-                   -> Result<(), String> {
+                   -> Result<()> {
     let subject = try!(make_subject(new_triples.subject, blank_nodes, triple_buffer));
     add_predicated_objects(subject,
                            new_triples.predicated_objects_list,
