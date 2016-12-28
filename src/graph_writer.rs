@@ -1,7 +1,6 @@
 use std::mem;
 use std::slice;
 use std::rc::Rc;
-use std::iter;
 use grammar;
 use graph;
 use string_collector::*;
@@ -10,7 +9,7 @@ use triple_to_uint::*;
 pub struct GraphWriter {
     string_collector: StringCollector,
     datatype_lang_collector: StringCollector,
-    triples: Vec<Triple64>,
+    triples: Vec<Triple64SPO>,
     prev_subject_iri: Option<(String, StringId)>,
     prev_predicate: Option<(String, StringId)>,
     prev_datatype: Option<(String, StringId)>,
@@ -18,7 +17,7 @@ pub struct GraphWriter {
 }
 pub struct Graph {
     strings: Rc<StringCollection>,
-    triples: Vec<Triple64>,
+    triples: Vec<Triple64SPO>,
 }
 
 fn translate<T>(t: &mut T, translation: &Vec<StringId>)
@@ -76,7 +75,7 @@ impl GraphWriter {
     fn add_s_iri(&mut self, s: &str, p: &str, ot: TripleObjectType, o: u32, d: u32) {
         let s = check_prev(s, &mut self.prev_subject_iri, &mut self.string_collector);
         let p = check_prev(p, &mut self.prev_predicate, &mut self.string_collector);
-        let t = Triple64::triple(true, s.id, p.id, ot, o, d);
+        let t = Triple64SPO::triple(true, s.id, p.id, ot, o, d);
         self.triples.push(t);
     }
     pub fn add_iri_blank(&mut self, subject: &str, predicate: &str, object: u32) {
@@ -101,7 +100,7 @@ impl GraphWriter {
     }
     fn add_s_blank(&mut self, s: u32, p: &str, ot: TripleObjectType, o: u32, d: u32) {
         let p = check_prev(p, &mut self.prev_predicate, &mut self.string_collector);
-        let t = Triple64::triple(false, s, p.id, ot, o, d);
+        let t = Triple64SPO::triple(false, s, p.id, ot, o, d);
         self.triples.push(t);
     }
     pub fn add_blank_blank(&mut self, subject: u32, predicate: &str, object: u32) {
@@ -202,12 +201,12 @@ impl GraphWriter {
 
 pub struct GraphTriple {
     strings: Rc<StringCollection>,
-    triple: Triple64,
+    triple: Triple64SPO,
 }
 
 struct GraphIterator<'a> {
     strings: Rc<StringCollection>,
-    iter: slice::Iter<'a, Triple64>,
+    iter: slice::Iter<'a, Triple64SPO>,
 }
 
 impl<'a> Iterator for GraphIterator<'a> {
@@ -256,7 +255,7 @@ impl graph::Triple for GraphTriple {
 
 pub struct TakeWhileSubject<'a> {
     iter: GraphIterator<'a>,
-    end: Triple64,
+    end: Triple64SPO,
 }
 
 impl<'a> Iterator for TakeWhileSubject<'a> {
@@ -268,7 +267,7 @@ impl<'a> Iterator for TakeWhileSubject<'a> {
 
 impl Graph {
     /// iterator over all triples with the same subject
-    fn iter_subject(&self, triple: Triple64) -> TakeWhileSubject {
+    fn iter_subject(&self, triple: Triple64SPO) -> TakeWhileSubject {
         let slice = match self.triples.binary_search(&triple) {
             Ok(pos) => &self.triples[pos..pos],
             Err(pos) => &self.triples[pos..pos],
@@ -287,7 +286,7 @@ impl Graph {
     pub fn iter_subject_iri(&self, iri: &str) -> TakeWhileSubject {
         match self.strings.find(iri) {
             None => {
-                let end = Triple64::triple(true, 0, 0, TripleObjectType::BlankNode, 0, 0);
+                let end = Triple64SPO::triple(true, 0, 0, TripleObjectType::BlankNode, 0, 0);
                 TakeWhileSubject {
                     iter: GraphIterator {
                         strings: self.strings.clone(),
@@ -297,7 +296,7 @@ impl Graph {
                 }
             }
             Some(id) => {
-                let triple = Triple64::triple(true, id.id, 0, TripleObjectType::BlankNode, 0, 0);
+                let triple = Triple64SPO::triple(true, id.id, 0, TripleObjectType::BlankNode, 0, 0);
                 self.iter_subject(triple)
             }
         }
