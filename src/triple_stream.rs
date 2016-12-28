@@ -166,8 +166,8 @@ impl<'a> TripleIterator<'a> {
             },
         })
     }
-    pub fn prefixes(&self) -> &HashMap<&'a str, String> {
-        &self.prefixes
+    pub fn prefixes(&self) -> HashMap<String, String> {
+        self.prefixes.iter().map(|(&k, v)| (String::from(k), v.clone())).collect()
     }
     fn set_prefix(&mut self, prefix: &'a str, value: String) {
         let value = resolve_iri_ref(value);

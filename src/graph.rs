@@ -1,6 +1,6 @@
-pub trait Graph {
-    type Triple: Triple;
-    fn iter<'a>(&'a self) -> Box<Iterator<Item = &Self::Triple> + 'a>;
+pub trait Graph<'a> {
+    type Triple: Triple + 'a;
+    fn iter(&'a self) -> Box<Iterator<Item = Self::Triple> + 'a>;
     /// return the number of triples in the graph
     fn len(&self) -> usize;
 }

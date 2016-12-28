@@ -26,16 +26,25 @@ use graph::{WritableGraph, Graph};
 use mem_graph::MemGraph;
 use std::collections::HashMap;
 
-pub fn parse(data: &str) -> Result<(MemGraph, HashMap<&str, String>), String> {
+pub fn parse(data: &str) -> Result<(MemGraph, HashMap<String, String>), String> {
     let mut graph = MemGraph::new();
     let mut triples = try!(TripleIterator::new(data));
     while let Some(triple) = triples.next() {
         graph.add_triple(&try!(triple));
     }
-    Ok((graph, triples.prefixes().clone()))
+    Ok((graph, triples.prefixes()))
 }
 
-pub fn run(path: &str) -> io::Result<MemGraph> {
+pub fn parse2(data: &str) -> Result<(graph_writer::Graph, HashMap<String, String>), String> {
+    let mut writer = graph_writer::GraphWriter::with_capacity(65000);
+    let mut triples = try!(TripleIterator::new(data));
+    while let Some(triple) = triples.next() {
+        writer.add_triple(&try!(triple));
+    }
+    Ok((writer.collect(), triples.prefixes()))
+}
+
+pub fn run(path: &str) -> io::Result<graph_writer::Graph> {
     let mut s = String::new();
     let mut f = try!(File::open(path));
     try!(f.read_to_string(&mut s));
@@ -43,7 +52,21 @@ pub fn run(path: &str) -> io::Result<MemGraph> {
         Ok((graph, _)) => {
             let stdout = io::stdout();
             let mut handle = stdout.lock();
-            try!(ntriples_writer::write_ntriples(&graph, &mut handle));
+            try!(ntriples_writer::write_ntriples(graph.iter(), &mut handle));
+        }
+        Err(e) => {
+            println!("{}", e);
+            return Err(io::Error::new(io::ErrorKind::Other, e));
+        }
+    }
+    run2(s)
+}
+fn run2(s: String) -> io::Result<graph_writer::Graph> {
+    match parse2(s.as_str()) {
+        Ok((graph, _)) => {
+            let stdout = io::stdout();
+            let mut handle = stdout.lock();
+            try!(ntriples_writer::write_ntriples(graph.iter(), &mut handle));
             Ok(graph)
         }
         Err(e) => {

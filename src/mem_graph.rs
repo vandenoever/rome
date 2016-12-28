@@ -3,10 +3,11 @@ use std::collections::btree_set;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use rand;
-use std::iter::FromIterator;
 use graph;
-use graph::{Triple, Graph, WritableGraph};
+use graph::Triple;
 use std::rc::Rc;
+#[cfg(test)]
+use graph::{Graph, WritableGraph};
 
 pub type BlankNode = (usize, usize);
 
@@ -240,9 +241,9 @@ impl MemGraph {
     }
 }
 
-impl graph::Graph for MemGraph {
-    type Triple = MemGraphTriple;
-    fn iter<'a>(&'a self) -> Box<Iterator<Item = &MemGraphTriple> + 'a> {
+impl<'a> graph::Graph<'a> for MemGraph {
+    type Triple = &'a MemGraphTriple;
+    fn iter(&'a self) -> Box<Iterator<Item = Self::Triple> + 'a> {
         let i = TripleIterator { iter: self.triples.iter() };
         Box::new(i)
     }
@@ -298,6 +299,31 @@ pub struct TripleIterator<'a> {
 }
 
 impl Triple for MemGraphTriple {
+    fn subject(&self) -> graph::Subject {
+        match self.subject {
+            Subject::IRI(ref iri) => graph::Subject::IRI(iri.as_str()),
+            Subject::BlankNode(n) => graph::Subject::BlankNode(n),
+        }
+    }
+    fn predicate(&self) -> &str {
+        self.predicate.as_str()
+    }
+    fn object(&self) -> graph::Object {
+        match self.object {
+            Object::IRI(ref iri) => graph::Object::IRI(iri.as_str()),
+            Object::BlankNode(n) => graph::Object::BlankNode(n),
+            Object::Literal(ref l) => {
+                graph::Object::Literal(graph::Literal {
+                    lexical: l.lexical.as_str(),
+                    datatype: l.datatype.as_str(),
+                    language: l.language.as_ref().map(|l| l.as_str()),
+                })
+            }
+        }
+    }
+}
+
+impl<'a> Triple for &'a MemGraphTriple {
     fn subject(&self) -> graph::Subject {
         match self.subject {
             Subject::IRI(ref iri) => graph::Subject::IRI(iri.as_str()),

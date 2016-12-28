@@ -1,6 +1,5 @@
 use std::io::{Result, Write};
 use graph::*;
-use std::rc::Rc;
 
 struct NTripleWriter<'a, W>
     where W: Write + 'a
@@ -10,16 +9,17 @@ struct NTripleWriter<'a, W>
 }
 
 /// write an RDF 1.1 N-Triples file in canonical form
-pub fn write_ntriples<G, W>(triples: &G, writer: &mut W) -> Result<()>
-    where G: Graph,
+pub fn write_ntriples<T, I, W>(triples: I, writer: &mut W) -> Result<()>
+    where T: Triple,
+          I: Iterator<Item = T>,
           W: Write
 {
     let mut writer = NTripleWriter {
         buffer: Vec::new(),
         writer: writer,
     };
-    for triple in triples.iter() {
-        try!(writer.write_ntriple(triple));
+    for triple in triples {
+        try!(writer.write_ntriple(&triple));
     }
     Ok(())
 }

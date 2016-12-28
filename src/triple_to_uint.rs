@@ -38,7 +38,7 @@ pub trait CompactTriple<T> {
 ///          or has lang (0) or has no lang (1)
 /// 18 bits for object id
 ///  7 bits for for datatype or language id
-#[derive(PartialEq,Eq,Hash,PartialOrd,Ord)]
+#[derive(PartialEq,Eq,Hash,PartialOrd,Ord,Clone,Copy)]
 pub struct Triple64 {
     value: u64,
 }

@@ -21,7 +21,7 @@ macro_rules! one_if (
   );
 );
 
-const RDF_LANG_STRING: &'static str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString";
+pub const RDF_LANG_STRING: &'static str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString";
 const XSD_STRING: &'static str = "http://www.w3.org/2001/XMLSchema#string";
 const XSD_BOOLEAN: &'static str = "http://www.w3.org/2001/XMLSchema#boolean";
 const XSD_DECIMAL: &'static str = "http://www.w3.org/2001/XMLSchema#decimal";

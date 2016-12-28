@@ -1,5 +1,8 @@
 use std::mem;
-
+use std::slice;
+use std::rc::Rc;
+use grammar;
+use graph;
 use string_collector::*;
 use triple_to_uint::*;
 
@@ -13,7 +16,7 @@ pub struct GraphWriter {
     prev_lang: Option<(String, StringId)>,
 }
 pub struct Graph {
-    strings: StringCollection,
+    strings: Rc<StringCollection>,
     triples: Vec<Triple64>,
 }
 
@@ -120,6 +123,65 @@ impl GraphWriter {
         let l = check_prev(lang, &mut self.prev_lang, &mut self.datatype_lang_collector).id;
         self.add_s_blank(subject, predicate, TripleObjectType::LiteralLang, o.id, l);
     }
+    pub fn add_triple<T>(&mut self, triple: &T)
+        where T: graph::Triple
+    {
+        match triple.subject() {
+            graph::Subject::IRI(subject) => {
+                match triple.object() {
+                    graph::Object::IRI(object) => {
+                        self.add_iri_iri(subject, triple.predicate(), object);
+                    }
+                    graph::Object::BlankNode(object) => {
+                        self.add_iri_blank(subject, triple.predicate(), object.0 as u32);
+                    }
+                    graph::Object::Literal(object) => {
+                        match object.language {
+                            None => {
+                                self.add_iri_lit(subject,
+                                                 triple.predicate(),
+                                                 object.lexical,
+                                                 object.datatype);
+                            }
+                            Some(lang) => {
+                                self.add_iri_lit_lang(subject,
+                                                      triple.predicate(),
+                                                      object.lexical,
+                                                      lang);
+                            }
+                        }
+                    }
+                }
+            }
+            graph::Subject::BlankNode(subject) => {
+                match triple.object() {
+                    graph::Object::IRI(object) => {
+                        self.add_blank_iri(subject.0 as u32, triple.predicate(), object);
+                    }
+                    graph::Object::BlankNode(object) => {
+                        self.add_blank_blank(subject.0 as u32, triple.predicate(), object.0 as u32);
+                    }
+                    graph::Object::Literal(object) => {
+                        match object.language {
+                            None => {
+                                self.add_blank_lit(subject.0 as u32,
+                                                   triple.predicate(),
+                                                   object.lexical,
+                                                   object.datatype);
+                            }
+                            Some(lang) => {
+                                self.add_blank_lit_lang(subject.0 as u32,
+                                                        triple.predicate(),
+                                                        object.lexical,
+                                                        lang);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     pub fn collect(&mut self) -> Graph {
         let (translation, string_collection) = self.string_collector.collect();
         let mut triples = Vec::new();
@@ -131,8 +193,88 @@ impl GraphWriter {
         triples.sort();
         triples.dedup();
         Graph {
-            strings: string_collection,
+            strings: Rc::new(string_collection),
             triples: triples,
         }
+    }
+}
+
+pub struct GraphTriple {
+    strings: Rc<StringCollection>,
+    triple: Triple64,
+}
+
+struct GraphIterator<'a> {
+    strings: Rc<StringCollection>,
+    iter: slice::Iter<'a, Triple64>,
+}
+
+impl<'a> Iterator for GraphIterator<'a> {
+    type Item = GraphTriple;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next().map(|t| {
+            GraphTriple {
+                strings: self.strings.clone(),
+                triple: *t,
+            }
+        })
+    }
+}
+
+impl graph::Triple for GraphTriple {
+    fn subject(&self) -> graph::Subject {
+        if self.triple.subject_is_iri() {
+            graph::Subject::IRI(self.strings.get(StringId { id: self.triple.subject() }))
+        } else {
+            graph::Subject::BlankNode((0, 0))
+        }
+    }
+    fn predicate(&self) -> &str {
+        self.strings.get(StringId { id: self.triple.predicate() })
+    }
+    fn object(&self) -> graph::Object {
+        if self.triple.object_is_iri() {
+            graph::Object::IRI(self.strings.get(StringId { id: self.triple.object() }))
+        } else if self.triple.object_is_blank_node() {
+            graph::Object::BlankNode((0, 0))
+        } else if self.triple.has_language() {
+            graph::Object::Literal(graph::Literal {
+                lexical: self.strings.get(StringId { id: self.triple.object() }),
+                datatype: grammar::RDF_LANG_STRING,
+                language: Some(self.strings.get(StringId { id: self.triple.datatype_or_lang() })),
+            })
+        } else {
+            graph::Object::Literal(graph::Literal {
+                lexical: self.strings.get(StringId { id: self.triple.object() }),
+                datatype: self.strings.get(StringId { id: self.triple.datatype_or_lang() }),
+                language: None,
+            })
+        }
+    }
+}
+
+impl Graph {
+    // pub fn iter<'a>(&'a self) -> Box<Iterator<Item = &GraphTriple> + 'a> {
+    // Box::new(GraphIterator {
+    // strings: self.strings.clone(),
+    // iter: self.triples.iter(),
+    // })
+    // }
+    // pub fn len(&self) -> usize {
+    // self.triples.len()
+    // }
+    //
+}
+
+impl<'a> graph::Graph<'a> for Graph {
+    type Triple = GraphTriple;
+    fn iter(&'a self) -> Box<Iterator<Item = Self::Triple> + 'a> {
+        Box::new(GraphIterator {
+            strings: self.strings.clone(),
+            iter: self.triples.iter(),
+        })
+    }
+    fn len(&self) -> usize {
+        self.triples.len()
     }
 }
