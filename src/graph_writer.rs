@@ -4,6 +4,7 @@ use std::rc::Rc;
 use grammar;
 use graph;
 use string_collector::*;
+use std::fmt::Debug;
 use triple_to_uint::*;
 
 pub struct GraphWriter {
@@ -285,7 +286,7 @@ pub struct TripleRangeIterator<'a, T: 'a>
 }
 
 impl<'a, T> Iterator for TripleRangeIterator<'a, T>
-    where T: Ord + CompactTriple<u32> + Copy
+    where T: Ord + CompactTriple<u32> + Copy + Debug
 {
     type Item = GraphTriple<T>;
     fn next(&mut self) -> Option<Self::Item> {
@@ -326,10 +327,16 @@ impl Graph {
         }
     }
     /// iterator over all triples with the same subject
-    fn iter_subject(&self, triple: Triple64SPO) -> TripleRangeIterator<Triple64SPO> {
+    fn iter_subject_(&self, triple: Triple64SPO) -> TripleRangeIterator<Triple64SPO> {
         let mut end = triple;
         end.set_subject(triple.subject() + 1);
         self.range_iter(&self.spo, triple, end)
+    }
+    pub fn iter_subject(&self, subject: &graph::Subject) -> TripleRangeIterator<Triple64SPO> {
+        match *subject {
+            graph::Subject::IRI(iri) => self.iter_subject_iri(iri),
+            graph::Subject::BlankNode(_) => self.empty_range_iter(),
+        }
     }
     /// iterator over all triples with the same subject
     pub fn iter_subject_iri(&self, iri: &str) -> TripleRangeIterator<Triple64SPO> {
@@ -337,7 +344,7 @@ impl Graph {
             None => self.empty_range_iter(),
             Some(id) => {
                 let triple = Triple64SPO::triple(true, id.id, 0, TripleObjectType::BlankNode, 0, 0);
-                self.iter_subject(triple)
+                self.iter_subject_(triple)
             }
         }
     }
