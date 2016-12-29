@@ -56,6 +56,9 @@ impl StringCollector {
     fn deduplicate_and_translate(&mut self) -> Vec<StringId> {
         let buffer = &self.buffer;
         let refs = &mut self.refs;
+        if refs.len() == 0 {
+            return Vec::new();
+        }
         let mut translation = vec![StringId{id:0}; refs.len()];
         translation[refs[0].index as usize] = StringId { id: 0 };
         let mut to = 0;
