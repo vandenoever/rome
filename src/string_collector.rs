@@ -1,4 +1,5 @@
 use std::ops::Index;
+use std::cmp::Ordering;
 
 struct StringRef {
     start: u32,
@@ -119,9 +120,32 @@ impl StringCollection {
         &self.buffer[start..end]
     }
     pub fn find(&self, s: &str) -> Option<StringId> {
-        match self.starts.binary_search_by_key(&s, |i| self.get(StringId { id: *i })) {
+        match binary_search_by_index(self.starts.len(),
+                                     |i| self.get(StringId { id: i as u32 }).cmp(s)) {
             Ok(pos) => Some(StringId { id: pos as u32 }),
             Err(_) => None,
+        }
+    }
+}
+
+fn binary_search_by_index<F>(len: usize, mut f: F) -> Result<usize, usize>
+    where F: FnMut(usize) -> Ordering
+{
+    let mut l = 0;
+    let mut r = len - 1;
+    loop {
+        if l > r {
+            return Err(l);
+        }
+        let m = (l + r) >> 1;
+        match f(m) {
+            Ordering::Less => {
+                l = m + 1;
+            }
+            Ordering::Greater => {
+                r = m - 1;
+            }
+            Ordering::Equal => return Ok(m),
         }
     }
 }
