@@ -1,4 +1,4 @@
-
+#[derive (Debug)]
 pub enum TripleObjectType {
     BlankNode,
     IRI,
@@ -126,7 +126,7 @@ impl CompactTriple<u32> for $name {
         self.value += datatype_or_lang as u64;
     }
     fn subject_is_iri(&self) -> bool {
-        (self.value >> $subject_type_offset) == 1
+        (self.value >> $subject_type_offset) & 1 == 1
     }
     fn object_is_iri(&self) -> bool {
         (self.value >> $object_type_offset) & 3 == 1
@@ -163,7 +163,7 @@ impl CompactTriple<u32> for $name {
 }
 
 triple64!(Triple64SPO, 45, 27, 7);
-triple64!(Triple64OPS, 7, 27, 45);
+triple64!(Triple64OPS, 7, 26, 44);
 
 #[test]
 fn test_triple1() {
@@ -232,6 +232,77 @@ fn test_triple_set_predicate() {
 #[test]
 fn test_triple_set_object() {
     let mut t = Triple64SPO::triple(false, 1, 2, TripleObjectType::BlankNode, 3, 4);
+    t.set_object(4);
+    assert_eq!(t.object(), 4);
+}
+
+#[test]
+fn test_triple1_ops() {
+    let t = Triple64OPS::triple(false, 1, 2, TripleObjectType::BlankNode, 3, 4);
+    println!("test1 {}", t.value);
+    assert_eq!(t.subject_is_iri(), false);
+    assert_eq!(t.subject(), 1);
+    assert_eq!(t.predicate(), 2);
+    assert_eq!(t.object_is_blank_node(), true);
+    assert_eq!(t.object_is_iri(), false);
+    assert_eq!(t.has_language(), false);
+    assert_eq!(t.object(), 3);
+    assert_eq!(t.datatype_or_lang(), 0);
+}
+#[test]
+fn test_triple2_ops() {
+    let t = Triple64OPS::triple(true, 1, 2, TripleObjectType::IRI, 3, 4);
+    println!("test2 {}", t.value);
+    assert_eq!(t.subject_is_iri(), true);
+    assert_eq!(t.subject(), 1);
+    assert_eq!(t.predicate(), 2);
+    assert_eq!(t.object_is_blank_node(), false);
+    assert_eq!(t.object_is_iri(), true);
+    assert_eq!(t.has_language(), false);
+    assert_eq!(t.object(), 3);
+    assert_eq!(t.datatype_or_lang(), 0);
+}
+#[test]
+fn test_triple3_ops() {
+    let t = Triple64OPS::triple(false, 1, 2, TripleObjectType::Literal, 3, 4);
+    println!("test1 {}", t.value);
+    assert_eq!(t.subject_is_iri(), false);
+    assert_eq!(t.subject(), 1);
+    assert_eq!(t.predicate(), 2);
+    assert_eq!(t.object_is_blank_node(), false);
+    assert_eq!(t.object_is_iri(), false);
+    assert_eq!(t.has_language(), false);
+    assert_eq!(t.object(), 3);
+    assert_eq!(t.datatype_or_lang(), 4);
+}
+#[test]
+fn test_triple4_ops() {
+    let t = Triple64OPS::triple(false, 1, 2, TripleObjectType::LiteralLang, 3, 4);
+    println!("test1 {}", t.value);
+    assert_eq!(t.subject_is_iri(), false);
+    assert_eq!(t.subject(), 1);
+    assert_eq!(t.predicate(), 2);
+    assert_eq!(t.object_is_blank_node(), false);
+    assert_eq!(t.object_is_iri(), false);
+    assert_eq!(t.has_language(), true);
+    assert_eq!(t.object(), 3);
+    assert_eq!(t.datatype_or_lang(), 4);
+}
+#[test]
+fn test_triple_set_subject_ops() {
+    let mut t = Triple64OPS::triple(false, 1, 2, TripleObjectType::BlankNode, 3, 4);
+    t.set_subject(2);
+    assert_eq!(t.subject(), 2);
+}
+#[test]
+fn test_triple_set_predicate_ops() {
+    let mut t = Triple64OPS::triple(false, 1, 2, TripleObjectType::BlankNode, 3, 4);
+    t.set_predicate(3);
+    assert_eq!(t.predicate(), 3);
+}
+#[test]
+fn test_triple_set_object_ops() {
+    let mut t = Triple64OPS::triple(false, 1, 2, TripleObjectType::BlankNode, 3, 4);
     t.set_object(4);
     assert_eq!(t.object(), 4);
 }
