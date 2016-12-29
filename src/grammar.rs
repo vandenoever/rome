@@ -2,7 +2,7 @@ use grammar_structs::*;
 use grammar_helper::*;
 use nom::IResult;
 use nom::IResult::Done;
-use nom::Needed;
+use nom::{Needed, ErrorKind};
 
 /// Take one character if it fits the function
 macro_rules! one_if (
@@ -29,29 +29,40 @@ const XSD_DOUBLE: &'static str = "http://www.w3.org/2001/XMLSchema#double";
 const XSD_INTEGER: &'static str = "http://www.w3.org/2001/XMLSchema#integer";
 const RDF_TYPE: &'static str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 
-named!(comment<&str,()>, value!((), tuple!(
-    tag_s!("#"),
-    take_until_either_and_consume!("\r\n")
-)));
+fn comment(str: &str) -> IResult<&str, ()> {
+    if str.len() == 0 {
+        return IResult::Incomplete(Needed::Size(2));
+    }
+    if &str[0..1] != "#" {
+        return IResult::Error(ErrorKind::Custom(0));
+    }
+    if let Some(pos) = str.find(|c| c == '\n' || c == '\r') {
+        IResult::Done(&str[pos + 1..], ())
+    } else {
+        IResult::Incomplete(Needed::Size(1))
+    }
+}
 
 /// whitespace that may contain comments
 pub fn tws(mut str: &str) -> IResult<&str, ()> {
+    let mut last_len = str.len();
     loop {
         match comment(str) {
             Done(left, _) => {
                 str = left;
             }
-            IResult::Error(_) => {}
-            IResult::Incomplete(_) => return Done(str, ()),
+            _ => {}
         }
         match take_while_s!(str, is_ws) {
-            Done(left, "") => return Done(left, ()),
             Done(left, _) => {
                 str = left;
             }
-            IResult::Error(e) => return IResult::Error(e),
-            IResult::Incomplete(_) => return Done(str, ()),
+            _ => {}
         }
+        if str.len() == last_len {
+            return Done(str, ());
+        }
+        last_len = str.len();
     }
 }
 
@@ -138,20 +149,52 @@ fn triples_blank(str: &str) -> IResult<&str, Triples> {
 }
 
 /// [7] predicateObjectList ::= verb objectList (';' (verb objectList)?)*
-named!(predicated_objects_list<&str,Vec<PredicatedObjects>>,
-    separated_nonempty_list!(
-        tuple!(tws, tag_s!(";"), tws),
-        do_parse!(
-            verb: verb >>
-            tws >>
-            objects: object_list >>
-            (PredicatedObjects{
-                verb:verb,
-                objects:objects
-            })
-        )
-    )
+fn predicated_objects_list(mut str: &str) -> IResult<&str, Vec<PredicatedObjects>> {
+    let mut v = Vec::new();
+    match tws(str) {
+        Done(left, _) => {
+            str = left;
+        }
+        _ => {}
+    }
+    match predicated_object(str) {
+        Done(left, po) => {
+            v.push(po);
+            str = left;
+        }
+        IResult::Error(e) => return IResult::Error(e),
+        IResult::Incomplete(n) => return IResult::Incomplete(n),
+    }
+    loop {
+        match predicated_object_sep(str) {
+            Done(left, _) => {
+                str = left;
+            }
+            _ => return Done(str, v),
+        }
+        match predicated_object(str) {
+            Done(left, po) => {
+                v.push(po);
+                str = left;
+            }
+            _ => return Done(str, v),
+        }
+    }
+}
+
+named!(predicated_object_sep<&str,()>,
+    fold_many1!(tuple!(tws, tag_s!(";"), tws),(),|_,_|())
 );
+
+named!(predicated_object<&str,PredicatedObjects>, do_parse!(
+    verb: verb >>
+    tws >>
+    objects: object_list >>
+    (PredicatedObjects{
+        verb:verb,
+        objects:objects
+    })
+));
 
 /// [8] objectList ::= object (',' object)*
 named!(object_list<&str,Vec<Object>>, separated_nonempty_list!(
@@ -515,6 +558,14 @@ fn is_hex(c: char) -> bool {
 
 fn in_range(c: char, lower: u32, upper: u32) -> bool {
     c as u32 >= lower && c as u32 <= upper
+}
+
+#[test]
+fn test_comment() {
+    assert_eq!(comment("#\r\na"), Done(&"\na"[..],()));
+    assert_eq!(comment("#\n\ra"), Done(&"\ra"[..],()));
+    assert_eq!(comment(""), IResult::Incomplete(Needed::Size(2)));
+    assert_eq!(comment("#"), IResult::Incomplete(Needed::Size(1)));
 }
 
 #[test]

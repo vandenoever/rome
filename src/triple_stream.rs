@@ -23,7 +23,7 @@ impl<'a> StatementIterator<'a> {
             }
             IResult::Error(_) => return Err(Error::Custom("cannot start parsing")),
             IResult::Incomplete(_) => {
-                return Ok(StatementIterator {
+                Ok(StatementIterator {
                     src: src,
                     done: false,
                 })
@@ -59,7 +59,7 @@ impl<'a> Iterator for StatementIterator<'a> {
                 self.src = left;
             }
             IResult::Error(_) => {
-                r = Some(Err(Error::Custom("error parsing")));
+                r = Some(Err(Error::Custom("error parsing whitespace")));
                 self.done = true;
             }
             IResult::Incomplete(_) => {
@@ -75,27 +75,27 @@ struct BlankNodes<'a> {
     next_blank: usize,
 }
 
-#[derive (Clone)]
+#[derive (Clone,Debug)]
 pub struct IteratorTriple {
     pub subject: IteratorSubject,
     pub predicate: Rc<String>,
     pub object: IteratorObject,
 }
 
-#[derive (Clone)]
+#[derive (Clone,Debug)]
 pub enum IteratorSubject {
     IRI(Rc<String>),
     BlankNode(graph::BlankNode),
 }
 
-#[derive (Clone)]
+#[derive (Clone,Debug)]
 pub struct IteratorLiteral {
     pub lexical: Rc<String>,
     pub datatype: Rc<String>,
     pub language: Option<Rc<String>>,
 }
 
-#[derive (Clone)]
+#[derive (Clone,Debug)]
 pub enum IteratorObject {
     IRI(Rc<String>),
     BlankNode(graph::BlankNode),
