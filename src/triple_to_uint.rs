@@ -126,13 +126,13 @@ impl CompactTriple<u32> for $name {
         self.value += datatype_or_lang as u64;
     }
     fn subject_is_iri(&self) -> bool {
-        (self.value >> $subject_type_offset) & 1 == 1
+        self.value & (1 << $subject_type_offset) == 1 << $subject_type_offset
     }
     fn object_is_iri(&self) -> bool {
-        (self.value >> $object_type_offset) & 3 == 1
+        self.value & (3 << $object_type_offset) == 1 << $object_type_offset
     }
     fn object_is_blank_node(&self) -> bool {
-        (self.value >> $object_type_offset) & 3 == 0
+        self.value & (3 << $object_type_offset) == 0
     }
     fn object_type(&self) -> TripleObjectType {
         match (self.value >> $object_type_offset) & 3 {
@@ -143,7 +143,7 @@ impl CompactTriple<u32> for $name {
         }
     }
     fn has_language(&self) -> bool {
-        (self.value >> $object_type_offset) & 3 == 2
+        self.value & (3 << $object_type_offset) == 2 << $object_type_offset
     }
     fn subject(&self) -> u32 {
         ((self.value >> $subject_offset) & 0x3ffff) as u32
