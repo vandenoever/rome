@@ -70,7 +70,7 @@ macro_rules! triple64_helper{(
     $subject_type_offset:expr,
     $object_type_offset:expr) => {
 
-#[derive(PartialEq,Eq,Hash,PartialOrd,Ord,Clone,Copy)]
+#[derive(PartialEq,Eq,Hash,PartialOrd,Ord,Clone,Copy,Debug)]
 pub struct $name {
     value: u64,
 }
@@ -122,7 +122,7 @@ impl CompactTriple<u32> for $name {
         self.value += (object as u64) << $object_offset;
     }
     fn set_datatype_or_lang(&mut self, datatype_or_lang: u32) {
-        self.value &= !0x3ffff;
+        self.value &= !0x7f;
         self.value += datatype_or_lang as u64;
     }
     fn subject_is_iri(&self) -> bool {
