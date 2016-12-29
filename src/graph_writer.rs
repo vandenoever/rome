@@ -248,6 +248,7 @@ impl<T> graph::Triple for GraphTriple<T>
         if self.triple.subject_is_iri() {
             graph::Subject::IRI(self.strings.get(StringId { id: self.triple.subject() }))
         } else {
+            unimplemented!();
             graph::Subject::BlankNode((0, 0))
         }
     }
@@ -301,17 +302,17 @@ impl<'a, T> Iterator for TripleRangeIterator<'a, T>
 }
 
 impl Graph {
-    fn range_iter<'a, T>(&self, index: &'a [T], start: &T, end: &T) -> TripleRangeIterator<'a, T>
+    fn range_iter<'a, T>(&self, index: &'a [T], start: T, end: T) -> TripleRangeIterator<'a, T>
         where T: CompactTriple<u32> + Ord + Copy
     {
         let slice = match index.binary_search(&start) {
-            Ok(pos) => &index[pos..pos],
-            Err(pos) => &index[pos..pos],
+            Ok(pos) => &index[pos..],
+            Err(pos) => &index[pos..],
         };
         TripleRangeIterator {
             strings: self.strings.clone(),
             iter: slice.iter(),
-            end: *end,
+            end: end,
         }
     }
     fn empty_range_iter<T>(&self) -> TripleRangeIterator<T>
@@ -328,7 +329,7 @@ impl Graph {
     fn iter_subject(&self, triple: Triple64SPO) -> TripleRangeIterator<Triple64SPO> {
         let mut end = triple;
         end.set_subject(triple.subject() + 1);
-        self.range_iter(&self.spo, &triple, &end)
+        self.range_iter(&self.spo, triple, end)
     }
     /// iterator over all triples with the same subject
     pub fn iter_subject_iri(&self, iri: &str) -> TripleRangeIterator<Triple64SPO> {
@@ -344,7 +345,7 @@ impl Graph {
     fn iter_object(&self, triple: Triple64OPS) -> TripleRangeIterator<Triple64OPS> {
         let mut end = triple;
         end.set_object(triple.object() + 1);
-        self.range_iter(&self.ops, &triple, &end)
+        self.range_iter(&self.ops, triple, end)
     }
     /// iterator over all triples with the same object
     pub fn iter_object_iri(&self, iri: &str) -> TripleRangeIterator<Triple64OPS> {
@@ -353,6 +354,35 @@ impl Graph {
             Some(id) => {
                 let triple = Triple64OPS::triple(true, 0, 0, TripleObjectType::IRI, id.id, 0);
                 self.iter_object(triple)
+            }
+        }
+    }
+    /// iterator over all triples with the same object and predicate
+    fn iter_object_predicate(&self, triple: Triple64OPS) -> TripleRangeIterator<Triple64OPS> {
+        let mut end = triple;
+        end.set_predicate(triple.predicate() + 1);
+        self.range_iter(&self.ops, triple, end)
+    }
+    /// iterator over all triples with the same object and predicate
+    pub fn iter_object_iri_predicate(&self,
+                                     object_iri: &str,
+                                     predicate: &str)
+                                     -> TripleRangeIterator<Triple64OPS> {
+        match self.strings.find(object_iri) {
+            None => self.empty_range_iter(),
+            Some(object) => {
+                match self.strings.find(predicate) {
+                    None => self.empty_range_iter(),
+                    Some(predicate) => {
+                        let triple = Triple64OPS::triple(true,
+                                                         0,
+                                                         predicate.id,
+                                                         TripleObjectType::IRI,
+                                                         object.id,
+                                                         0);
+                        self.iter_object_predicate(triple)
+                    }
+                }
             }
         }
     }
@@ -369,4 +399,10 @@ impl<'a> graph::Graph<'a> for Graph {
     fn len(&self) -> usize {
         self.spo.len()
     }
+}
+
+#[test]
+fn collect_empty() {
+    let mut writer = GraphWriter::with_capacity(0);
+    writer.collect();
 }
