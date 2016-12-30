@@ -89,11 +89,6 @@ pub fn pn_local_unescape(s: &str, result: &mut String) -> Result<()> {
                 Some(v) => result.push(v),
                 None => return Err(Error::Custom("Error escaping local")),
             }
-        } else if ch == '%' {
-            match hex_to_char(&mut chars, 2) {
-                Some(v) => result.push(v),
-                None => return Err(Error::Custom("Error escaping local hex")),
-            }
         } else {
             result.push(ch)
         }
