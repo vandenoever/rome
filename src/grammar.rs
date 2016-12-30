@@ -298,8 +298,9 @@ named!(boolean<&str,Literal>, do_parse!(
 
 /// [17] String ::= STRING_LITERAL_QUOTE | STRING_LITERAL_SINGLE_QUOTE
 ///                 | STRING_LITERAL_LONG_SINGLE_QUOTE | STRING_LITERAL_LONG_QUOTE
-named!(string<&str,&str>, alt!(string_literal_quote | string_literal_single_quote
-    | string_literal_long_single_quote | string_literal_long_quote));
+named!(string<&str,&str>, alt!(string_literal_long_single_quote
+    | string_literal_long_quote | string_literal_quote
+    | string_literal_single_quote));
 
 /// [135s] iri ::= IRIREF | PrefixedName
 named!(iri<&str,IRI>, alt!(iri_iri|prefixed_name));
@@ -613,6 +614,8 @@ fn test_string_literal_long_single_quote() {
 fn test_string_literal_long_quote() {
     assert_eq!(string_literal_long_quote("\"\"\"\\U0001f435\"\"\""), Done(&""[..],
             "\\U0001f435"));
+    assert_eq!(string_literal_long_quote("\"\"\"first long literal\"\"\""), Done(&""[..],
+            "first long literal"));
 }
 
 #[test]
@@ -710,6 +713,12 @@ fn test_literal() {
 #[test]
 fn test_object() {
     assert_eq!(object("_:b1 "), Done(&" "[..], Object::BlankNode(BlankNode::BlankNode("b1"))));
+    let long = Object::Literal(Literal {
+        lexical: "first long literal",
+        datatype: IRI::IRI(XSD_STRING),
+        language: None,
+    });
+    assert_eq!(object("\"\"\"first long literal\"\"\" "), Done(&" "[..], long));
 }
 
 #[test]

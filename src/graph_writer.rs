@@ -267,8 +267,7 @@ impl<T> graph::Triple for GraphTriple<T>
         if self.triple.subject_is_iri() {
             graph::Subject::IRI(self.strings.get(StringId { id: self.triple.subject() }))
         } else {
-            unimplemented!();
-            graph::Subject::BlankNode((0, 0))
+            graph::Subject::BlankNode((self.triple.subject() as usize, 0))
         }
     }
     fn predicate(&self) -> &str {

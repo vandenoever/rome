@@ -445,3 +445,13 @@ fn blank_node() {
     assert!(n.is_some());
     assert!(n.unwrap().is_ok());
 }
+
+#[test]
+fn test_string_literal_long_quote() {
+    let s = "<http://a.example/s> <http://a.example/p> \"\"\"first long literal\"\"\" .\n";
+    let mut i = StatementIterator::new(s).unwrap();
+    let n = i.next();
+    assert!(n.is_some());
+    assert!(n.unwrap().is_ok());
+
+}
