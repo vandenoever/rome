@@ -190,7 +190,7 @@ impl<'a> TripleIterator<'a> {
                 Ok(Statement::Base(new_base)) => {
                     self.base_string.clear();
                     try!(unescape(new_base, &mut self.base_string));
-                    self.base_url = try!(Url::parse(&self.base_string));
+                    self.base_url = try!(self.base_url.join(self.base_string.as_str()));
                 }
                 Ok(Statement::Triples(new_triples)) => {
                     try!(add_triples(new_triples, &mut self.blank_nodes, &mut self.triple_buffer));
