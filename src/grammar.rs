@@ -339,6 +339,7 @@ named!(blank_node_label<&str,BlankNode>, do_parse!(
     tag!("_:") >>
     label: recognize!(tuple!(
         one_if!(is_pn_chars_u_digit),
+        take_while_s!(is_pn_chars),
         fold_many0!(tuple!(
             tag!("."),
             take_while_s!(is_pn_chars)
@@ -704,6 +705,16 @@ fn test_boolean() {
 fn test_literal() {
     assert_eq!(literal("true"), Done(&""[..], literal_true()));
     assert_eq!(literal("false"), Done(&""[..], literal_false()));
+}
+
+#[test]
+fn test_object() {
+    assert_eq!(object("_:b1 "), Done(&" "[..], Object::BlankNode(BlankNode::BlankNode("b1"))));
+}
+
+#[test]
+fn test_blank_node_label() {
+    assert_eq!(blank_node_label("_:b1 "), Done(&" "[..], BlankNode::BlankNode("b1")));
 }
 
 #[test]

@@ -436,3 +436,12 @@ fn add_triples<'a>(new_triples: Triples<'a>,
                            blank_nodes,
                            triple_buffer)
 }
+
+#[test]
+fn blank_node() {
+    let s = "<http://a.example/s> <http://a.example/p> _:b1 .\n";
+    let mut i = StatementIterator::new(s).unwrap();
+    let n = i.next();
+    assert!(n.is_some());
+    assert!(n.unwrap().is_ok());
+}
