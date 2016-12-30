@@ -9,6 +9,7 @@ pub enum Error {
     IOError(io::Error),
     NomError(nom::ErrorKind),
     Custom(&'static str),
+    String(String),
 }
 
 impl fmt::Display for Error {
@@ -17,6 +18,7 @@ impl fmt::Display for Error {
             Error::IOError(ref e) => e.fmt(f),
             Error::NomError(ref e) => e.fmt(f),
             Error::Custom(s) => f.write_str(s),
+            Error::String(ref s) => f.write_str(s.as_str()),
         }
     }
 }
@@ -29,5 +31,10 @@ impl From<io::Error> for Error {
 impl From<nom::ErrorKind> for Error {
     fn from(error: nom::ErrorKind) -> Error {
         Error::NomError(error)
+    }
+}
+impl From<String> for Error {
+    fn from(error: String) -> Error {
+        Error::String(error)
     }
 }
