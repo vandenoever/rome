@@ -138,7 +138,8 @@ struct Strings {
 
 pub struct TripleIterator<'a> {
     statement_iterator: StatementIterator<'a>,
-    base_string: String,
+    buffer: String,
+    base: String,
     prefixes: HashMap<&'a str, String>,
     blank_nodes: BlankNodes<'a>,
     triple_buffer: Vec<Triple<'a>>,
@@ -153,20 +154,19 @@ fn is_absolute(url: &str) -> bool {
     RE.is_match(url)
 }
 
-fn join_iri(base: &str, p: &str) -> Result<String> {
-    if is_absolute(p) {
-        return Ok(String::from(p));
-    }
-    let mut n = if p.starts_with("#") {
-        String::from(base)
-    } else {
-        match base.rfind("/") {
-            Some(pos) => String::from(&base[..pos + 1]),
-            _ => String::from(base),
+fn join_iri(base: &str, p: &str, to: &mut String) -> Result<()> {
+    to.clear();
+    if !is_absolute(p) {
+        let mut end = base.len();
+        if !p.starts_with("#") {
+            if let Some(pos) = base.rfind('/') {
+                end = pos + 1;
+            }
         }
-    };
-    n.push_str(p);
-    Ok(n)
+        to.push_str(&base[..end]);
+    }
+    to.push_str(p);
+    Ok(())
 }
 
 impl<'a> TripleIterator<'a> {
@@ -177,7 +177,8 @@ impl<'a> TripleIterator<'a> {
         let rc = Rc::new(String::new());
         Ok(TripleIterator {
             statement_iterator: try!(StatementIterator::new(src)),
-            base_string: String::from(base),
+            buffer: String::new(),
+            base: String::from(base),
             prefixes: HashMap::new(),
             blank_nodes: BlankNodes {
                 blank_nodes: HashMap::new(),
@@ -198,7 +199,6 @@ impl<'a> TripleIterator<'a> {
         self.prefixes.iter().map(|(&k, v)| (String::from(k), v.clone())).collect()
     }
     fn set_prefix(&mut self, prefix: &'a str, value: String) {
-        let value = resolve_iri_ref(value);
         self.prefixes.insert(prefix, value);
     }
     fn fill_buffer(&mut self) -> Result<usize> {
@@ -206,14 +206,16 @@ impl<'a> TripleIterator<'a> {
             match statement {
                 Ok(Statement::Prefix(prefix, iri)) => {
                     let mut result = String::with_capacity(iri.len());
-                    try!(unescape(iri, &mut result));
-                    let prefix_url = try!(join_iri(self.base_string.as_str(), &result));
-                    self.set_prefix(prefix, prefix_url);
+                    self.buffer.clear();
+                    try!(unescape(iri, &mut self.buffer));
+                    try!(join_iri(self.base.as_str(), self.buffer.as_str(), &mut result));
+                    self.set_prefix(prefix, result);
                 }
                 Ok(Statement::Base(new_base)) => {
-                    let mut base = String::new();
-                    try!(unescape(new_base, &mut base));
-                    self.base_string = try!(join_iri(self.base_string.as_str(), base.as_str()));
+                    self.buffer.clear();
+                    try!(unescape(new_base, &mut self.buffer));
+                    let old_base = self.base.clone();
+                    try!(join_iri(old_base.as_str(), self.buffer.as_str(), &mut self.base));
                 }
                 Ok(Statement::Triples(new_triples)) => {
                     try!(add_triples(new_triples, &mut self.blank_nodes, &mut self.triple_buffer));
@@ -229,23 +231,28 @@ impl<'a> TripleIterator<'a> {
 fn resolve_triple(triple: Triple,
                   prefixes: &HashMap<&str, String>,
                   base: &str,
+                  buffer: &mut String,
                   strings: &mut Strings)
                   -> Result<IteratorTriple> {
     Ok(IteratorTriple {
         subject: match triple.subject {
             SingleSubject::IRI(iri) => {
-                try!(resolve_iri(iri, prefixes, base, &mut strings.subject));
+                try!(resolve_iri(iri, prefixes, base, buffer, &mut strings.subject));
                 IteratorSubject::IRI(strings.subject.clone())
             }
             SingleSubject::BlankNode(n) => IteratorSubject::BlankNode((n, 0)),
         },
         predicate: {
-            try!(resolve_iri(triple.predicate, prefixes, base, &mut strings.predicate));
+            try!(resolve_iri(triple.predicate,
+                             prefixes,
+                             base,
+                             buffer,
+                             &mut strings.predicate));
             strings.predicate.clone()
         },
         object: match triple.object {
             SingleObject::IRI(iri) => {
-                try!(resolve_iri(iri, prefixes, base, &mut strings.object));
+                try!(resolve_iri(iri, prefixes, base, buffer, &mut strings.object));
                 IteratorObject::IRI(strings.object.clone())
             }
             SingleObject::BlankNode(n) => IteratorObject::BlankNode((n, 0)),
@@ -256,7 +263,11 @@ fn resolve_triple(triple: Triple,
                         strings.object.clone()
                     },
                     datatype: {
-                        try!(resolve_iri(l.datatype, prefixes, base, &mut strings.datatype));
+                        try!(resolve_iri(l.datatype,
+                                         prefixes,
+                                         base,
+                                         buffer,
+                                         &mut strings.datatype));
                         strings.datatype.clone()
                     },
                     language: match l.language {
@@ -286,16 +297,16 @@ fn unescape_literal(string: &str, to: &mut Rc<String>) -> Result<()> {
 fn resolve_iri(iri: IRI,
                prefixes: &HashMap<&str, String>,
                base: &str,
+               buffer: &mut String,
                to: &mut Rc<String>)
                -> Result<()> {
     let p = Rc::make_mut(to);
     p.clear();
     match iri {
         IRI::IRI(iri) => {
-            try!(unescape(iri, p));
-            let iri = try!(join_iri(base, p.as_str()));
-            p.clear();
-            p.push_str(iri.as_str());
+            buffer.clear();
+            try!(unescape(iri, buffer));
+            try!(join_iri(base, buffer.as_str(), p));
         }
         IRI::PrefixedName(ns, local) => {
             match prefixes.get(ns) {
@@ -308,10 +319,6 @@ fn resolve_iri(iri: IRI,
         }
     }
     Ok(())
-}
-
-fn resolve_iri_ref(iri: String) -> String {
-    iri
 }
 
 impl<'a> BlankNodes<'a> {
@@ -349,7 +356,11 @@ impl<'a> Iterator for TripleIterator<'a> {
         }
         match self.triple_buffer.pop() {
             Some(t) => {
-                Some(resolve_triple(t, &self.prefixes, &self.base_string, &mut self.strings))
+                Some(resolve_triple(t,
+                                    &self.prefixes,
+                                    &self.base,
+                                    &mut self.buffer,
+                                    &mut self.strings))
             }
             None => None,
         }
