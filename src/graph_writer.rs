@@ -18,11 +18,12 @@ pub struct GraphWriter {
 }
 pub struct Graph {
     strings: Rc<StringCollection>,
+    datatype_or_lang: Rc<StringCollection>,
     spo: Vec<Triple64SPO>,
     ops: Vec<Triple64OPS>,
 }
 
-fn translate<T>(t: &mut T, translation: &Vec<StringId>)
+fn translate<T>(t: &mut T, translation: &Vec<StringId>, datatrans: &Vec<StringId>)
     where T: CompactTriple<u32>
 {
     if t.subject_is_iri() {
@@ -36,7 +37,7 @@ fn translate<T>(t: &mut T, translation: &Vec<StringId>)
         t.set_object(translation[object].id);
         if !t.object_is_iri() {
             let datatype_or_lang = t.datatype_or_lang() as usize;
-            t.set_datatype_or_lang(translation[datatype_or_lang].id);
+            t.set_datatype_or_lang(datatrans[datatype_or_lang].id);
         }
     }
 }
@@ -186,10 +187,11 @@ impl GraphWriter {
 
     pub fn collect(&mut self) -> Graph {
         let (translation, string_collection) = self.string_collector.collect();
+        let (datatrans, datatype_lang_collection) = self.datatype_lang_collector.collect();
         let mut spo = Vec::new();
         mem::swap(&mut spo, &mut self.triples);
         for t in spo.iter_mut() {
-            translate(t, &translation);
+            translate(t, &translation, &datatrans);
         }
         // sort according to StringId, which is sorted alphabetically
         spo.sort();
@@ -198,6 +200,7 @@ impl GraphWriter {
         let ops = create_ops(&spo);
         Graph {
             strings: Rc::new(string_collection),
+            datatype_or_lang: Rc::new(datatype_lang_collection),
             spo: spo,
             ops: ops,
         }
@@ -222,6 +225,7 @@ pub struct GraphTriple<T>
     where T: PartialEq
 {
     strings: Rc<StringCollection>,
+    datatype_or_lang: Rc<StringCollection>,
     triple: T,
 }
 
@@ -243,6 +247,7 @@ impl<T> PartialEq for GraphTriple<T>
 
 struct GraphIterator<'a, T: 'a> {
     strings: Rc<StringCollection>,
+    datatype_or_lang: Rc<StringCollection>,
     iter: slice::Iter<'a, T>,
 }
 
@@ -254,6 +259,7 @@ impl<'a, T> Iterator for GraphIterator<'a, T>
         self.iter.next().map(|t| {
             GraphTriple {
                 strings: self.strings.clone(),
+                datatype_or_lang: self.datatype_or_lang.clone(),
                 triple: *t,
             }
         })
@@ -282,12 +288,14 @@ impl<T> graph::Triple for GraphTriple<T>
             graph::Object::Literal(graph::Literal {
                 lexical: self.strings.get(StringId { id: self.triple.object() }),
                 datatype: grammar::RDF_LANG_STRING,
-                language: Some(self.strings.get(StringId { id: self.triple.datatype_or_lang() })),
+                language: Some(self.datatype_or_lang
+                    .get(StringId { id: self.triple.datatype_or_lang() })),
             })
         } else {
             graph::Object::Literal(graph::Literal {
                 lexical: self.strings.get(StringId { id: self.triple.object() }),
-                datatype: self.strings.get(StringId { id: self.triple.datatype_or_lang() }),
+                datatype: self.datatype_or_lang
+                    .get(StringId { id: self.triple.datatype_or_lang() }),
                 language: None,
             })
         }
@@ -298,6 +306,7 @@ pub struct TripleRangeIterator<'a, T: 'a>
     where T: CompactTriple<u32>
 {
     strings: Rc<StringCollection>,
+    datatype_or_lang: Rc<StringCollection>,
     iter: slice::Iter<'a, T>,
     end: T,
 }
@@ -311,6 +320,7 @@ impl<'a, T> Iterator for TripleRangeIterator<'a, T>
             Some(t) if *t < self.end => {
                 Some(GraphTriple {
                     strings: self.strings.clone(),
+                    datatype_or_lang: self.datatype_or_lang.clone(),
                     triple: *t,
                 })
             }
@@ -329,6 +339,7 @@ impl Graph {
         };
         TripleRangeIterator {
             strings: self.strings.clone(),
+            datatype_or_lang: self.datatype_or_lang.clone(),
             iter: slice.iter(),
             end: end,
         }
@@ -339,6 +350,7 @@ impl Graph {
         let end = T::triple(true, 0, 0, TripleObjectType::BlankNode, 0, 0);
         TripleRangeIterator {
             strings: self.strings.clone(),
+            datatype_or_lang: self.datatype_or_lang.clone(),
             iter: [].iter(),
             end: end,
         }
@@ -417,6 +429,7 @@ impl<'a> graph::Graph<'a> for Graph {
     fn iter(&'a self) -> Box<Iterator<Item = Self::Triple> + 'a> {
         Box::new(GraphIterator {
             strings: self.strings.clone(),
+            datatype_or_lang: self.datatype_or_lang.clone(),
             iter: self.spo.iter(),
         })
     }
