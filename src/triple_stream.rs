@@ -46,8 +46,8 @@ impl<'a> Iterator for StatementIterator<'a> {
                 r = Some(Ok(s));
                 self.src = left;
             }
-            IResult::Error(_) => {
-                r = Some(Err(Error::Custom("error parsing")));
+            IResult::Error(e) => {
+                r = Some(Err(Error::from(e)));
                 self.done = true;
             }
             IResult::Incomplete(_) => {

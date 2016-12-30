@@ -30,7 +30,7 @@ pub trait Triple: PartialEq {
     }
 }
 
-#[derive(PartialEq,Eq,Hash,Clone,PartialOrd,Ord,Debug)]
+#[derive(PartialEq,Eq,Hash,Clone,Copy,PartialOrd,Ord,Debug)]
 pub enum Subject<'a> {
     IRI(&'a str),
     BlankNode(BlankNode),
