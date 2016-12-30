@@ -1,3 +1,4 @@
+#![feature(ptr_eq)]
 #[macro_use]
 extern crate nom;
 extern crate rand;

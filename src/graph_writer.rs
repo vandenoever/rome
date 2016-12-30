@@ -218,9 +218,27 @@ fn create_ops(spo: &[Triple64SPO]) -> Vec<Triple64OPS> {
     ops
 }
 
-pub struct GraphTriple<T> {
+pub struct GraphTriple<T>
+    where T: PartialEq
+{
     strings: Rc<StringCollection>,
     triple: T,
+}
+
+impl<T> PartialEq for GraphTriple<T>
+    where T: PartialEq + CompactTriple<u32>
+{
+    fn eq(&self, other: &Self) -> bool {
+        // if the triples use the same StringCollection, it's ok to compare
+        // the numeric value of the triple
+        if Rc::ptr_eq(&self.strings, &other.strings) {
+            self.triple.eq(&other.triple)
+        } else {
+            use graph::Triple;
+            self.subject().eq(&other.subject()) && self.predicate().eq(other.predicate()) &&
+            self.object().eq(&other.object())
+        }
+    }
 }
 
 struct GraphIterator<'a, T: 'a> {
@@ -229,7 +247,7 @@ struct GraphIterator<'a, T: 'a> {
 }
 
 impl<'a, T> Iterator for GraphIterator<'a, T>
-    where T: Copy
+    where T: Copy + PartialEq
 {
     type Item = GraphTriple<T>;
     fn next(&mut self) -> Option<Self::Item> {
@@ -243,7 +261,7 @@ impl<'a, T> Iterator for GraphIterator<'a, T>
 }
 
 impl<T> graph::Triple for GraphTriple<T>
-    where T: CompactTriple<u32>
+    where T: CompactTriple<u32> + PartialEq
 {
     fn subject(&self) -> graph::Subject {
         if self.triple.subject_is_iri() {

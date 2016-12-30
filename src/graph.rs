@@ -18,10 +18,16 @@ pub trait WritableGraph {
 
 pub type BlankNode = (usize, usize);
 
-pub trait Triple {
+pub trait Triple: PartialEq {
     fn subject(&self) -> Subject;
     fn predicate(&self) -> &str;
     fn object(&self) -> Object;
+    fn eq<Rhs>(&self, other: &Rhs) -> bool
+        where Rhs: Triple
+    {
+        self.subject().eq(&other.subject()) && self.predicate().eq(other.predicate()) &&
+        self.object().eq(&other.object())
+    }
 }
 
 #[derive(PartialEq,Eq,Hash,Clone,PartialOrd,Ord,Debug)]

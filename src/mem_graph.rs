@@ -114,7 +114,9 @@ fn blank_use_count(blank: &Blank) -> usize {
 }
 
 impl MemGraphTriple {
-    fn new(triple: &graph::Triple) -> MemGraphTriple {
+    fn new<T>(triple: &T) -> MemGraphTriple
+        where T: graph::Triple
+    {
         MemGraphTriple {
             subject: match triple.subject() {
                 graph::Subject::IRI(iri) => Subject::IRI(Rc::new(String::from(iri))),
