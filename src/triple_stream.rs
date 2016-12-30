@@ -342,33 +342,33 @@ const RDF_FIRST: &'static str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#firs
 const RDF_REST: &'static str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest";
 const RDF_NIL: &'static str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil";
 
+fn s2o(s: SingleSubject) -> SingleObject {
+    match s {
+        SingleSubject::IRI(iri) => SingleObject::IRI(iri),
+        SingleSubject::BlankNode(n) => SingleObject::BlankNode(n),
+    }
+}
+
 fn make_collection<'a>(collection: Vec<Object<'a>>,
                        blank_nodes: &mut BlankNodes<'a>,
                        triple_buffer: &mut Vec<Triple<'a>>)
-                       -> Result<usize> {
-    let head = blank_nodes.new_blank();
-
-    let mut node = head;
-    for object in collection {
+                       -> Result<SingleSubject<'a>> {
+    let mut head = SingleSubject::IRI(IRI::IRI(RDF_NIL));
+    for object in collection.into_iter().rev() {
+        let this = blank_nodes.new_blank();
         let o = try!(make_object(object, blank_nodes, triple_buffer));
         triple_buffer.push(Triple {
-            subject: SingleSubject::BlankNode(node),
+            subject: SingleSubject::BlankNode(this),
             predicate: IRI::IRI(RDF_FIRST),
             object: o,
         });
-        let next = blank_nodes.new_blank();
         triple_buffer.push(Triple {
-            subject: SingleSubject::BlankNode(node),
+            subject: SingleSubject::BlankNode(this),
             predicate: IRI::IRI(RDF_REST),
-            object: SingleObject::BlankNode(next),
+            object: s2o(head),
         });
-        node = next;
+        head = SingleSubject::BlankNode(this);
     }
-    triple_buffer.push(Triple {
-        subject: SingleSubject::BlankNode(node),
-        predicate: IRI::IRI(RDF_REST),
-        object: SingleObject::IRI(IRI::IRI(RDF_NIL)),
-    });
     Ok(head)
 }
 
@@ -380,7 +380,7 @@ fn make_subject<'a>(subject: Subject<'a>,
         Subject::IRI(iri) => SingleSubject::IRI(iri),
         Subject::BlankNode(blank) => SingleSubject::BlankNode(make_blank(blank, blank_nodes)),
         Subject::Collection(collection) => {
-            SingleSubject::BlankNode(try!(make_collection(collection, blank_nodes, triple_buffer)))
+            try!(make_collection(collection, blank_nodes, triple_buffer))
         }
     })
 }
@@ -393,7 +393,7 @@ fn make_object<'a>(object: Object<'a>,
         Object::IRI(iri) => SingleObject::IRI(iri),
         Object::BlankNode(blank) => SingleObject::BlankNode(make_blank(blank, blank_nodes)),
         Object::Collection(collection) => {
-            SingleObject::BlankNode(try!(make_collection(collection, blank_nodes, triple_buffer)))
+            s2o(try!(make_collection(collection, blank_nodes, triple_buffer)))
         }
         Object::Literal(l) => SingleObject::Literal(l),
         Object::BlankNodePropertyList(predicated_objects_list) => {
