@@ -96,14 +96,14 @@ named!(base<&str,Statement>, do_parse!(
 
 /// [5s] sparqlBase ::= "BASE" IRIREF
 named!(sparql_base<&str,Statement>, do_parse!(
-    tag_s!("BASE") >> tws >>
+    tag_no_case_s!("BASE") >> tws >>
     iri_ref: iri_ref >>
     (Statement::Base(iri_ref))
 ));
 
 /// [6s] sparqlPrefix ::= "PREFIX" PNAME_NS IRIREF
 named!(sparql_prefix<&str,Statement>, do_parse!(
-    tag_s!("PREFIX") >> tws >>
+    tag_no_case_s!("PREFIX") >> tws >>
     pname_ns: pname_ns >> tws >>
     iri_ref: iri_ref >>
     (Statement::Prefix(pname_ns, iri_ref))
