@@ -6,7 +6,7 @@ use nom::IResult;
 use graph;
 use std::rc::Rc;
 use error::{Error, Result};
-use url::Url;
+use regex::Regex;
 
 struct StatementIterator<'a> {
     src: &'a str,
@@ -139,7 +139,6 @@ struct Strings {
 pub struct TripleIterator<'a> {
     statement_iterator: StatementIterator<'a>,
     base_string: String,
-    base_url: Url,
     prefixes: HashMap<&'a str, String>,
     blank_nodes: BlankNodes<'a>,
     triple_buffer: Vec<Triple<'a>>,
@@ -147,14 +146,38 @@ pub struct TripleIterator<'a> {
     strings: Strings,
 }
 
+fn is_absolute(url: &str) -> bool {
+    lazy_static! {
+        static ref RE: Regex = Regex::new("^[a-z][a-z0-9+.-]*:").unwrap();
+    }
+    RE.is_match(url)
+}
+
+fn join_iri(base: &str, p: &str) -> Result<String> {
+    if is_absolute(p) {
+        return Ok(String::from(p));
+    }
+    let mut n = if p.starts_with("#") {
+        String::from(base)
+    } else {
+        match base.rfind("/") {
+            Some(pos) => String::from(&base[..pos + 1]),
+            _ => String::from(base),
+        }
+    };
+    n.push_str(p);
+    Ok(n)
+}
+
 impl<'a> TripleIterator<'a> {
     pub fn new(src: &'a str, base: &str) -> Result<TripleIterator<'a>> {
-        let base_url = try!(Url::parse(base));
+        if !is_absolute(base) {
+            return Err(Error::Custom("base url is not absolute"));
+        }
         let rc = Rc::new(String::new());
         Ok(TripleIterator {
             statement_iterator: try!(StatementIterator::new(src)),
             base_string: String::from(base),
-            base_url: base_url,
             prefixes: HashMap::new(),
             blank_nodes: BlankNodes {
                 blank_nodes: HashMap::new(),
@@ -184,13 +207,13 @@ impl<'a> TripleIterator<'a> {
                 Ok(Statement::Prefix(prefix, iri)) => {
                     let mut result = String::with_capacity(iri.len());
                     try!(unescape(iri, &mut result));
-                    let prefix_url = try!(self.base_url.join(&result));
-                    self.set_prefix(prefix, String::from(prefix_url.into_string()));
+                    let prefix_url = try!(join_iri(self.base_string.as_str(), &result));
+                    self.set_prefix(prefix, prefix_url);
                 }
                 Ok(Statement::Base(new_base)) => {
-                    self.base_string.clear();
-                    try!(unescape(new_base, &mut self.base_string));
-                    self.base_url = try!(self.base_url.join(self.base_string.as_str()));
+                    let mut base = String::new();
+                    try!(unescape(new_base, &mut base));
+                    self.base_string = try!(join_iri(self.base_string.as_str(), base.as_str()));
                 }
                 Ok(Statement::Triples(new_triples)) => {
                     try!(add_triples(new_triples, &mut self.blank_nodes, &mut self.triple_buffer));
@@ -205,7 +228,7 @@ impl<'a> TripleIterator<'a> {
 
 fn resolve_triple(triple: Triple,
                   prefixes: &HashMap<&str, String>,
-                  base: &Url,
+                  base: &str,
                   strings: &mut Strings)
                   -> Result<IteratorTriple> {
     Ok(IteratorTriple {
@@ -262,7 +285,7 @@ fn unescape_literal(string: &str, to: &mut Rc<String>) -> Result<()> {
 }
 fn resolve_iri(iri: IRI,
                prefixes: &HashMap<&str, String>,
-               base: &Url,
+               base: &str,
                to: &mut Rc<String>)
                -> Result<()> {
     let p = Rc::make_mut(to);
@@ -270,7 +293,7 @@ fn resolve_iri(iri: IRI,
     match iri {
         IRI::IRI(iri) => {
             try!(unescape(iri, p));
-            let iri = try!(base.join(&p));
+            let iri = try!(join_iri(base, p.as_str()));
             p.clear();
             p.push_str(iri.as_str());
         }
@@ -325,7 +348,9 @@ impl<'a> Iterator for TripleIterator<'a> {
             }
         }
         match self.triple_buffer.pop() {
-            Some(t) => Some(resolve_triple(t, &self.prefixes, &self.base_url, &mut self.strings)),
+            Some(t) => {
+                Some(resolve_triple(t, &self.prefixes, &self.base_string, &mut self.strings))
+            }
             None => None,
         }
     }

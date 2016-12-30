@@ -2,7 +2,9 @@
 #[macro_use]
 extern crate nom;
 extern crate rand;
-extern crate url;
+#[macro_use]
+extern crate lazy_static;
+extern crate regex;
 use nom::ErrorKind;
 use std::io;
 use std::io::Read;
