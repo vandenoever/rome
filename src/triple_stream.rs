@@ -6,6 +6,7 @@ use nom::IResult;
 use graph;
 use std::rc::Rc;
 use error::{Error, Result};
+use url::Url;
 
 struct StatementIterator<'a> {
     src: &'a str,
@@ -137,7 +138,8 @@ struct Strings {
 
 pub struct TripleIterator<'a> {
     statement_iterator: StatementIterator<'a>,
-    base: String,
+    base_string: String,
+    base_url: Url,
     prefixes: HashMap<&'a str, String>,
     blank_nodes: BlankNodes<'a>,
     triple_buffer: Vec<Triple<'a>>,
@@ -146,11 +148,13 @@ pub struct TripleIterator<'a> {
 }
 
 impl<'a> TripleIterator<'a> {
-    pub fn new(src: &str) -> Result<TripleIterator> {
+    pub fn new(src: &'a str, base: &str) -> Result<TripleIterator<'a>> {
+        let base_url = try!(Url::parse(base));
         let rc = Rc::new(String::new());
         Ok(TripleIterator {
             statement_iterator: try!(StatementIterator::new(src)),
-            base: String::new(),
+            base_string: String::from(base),
+            base_url: base_url,
             prefixes: HashMap::new(),
             blank_nodes: BlankNodes {
                 blank_nodes: HashMap::new(),
@@ -180,10 +184,13 @@ impl<'a> TripleIterator<'a> {
                 Ok(Statement::Prefix(prefix, iri)) => {
                     let mut result = String::with_capacity(iri.len());
                     try!(unescape(iri, &mut result));
-                    self.set_prefix(prefix, result);
+                    let prefix_url = try!(self.base_url.join(&result));
+                    self.set_prefix(prefix, String::from(prefix_url.into_string()));
                 }
                 Ok(Statement::Base(new_base)) => {
-                    try!(unescape(new_base, &mut self.base));
+                    self.base_string.clear();
+                    try!(unescape(new_base, &mut self.base_string));
+                    self.base_url = try!(Url::parse(&self.base_string));
                 }
                 Ok(Statement::Triples(new_triples)) => {
                     try!(add_triples(new_triples, &mut self.blank_nodes, &mut self.triple_buffer));
@@ -198,23 +205,24 @@ impl<'a> TripleIterator<'a> {
 
 fn resolve_triple(triple: Triple,
                   prefixes: &HashMap<&str, String>,
+                  base: &Url,
                   strings: &mut Strings)
                   -> Result<IteratorTriple> {
     Ok(IteratorTriple {
         subject: match triple.subject {
             SingleSubject::IRI(iri) => {
-                try!(resolve_iri(iri, prefixes, &mut strings.subject));
+                try!(resolve_iri(iri, prefixes, base, &mut strings.subject));
                 IteratorSubject::IRI(strings.subject.clone())
             }
             SingleSubject::BlankNode(n) => IteratorSubject::BlankNode((n, 0)),
         },
         predicate: {
-            try!(resolve_iri(triple.predicate, prefixes, &mut strings.predicate));
+            try!(resolve_iri(triple.predicate, prefixes, base, &mut strings.predicate));
             strings.predicate.clone()
         },
         object: match triple.object {
             SingleObject::IRI(iri) => {
-                try!(resolve_iri(iri, prefixes, &mut strings.object));
+                try!(resolve_iri(iri, prefixes, base, &mut strings.object));
                 IteratorObject::IRI(strings.object.clone())
             }
             SingleObject::BlankNode(n) => IteratorObject::BlankNode((n, 0)),
@@ -225,7 +233,7 @@ fn resolve_triple(triple: Triple,
                         strings.object.clone()
                     },
                     datatype: {
-                        try!(resolve_iri(l.datatype, prefixes, &mut strings.datatype));
+                        try!(resolve_iri(l.datatype, prefixes, base, &mut strings.datatype));
                         strings.datatype.clone()
                     },
                     language: match l.language {
@@ -252,12 +260,19 @@ fn unescape_literal(string: &str, to: &mut Rc<String>) -> Result<()> {
     try!(unescape(string, p));
     Ok(())
 }
-fn resolve_iri(iri: IRI, prefixes: &HashMap<&str, String>, to: &mut Rc<String>) -> Result<()> {
+fn resolve_iri(iri: IRI,
+               prefixes: &HashMap<&str, String>,
+               base: &Url,
+               to: &mut Rc<String>)
+               -> Result<()> {
     let p = Rc::make_mut(to);
     p.clear();
     match iri {
         IRI::IRI(iri) => {
             try!(unescape(iri, p));
+            let iri = try!(base.join(&p));
+            p.clear();
+            p.push_str(iri.as_str());
         }
         IRI::PrefixedName(ns, local) => {
             match prefixes.get(ns) {
@@ -310,7 +325,7 @@ impl<'a> Iterator for TripleIterator<'a> {
             }
         }
         match self.triple_buffer.pop() {
-            Some(t) => Some(resolve_triple(t, &self.prefixes, &mut self.strings)),
+            Some(t) => Some(resolve_triple(t, &self.prefixes, &self.base_url, &mut self.strings)),
             None => None,
         }
     }

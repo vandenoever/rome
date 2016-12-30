@@ -7,3 +7,4 @@ authors = ["Jos van den Oever <jos@vandenoever.info>"]
 nom = "*"
 walkdir = "*"
 rand = "*"
+url = "*"

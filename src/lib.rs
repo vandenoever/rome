@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate nom;
 extern crate rand;
+extern crate url;
 use nom::ErrorKind;
 use std::io;
 use std::io::Read;
@@ -30,7 +31,7 @@ pub use error::Result;
 
 pub fn parse(data: &str) -> Result<(MemGraph, HashMap<String, String>)> {
     let mut graph = MemGraph::new();
-    let mut triples = try!(TripleIterator::new(data));
+    let mut triples = try!(TripleIterator::new(data, ""));
     while let Some(triple) = triples.next() {
         graph.add_triple(&try!(triple));
     }
@@ -39,7 +40,7 @@ pub fn parse(data: &str) -> Result<(MemGraph, HashMap<String, String>)> {
 
 pub fn parse2(data: &str) -> Result<(graph_writer::Graph, HashMap<String, String>)> {
     let mut writer = graph_writer::GraphWriter::with_capacity(65000);
-    let mut triples = try!(TripleIterator::new(data));
+    let mut triples = try!(TripleIterator::new(data, ""));
     while let Some(triple) = triples.next() {
         writer.add_triple(&try!(triple));
     }
