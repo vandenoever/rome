@@ -6,6 +6,7 @@ use graph;
 use string_collector::*;
 use std::fmt::Debug;
 use triple_to_uint::*;
+use std::cmp;
 
 pub struct GraphWriter {
     string_collector: StringCollector,
@@ -15,12 +16,14 @@ pub struct GraphWriter {
     prev_predicate: Option<(String, StringId)>,
     prev_datatype: Option<(String, StringId)>,
     prev_lang: Option<(String, StringId)>,
+    highest_blank_node: u32,
 }
 pub struct Graph {
     strings: Rc<StringCollection>,
     datatype_or_lang: Rc<StringCollection>,
     spo: Vec<Triple64SPO>,
     ops: Vec<Triple64OPS>,
+    highest_blank_node: u32,
 }
 
 fn translate<T>(t: &mut T, translation: &Vec<StringId>, datatrans: &Vec<StringId>)
@@ -39,6 +42,18 @@ fn translate<T>(t: &mut T, translation: &Vec<StringId>, datatrans: &Vec<StringId
             let datatype_or_lang = t.datatype_or_lang() as usize;
             t.set_datatype_or_lang(datatrans[datatype_or_lang].id);
         }
+    }
+}
+fn translate_object<T>(t: &mut T, translation: &Vec<u32>)
+    where T: CompactTriple<u32>
+{
+    if !t.subject_is_iri() {
+        let subject = t.subject() as usize;
+        t.set_subject(translation[subject]);
+    }
+    if t.object_is_blank_node() {
+        let object = t.object() as usize;
+        t.set_object(translation[object]);
     }
 }
 /// check if the new string is the same as the string from the previous triple
@@ -73,6 +88,7 @@ impl GraphWriter {
             prev_predicate: None,
             prev_datatype: None,
             prev_lang: None,
+            highest_blank_node: 0,
         }
     }
     fn add_s_iri(&mut self, s: &str, p: &str, ot: TripleObjectType, o: u32, d: u32) {
@@ -82,6 +98,7 @@ impl GraphWriter {
         self.triples.push(t);
     }
     pub fn add_iri_blank(&mut self, subject: &str, predicate: &str, object: u32) {
+        self.highest_blank_node = cmp::max(self.highest_blank_node, object);
         self.add_s_iri(subject, predicate, TripleObjectType::BlankNode, object, 0);
     }
     pub fn add_iri_iri(&mut self, subject: &str, predicate: &str, object: &str) {
@@ -102,11 +119,13 @@ impl GraphWriter {
         self.add_s_iri(subject, predicate, TripleObjectType::LiteralLang, o.id, l);
     }
     fn add_s_blank(&mut self, s: u32, p: &str, ot: TripleObjectType, o: u32, d: u32) {
+        self.highest_blank_node = cmp::max(self.highest_blank_node, s);
         let p = check_prev(p, &mut self.prev_predicate, &mut self.string_collector);
         let t = Triple64SPO::triple(false, s, p.id, ot, o, d);
         self.triples.push(t);
     }
     pub fn add_blank_blank(&mut self, subject: u32, predicate: &str, object: u32) {
+        self.highest_blank_node = cmp::max(self.highest_blank_node, object);
         self.add_s_blank(subject, predicate, TripleObjectType::BlankNode, object, 0);
     }
     pub fn add_blank_iri(&mut self, subject: u32, predicate: &str, object: &str) {
@@ -203,6 +222,7 @@ impl GraphWriter {
             datatype_or_lang: Rc::new(datatype_lang_collection),
             spo: spo,
             ops: ops,
+            highest_blank_node: self.highest_blank_node,
         }
     }
 }
@@ -422,6 +442,102 @@ impl Graph {
             }
         }
     }
+    /// iterate over all triple with a blank node subject
+    pub fn iter_subject_blank_nodes(&self) -> TripleRangeIterator<Triple64SPO> {
+        let start = Triple64SPO::triple(false, 0, 0, TripleObjectType::BlankNode, 0, 0);
+        let end = Triple64SPO::triple(true, 0, 0, TripleObjectType::BlankNode, 0, 0);
+        self.range_iter(&self.spo, start, end)
+    }
+    /// iterate over all triple with a blank node object
+    pub fn iter_object_blank_nodes(&self) -> TripleRangeIterator<Triple64OPS> {
+        let start = Triple64OPS::triple(false, 0, 0, TripleObjectType::BlankNode, 0, 0);
+        let end = Triple64OPS::triple(false, 0, 0, TripleObjectType::IRI, 0, 0);
+        self.range_iter(&self.ops, start, end)
+    }
+    pub fn sort_blank_nodes(&self) -> Graph {
+        // sort nodes by usage (least used last)
+        self.sort_blank_nodes_by(|b1, b2| {
+            let mut cmp = b2.times_a_subject.cmp(&b1.times_a_subject);
+            if cmp == cmp::Ordering::Equal {
+                cmp = b2.times_a_subject_with_blank_object
+                    .cmp(&b1.times_a_subject_with_blank_object);
+            }
+            if cmp == cmp::Ordering::Equal {
+                cmp = b2.times_an_object.cmp(&b1.times_an_object);
+            }
+            if cmp == cmp::Ordering::Equal {
+                cmp = b2.times_an_object_with_blank_subject
+                    .cmp(&b1.times_an_object_with_blank_subject);
+            }
+            cmp
+        })
+    }
+    pub fn sort_blank_nodes_by<F>(&self, compare: F) -> Graph
+        where F: FnMut(&BlankNodeInfo, &BlankNodeInfo) -> cmp::Ordering
+    {
+        let len = self.highest_blank_node as usize + 1;
+        let mut blank_info = Vec::with_capacity(len);
+        for i in 0..len {
+            blank_info.push(BlankNodeInfo {
+                blank_node: i as u32,
+                times_a_subject: 0,
+                times_a_subject_with_blank_object: 0,
+                times_an_object: 0,
+                times_an_object_with_blank_subject: 0,
+            })
+        }
+        // collection information on the blank nodes
+        for t in self.iter_subject_blank_nodes() {
+            let i = &mut blank_info[t.triple.subject() as usize];
+            i.times_a_subject += 1;
+            if t.triple.object_is_blank_node() {
+                i.times_a_subject_with_blank_object += 1;
+            }
+        }
+        for t in self.iter_object_blank_nodes() {
+            let i = &mut blank_info[t.triple.object() as usize];
+            i.times_an_object += 1;
+            if !t.triple.subject_is_iri() {
+                i.times_an_object_with_blank_subject += 1;
+            }
+        }
+        // sort the vector
+        blank_info.sort_by(compare);
+        let mut translation = vec![0 as u32;len];
+        for i in 0..len {
+            translation[blank_info[i].blank_node as usize] = i as u32;
+        }
+        blank_info.clear();
+        blank_info.shrink_to_fit();
+
+        // translate the blank nodes in spo and ops
+        let mut spo = self.spo.clone();
+        for t in spo.iter_mut() {
+            translate_object(t, &translation);
+        }
+        spo.sort();
+        let mut ops = self.ops.clone();
+        for t in ops.iter_mut() {
+            translate_object(t, &translation);
+        }
+        ops.sort();
+
+        Graph {
+            strings: self.strings.clone(),
+            datatype_or_lang: self.datatype_or_lang.clone(),
+            spo: spo,
+            ops: ops,
+            highest_blank_node: self.highest_blank_node,
+        }
+    }
+}
+
+pub struct BlankNodeInfo {
+    blank_node: u32,
+    times_a_subject: u32,
+    times_a_subject_with_blank_object: u32,
+    times_an_object: u32,
+    times_an_object_with_blank_subject: u32,
 }
 
 impl<'a> graph::Graph<'a> for Graph {
