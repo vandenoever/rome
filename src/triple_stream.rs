@@ -67,6 +67,9 @@ impl<'a> Iterator for StatementIterator<'a> {
                 self.done = true;
             }
         }
+        if r.is_none() && self.src.len() > 0 {
+            r = Some(Err(Error::Custom("trailing bytes")));
+        }
         r
     }
 }
