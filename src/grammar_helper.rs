@@ -55,7 +55,6 @@ fn hex_to_char(chars: &mut Chars, n: u8) -> Option<char> {
 /// [26] UCHAR ::= '\u' HEX HEX HEX HEX | '\U' HEX HEX HEX HEX HEX HEX HEX HEX
 /// [159s] ECHAR ::= '\' [tbnrf"'\]
 pub fn unescape(s: &str, result: &mut String) -> Result<()> {
-    // let mut result = String::with_capacity(s.len());
     let mut chars = s.chars();
     while let Some(ch) = chars.next() {
         if ch == '\\' {
@@ -70,6 +69,26 @@ pub fn unescape(s: &str, result: &mut String) -> Result<()> {
                 Some('\'') => Some('\''),
                 Some('"') => Some('"'),
                 Some('\\') => Some('\\'),
+                _ => return Err(Error::Custom("Invalid escape sequence")),
+            };
+            match r {
+                Some(v) => result.push(v),
+                None => return Err(Error::Custom("Unclosed escape sequence")),
+            }
+        } else {
+            result.push(ch)
+        }
+    }
+    Ok(())
+}
+
+pub fn unescape_iri(s: &str, result: &mut String) -> Result<()> {
+    let mut chars = s.chars();
+    while let Some(ch) = chars.next() {
+        if ch == '\\' {
+            let r = match chars.next() {
+                Some('u') => hex_to_char(&mut chars, 4),
+                Some('U') => hex_to_char(&mut chars, 8),
                 _ => return Err(Error::Custom("Invalid escape sequence")),
             };
             match r {

@@ -210,13 +210,13 @@ impl<'a> TripleIterator<'a> {
                 Ok(Statement::Prefix(prefix, iri)) => {
                     let mut result = String::with_capacity(iri.len());
                     self.buffer.clear();
-                    try!(unescape(iri, &mut self.buffer));
+                    try!(unescape_iri(iri, &mut self.buffer));
                     try!(join_iri(self.base.as_str(), self.buffer.as_str(), &mut result));
                     self.set_prefix(prefix, result);
                 }
                 Ok(Statement::Base(new_base)) => {
                     self.buffer.clear();
-                    try!(unescape(new_base, &mut self.buffer));
+                    try!(unescape_iri(new_base, &mut self.buffer));
                     let old_base = self.base.clone();
                     try!(join_iri(old_base.as_str(), self.buffer.as_str(), &mut self.base));
                 }
@@ -308,7 +308,7 @@ fn resolve_iri(iri: IRI,
     match iri {
         IRI::IRI(iri) => {
             buffer.clear();
-            try!(unescape(iri, buffer));
+            try!(unescape_iri(iri, buffer));
             try!(join_iri(base, buffer.as_str(), p));
         }
         IRI::PrefixedName(ns, local) => {
