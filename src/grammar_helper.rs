@@ -92,6 +92,9 @@ pub fn unescape_iri(s: &str, result: &mut String) -> Result<()> {
                 _ => return Err(Error::Custom("Invalid escape sequence")),
             };
             match r {
+                Some(v) if v <= ' ' || "<>\"{}|^`\\".contains(v) => {
+                    return Err(Error::Custom("Invalid character in IRI."))
+                }
                 Some(v) => result.push(v),
                 None => return Err(Error::Custom("Unclosed escape sequence")),
             }
