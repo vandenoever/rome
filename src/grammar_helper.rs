@@ -96,7 +96,7 @@ pub fn unescape_iri(s: &str, result: &mut String) -> Result<()> {
                     return Err(Error::Custom("Invalid character in IRI."))
                 }
                 Some(v) => result.push(v),
-                None => return Err(Error::Custom("Unclosed escape sequence")),
+                None => return Err(Error::Custom("Incomplete escape sequence")),
             }
         } else {
             result.push(ch)
