@@ -507,12 +507,26 @@ named!(pn_prefix<&str,&str>, recognize!(tuple!(
 ///           ((PN_CHARS | '.' | ':' | PLX)* (PN_CHARS | ':' | PLX))?
 named!(pn_local<&str,&str>, recognize!(tuple!(
     alt!(one_if!(is_pn_local_start) | plx),
-    fold_many0!(alt!(pn_chars_colon | plx),(),|_,_|()),
-    fold_many0!(tuple!(
-        tag_s!("."),
-        fold_many0!(alt!(pn_chars_colon | plx),(),|_,_|())
-    ),(),|_,_|())
+    pn_local2
 )));
+
+fn pn_local2(src: &str) -> IResult<&str, ()> {
+    match pn_local3(src) {
+        Done(left, m) => {
+            // if last is a '.', remove that
+            if m.ends_with(".") {
+                Done(&src[m.len() - 1..], ())
+            } else {
+                Done(left, ())
+            }
+        }
+        IResult::Error(e) => IResult::Error(e),
+        IResult::Incomplete(i) => IResult::Incomplete(i),
+    }
+}
+
+named!(pn_local3<&str,&str>,
+    recognize!(many0!(alt!(pn_chars_colon | plx | tag_s!(".")))));
 
 named!(pn_chars_colon<&str,&str>, take_while1_s!(is_pn_chars_colon));
 
@@ -572,7 +586,7 @@ fn test_comment() {
 
 #[test]
 fn test_prefixed_name() {
-    assert_eq!(prefixed_name("a:a"), Done(&""[..],
+    assert_eq!(prefixed_name("a:a "), Done(&" "[..],
             IRI::PrefixedName("a","a")));
     assert_eq!(prefixed_name(": "), Done(&" "[..],
             IRI::PrefixedName("","")));
@@ -799,4 +813,10 @@ fn test_sparql_base() {
 fn test_sparql_prefix() {
     assert_eq!(sparql_prefix("PREFIX a.b.c: <urn>"),
         Done(&""[..],Statement::Prefix("a.b.c","urn")));
+}
+
+#[test]
+fn test_pn_local() {
+    // dot does not belong in the pn_local
+    assert_eq!(pn_local("c. "), Done(&". "[..], "c"));
 }

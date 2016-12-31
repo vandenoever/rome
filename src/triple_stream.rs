@@ -489,5 +489,15 @@ fn test_string_literal_long_quote() {
     let n = i.next();
     assert!(n.is_some());
     assert!(n.unwrap().is_ok());
+}
 
+#[test]
+fn test_no_space_before_dot() {
+    let s = "@prefix : <urn:> .\n:s..2 :p..2 :o.\n";
+    let mut i = StatementIterator::new(s).unwrap();
+    i.next();
+    let n = i.next();
+    println!("{:?}", n);
+    assert!(n.is_some());
+    assert!(n.unwrap().is_ok());
 }
