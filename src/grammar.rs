@@ -340,17 +340,34 @@ named!(blank_node_label<&str,BlankNode>, do_parse!(
     tag!("_:") >>
     label: recognize!(tuple!(
         one_if!(is_pn_chars_u_digit),
-        take_while_s!(is_pn_chars),
-        fold_many0!(tuple!(
-            tag!("."),
-            take_while_s!(is_pn_chars)
-        ),(),|_,_|())
+        blank_node_label2
     )) >> (BlankNode::BlankNode(label))
 ));
 
 fn is_pn_chars_u_digit(c: char) -> bool {
     is_digit(c) || is_pn_chars_u(c)
 }
+
+fn is_pn_chars_or_dot(c: char) -> bool {
+    c == '.' || is_pn_chars(c)
+}
+
+fn blank_node_label2(src: &str) -> IResult<&str, ()> {
+    match blank_node_label3(src) {
+        Done(left, m) => {
+            // if last is a '.', remove that
+            if m.ends_with(".") {
+                Done(&src[m.len() - 1..], ())
+            } else {
+                Done(left, ())
+            }
+        }
+        IResult::Error(e) => IResult::Error(e),
+        IResult::Incomplete(i) => IResult::Incomplete(i),
+    }
+}
+
+named!(blank_node_label3<&str,&str>, take_while_s!(is_pn_chars_or_dot));
 
 /// [144s] LANGTAG ::= '@' [a-zA-Z]+ ('-' [a-zA-Z0-9]+)*
 named!(langtag<&str,RDFLiteralType>, do_parse!(
@@ -738,6 +755,7 @@ fn test_object() {
 #[test]
 fn test_blank_node_label() {
     assert_eq!(blank_node_label("_:b1 "), Done(&" "[..], BlankNode::BlankNode("b1")));
+    assert_eq!(blank_node_label("_:b1. "), Done(&". "[..], BlankNode::BlankNode("b1")));
 }
 
 #[test]
