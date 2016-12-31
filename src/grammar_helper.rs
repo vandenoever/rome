@@ -67,7 +67,10 @@ pub fn unescape(s: &str, result: &mut String) -> Result<()> {
                 Some('n') => Some('\n'),
                 Some('r') => Some('\r'),
                 Some('f') => Some('\x0c'),
-                ch => ch, // ', " and \ are simply copied
+                Some('\'') => Some('\''),
+                Some('"') => Some('"'),
+                Some('\\') => Some('\\'),
+                _ => return Err(Error::Custom("Invalid escape sequence")),
             };
             match r {
                 Some(v) => result.push(v),
