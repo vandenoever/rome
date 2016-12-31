@@ -349,6 +349,22 @@ impl<'a, T> Iterator for TripleRangeIterator<'a, T>
     }
 }
 
+fn subject_blank_node(subject: u32) -> Triple64SPO {
+    Triple64SPO::triple(false, subject, 0, TripleObjectType::BlankNode, 0, 0)
+}
+fn subject_iri(subject: u32) -> Triple64SPO {
+    Triple64SPO::triple(true, subject, 0, TripleObjectType::BlankNode, 0, 0)
+}
+fn object_blank_node(object: u32) -> Triple64OPS {
+    Triple64OPS::triple(false, 0, 0, TripleObjectType::BlankNode, object, 0)
+}
+fn object_iri(object: u32) -> Triple64OPS {
+    Triple64OPS::triple(false, 0, 0, TripleObjectType::IRI, object, 0)
+}
+fn object_iri_predicate(object: u32, predicate: u32) -> Triple64OPS {
+    Triple64OPS::triple(true, 0, predicate, TripleObjectType::IRI, object, 0)
+}
+
 impl Graph {
     fn range_iter<'a, T>(&self, index: &'a [T], start: T, end: T) -> TripleRangeIterator<'a, T>
         where T: CompactTriple<u32> + Ord + Copy
@@ -392,7 +408,7 @@ impl Graph {
         match self.strings.find(iri) {
             None => self.empty_range_iter(),
             Some(id) => {
-                let triple = Triple64SPO::triple(true, id.id, 0, TripleObjectType::BlankNode, 0, 0);
+                let triple = subject_iri(id.id);
                 self.iter_subject_(triple)
             }
         }
@@ -408,7 +424,7 @@ impl Graph {
         match self.strings.find(iri) {
             None => self.empty_range_iter(),
             Some(id) => {
-                let triple = Triple64OPS::triple(true, 0, 0, TripleObjectType::IRI, id.id, 0);
+                let triple = object_iri(id.id);
                 self.iter_object(triple)
             }
         }
@@ -430,12 +446,7 @@ impl Graph {
                 match self.strings.find(predicate) {
                     None => self.empty_range_iter(),
                     Some(predicate) => {
-                        let triple = Triple64OPS::triple(true,
-                                                         0,
-                                                         predicate.id,
-                                                         TripleObjectType::IRI,
-                                                         object.id,
-                                                         0);
+                        let triple = object_iri_predicate(object.id, predicate.id);
                         self.iter_object_predicate(triple)
                     }
                 }
@@ -444,14 +455,14 @@ impl Graph {
     }
     /// iterate over all triple with a blank node subject
     pub fn iter_subject_blank_nodes(&self) -> TripleRangeIterator<Triple64SPO> {
-        let start = Triple64SPO::triple(false, 0, 0, TripleObjectType::BlankNode, 0, 0);
-        let end = Triple64SPO::triple(true, 0, 0, TripleObjectType::BlankNode, 0, 0);
+        let start = subject_blank_node(0);
+        let end = subject_iri(0);
         self.range_iter(&self.spo, start, end)
     }
     /// iterate over all triple with a blank node object
     pub fn iter_object_blank_nodes(&self) -> TripleRangeIterator<Triple64OPS> {
-        let start = Triple64OPS::triple(false, 0, 0, TripleObjectType::BlankNode, 0, 0);
-        let end = Triple64OPS::triple(false, 0, 0, TripleObjectType::IRI, 0, 0);
+        let start = object_blank_node(0);
+        let end = object_iri(0);
         self.range_iter(&self.ops, start, end)
     }
     pub fn sort_blank_nodes(&self) -> Graph {
@@ -468,6 +479,23 @@ impl Graph {
             if cmp == cmp::Ordering::Equal {
                 cmp = b2.times_an_object_with_blank_subject
                     .cmp(&b1.times_an_object_with_blank_subject);
+            }
+            // if usage is equal compare the triples that the nodes are in
+            if cmp == cmp::Ordering::Equal {
+                let s1 = self.iter_subject_(subject_blank_node(b1.blank_node));
+                let s2 = self.iter_subject_(subject_blank_node(b2.blank_node));
+                cmp = s1.zip(s2)
+                    .map(|(a, b)| compare_without_blank_nodes(a.triple, b.triple))
+                    .find(|cmp| *cmp != cmp::Ordering::Equal)
+                    .unwrap_or(cmp::Ordering::Equal);
+            }
+            if cmp == cmp::Ordering::Equal {
+                let o1 = self.iter_object(object_blank_node(b1.blank_node));
+                let o2 = self.iter_object(object_blank_node(b2.blank_node));
+                cmp = o1.zip(o2)
+                    .map(|(a, b)| compare_without_blank_nodes(a.triple, b.triple))
+                    .find(|cmp| *cmp != cmp::Ordering::Equal)
+                    .unwrap_or(cmp::Ordering::Equal);
             }
             cmp
         })
@@ -530,6 +558,25 @@ impl Graph {
             highest_blank_node: self.highest_blank_node,
         }
     }
+}
+
+fn zero_blank_nodes<T>(a: &mut T)
+    where T: CompactTriple<u32>
+{
+    if !a.subject_is_iri() {
+        a.set_subject(0);
+    }
+    if a.object_is_blank_node() {
+        a.set_subject(0);
+    }
+}
+
+fn compare_without_blank_nodes<T>(mut a: T, mut b: T) -> cmp::Ordering
+    where T: CompactTriple<u32> + Ord
+{
+    zero_blank_nodes(&mut a);
+    zero_blank_nodes(&mut b);
+    a.cmp(&b)
 }
 
 pub struct BlankNodeInfo {
