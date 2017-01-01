@@ -20,6 +20,7 @@ pub mod graph;
 pub mod mem_graph;
 pub mod index_graph;
 pub mod ntriples_writer;
+pub mod turtle_writer;
 mod string_store;
 mod unsafe_graph;
 pub mod graph_writer;

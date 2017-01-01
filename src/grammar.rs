@@ -27,7 +27,7 @@ const XSD_BOOLEAN: &'static str = "http://www.w3.org/2001/XMLSchema#boolean";
 const XSD_DECIMAL: &'static str = "http://www.w3.org/2001/XMLSchema#decimal";
 const XSD_DOUBLE: &'static str = "http://www.w3.org/2001/XMLSchema#double";
 const XSD_INTEGER: &'static str = "http://www.w3.org/2001/XMLSchema#integer";
-const RDF_TYPE: &'static str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
+pub const RDF_TYPE: &'static str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 
 fn comment(str: &str) -> IResult<&str, ()> {
     if str.len() == 0 {
