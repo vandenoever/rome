@@ -158,7 +158,7 @@ impl<'a, W> TurtleWriter<'a, W>
         where T: Triple
     {
         let subject = triple.subject();
-        if self.last_subject.eq(&subject) {
+        if self.last_subject == subject {
             try!(self.writer.write_all(b" ;\n\t"));
         } else {
             if self.open_statement {

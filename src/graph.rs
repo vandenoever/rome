@@ -63,7 +63,10 @@ impl SubjectClone {
             &Subject::BlankNode(b) => self.subject = SubjectCloneEnum::BlankNode(b),
         };
     }
-    pub fn eq(&self, s: &Subject) -> bool {
+}
+
+impl<'a> PartialEq<Subject<'a>> for SubjectClone {
+    fn eq(&self, s: &Subject) -> bool {
         match (&self.subject, s) {
             (&SubjectCloneEnum::IRI, &Subject::IRI(iri)) => self.iri == iri,
             (&SubjectCloneEnum::BlankNode(b1), &Subject::BlankNode(b2)) => b1 == b2,
