@@ -1,4 +1,5 @@
 extern crate rdfio;
+extern crate time;
 use std::io;
 use std::io::{Read, Write};
 use std::fs;
@@ -10,6 +11,7 @@ use rdfio::graph::Graph;
 use rdfio::graph::Triple;
 use std::env::args;
 use std::rc::Rc;
+use rdfio::ntriples_writer;
 
 macro_rules! println_stderr(
     ($($arg:tt)*) => { {
@@ -27,6 +29,17 @@ const RDFT_APPROVED: &'static str = "http://www.w3.org/ns/rdftest#Approved";
 const RDFT_PROPOSED: &'static str = "http://www.w3.org/ns/rdftest#Proposed";
 const RDFT_REJECTED: &'static str = "http://www.w3.org/ns/rdftest#Rejected";
 const RDF_TYPE: &'static str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
+
+const DC_DATE: &'static str = "http://purl.org/dc/elements/1.1/date";
+const XSD_DATE_TIME: &'static str = "http://www.w3.org/2001/XMLSchema#dateTime";
+const EARL_ASSERTION: &'static str = "http://www.w3.org/ns/earl#Assertion";
+const EARL_RESULT: &'static str = "http://www.w3.org/ns/earl#result";
+const EARL_TEST_RESULT: &'static str = "http://www.w3.org/ns/earl#TestResult";
+const EARL_TEST: &'static str = "http://www.w3.org/ns/earl#test";
+const EARL_OUTCOME: &'static str = "http://www.w3.org/ns/earl#outcome";
+const EARL_PASSED: &'static str = "http://www.w3.org/ns/earl#passed";
+const EARL_FAILED: &'static str = "http://www.w3.org/ns/earl#failed";
+const EARL_CANT_TELL: &'static str = "http://www.w3.org/ns/earl#cantTell";
 
 #[derive (Debug)]
 struct TestTurtleEval {
@@ -85,6 +98,7 @@ enum Outcome {
 #[derive (Debug)]
 struct Assertion {
     test: Rc<String>,
+    date: time::Tm,
     input_file: String,
     result: TestResult,
 }
@@ -94,6 +108,33 @@ struct TestResult {
     outcome: Outcome,
     date: String,
     info: String,
+}
+
+trait TripleObject {
+    fn write_as_triples(&self, output: &mut graph_writer::GraphWriter) -> rdfio::Result<()>;
+}
+
+impl TripleObject for Assertion {
+    fn write_as_triples(&self, output: &mut graph_writer::GraphWriter) -> rdfio::Result<()> {
+        let assertion_blank_node = output.highest_blank_node() + 1;
+        output.add_blank_iri(assertion_blank_node, RDF_TYPE, EARL_ASSERTION);
+        let date = format!("{}", self.date.rfc3339());
+        output.add_blank_lit(assertion_blank_node, DC_DATE, date.as_str(), XSD_DATE_TIME);
+
+        let result_blank_node = output.highest_blank_node() + 1;
+        println_stderr!("bla {} {}", assertion_blank_node, result_blank_node);
+        output.add_blank_iri(result_blank_node, RDF_TYPE, EARL_TEST_RESULT);
+        output.add_blank_blank(assertion_blank_node, EARL_RESULT, result_blank_node);
+        let outcome = match self.result.outcome {
+            Outcome::Passed => EARL_PASSED,
+            Outcome::Failed => EARL_FAILED,
+            Outcome::CannotTell => EARL_CANT_TELL,
+        };
+        output.add_blank_iri(result_blank_node, EARL_OUTCOME, outcome);
+        output.add_blank_iri(assertion_blank_node, EARL_TEST, self.test.as_str());
+
+        Ok(())
+    }
 }
 
 fn read_file(path: &str) -> io::Result<String> {
@@ -297,6 +338,7 @@ fn fail(test: &Rc<String>, input_file: &String, info: String) -> rdfio::Result<A
             date: String::new(),
             info: info,
         },
+        date: time::now_utc(),
     })
 }
 
@@ -309,6 +351,7 @@ fn pass(test: &Rc<String>, input_file: &String) -> rdfio::Result<Assertion> {
             date: String::new(),
             info: String::new(),
         },
+        date: time::now_utc(),
     })
 }
 
@@ -328,6 +371,7 @@ fn run_eval(test: &TestTurtleEval, base: &str, base_dir: &str) -> rdfio::Result<
                     date: String::new(),
                     info: format!("parsing of result failed {}", err),
                 },
+                date: time::now_utc(),
             });
         }
     };
@@ -402,6 +446,16 @@ fn run_eval_negative_eval<'a>(test: &TestTurtleNegativeEval,
     pass(&test.id, &ttl_path)
 }
 
+fn output_as_turtle(assertions: &Vec<Assertion>) -> rdfio::Result<()> {
+    let mut writer = graph_writer::GraphWriter::with_capacity(100000);
+    for a in assertions {
+        try!(a.write_as_triples(&mut writer));
+    }
+    let graph = writer.collect().sort_blank_nodes();
+    try!(ntriples_writer::write_ntriples(graph.iter(), &mut ::std::io::stdout()));
+    Ok(())
+}
+
 fn run(manifest_path: &str, output_turtle: bool) -> rdfio::Result<()> {
     // read the manifest file
     let path = Path::new(manifest_path);
@@ -411,7 +465,10 @@ fn run(manifest_path: &str, output_turtle: bool) -> rdfio::Result<()> {
     let manifest = try!(read_file(path.to_str().unwrap()));
     let base = "http://www.w3.org/2013/TurtleTests/manifest.ttl";
     let graph = try!(load_graph(manifest.as_str(), base));
-    try!(run_tests(&graph, base, dir.as_str()));
+    let assertions = try!(run_tests(&graph, base, dir.as_str()));
+    if output_turtle {
+        try!(output_as_turtle(&assertions));
+    }
     Ok(())
 }
 
