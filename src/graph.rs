@@ -36,6 +36,60 @@ pub enum Subject<'a> {
     BlankNode(BlankNode),
 }
 
+pub struct SubjectClone {
+    iri: String,
+    subject: SubjectCloneEnum,
+}
+
+enum SubjectCloneEnum {
+    IRI,
+    BlankNode(BlankNode),
+}
+
+impl SubjectClone {
+    pub fn new() -> SubjectClone {
+        SubjectClone {
+            iri: String::new(),
+            subject: SubjectCloneEnum::IRI,
+        }
+    }
+    pub fn assign(&mut self, s: &Subject) {
+        self.iri.clear();
+        match s {
+            &Subject::IRI(iri) => {
+                self.iri.push_str(iri);
+                self.subject = SubjectCloneEnum::IRI
+            }
+            &Subject::BlankNode(b) => self.subject = SubjectCloneEnum::BlankNode(b),
+        };
+    }
+    pub fn eq(&self, s: &Subject) -> bool {
+        match (&self.subject, s) {
+            (&SubjectCloneEnum::IRI, &Subject::IRI(iri)) => self.iri == iri,
+            (&SubjectCloneEnum::BlankNode(b1), &Subject::BlankNode(b2)) => b1 == b2,
+            _ => false,
+        }
+    }
+}
+impl<'a> From<Subject<'a>> for SubjectClone {
+    fn from(s: Subject<'a>) -> SubjectClone {
+        match s {
+            Subject::IRI(iri) => {
+                SubjectClone {
+                    iri: String::from(iri),
+                    subject: SubjectCloneEnum::IRI,
+                }
+            }
+            Subject::BlankNode(b) => {
+                SubjectClone {
+                    iri: String::new(),
+                    subject: SubjectCloneEnum::BlankNode(b),
+                }
+            }
+        }
+    }
+}
+
 #[derive(PartialEq,Eq,Hash,Clone,PartialOrd,Ord,Debug)]
 pub struct Literal<'a> {
     pub lexical: &'a str,

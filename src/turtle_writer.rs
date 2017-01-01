@@ -30,6 +30,8 @@ struct TurtleWriter<'a, W>
     base: String,
     namespaces: &'a Vec<Namespace>,
     writer: &'a mut W,
+    last_subject: SubjectClone,
+    open_statement: bool,
 }
 
 pub fn write_turtle<T, I, W>(namespaces: &Namespaces, triples: I, writer: &mut W) -> Result<()>
@@ -42,14 +44,17 @@ pub fn write_turtle<T, I, W>(namespaces: &Namespaces, triples: I, writer: &mut W
         base: String::new(),
         namespaces: &namespaces.namespaces,
         writer: writer,
+        last_subject: SubjectClone::new(),
+        open_statement: false,
     };
     for ns in writer.namespaces {
         try!(writer.write_prefix(ns));
     }
+    try!(writer.writer.write_all(b"\n"));
     for triple in triples {
         try!(writer.write_triple(&triple));
     }
-    Ok(())
+    writer.writer.write_all(b" .\n")
 }
 
 fn find_prefix<'a>(iri: &'a str, namespaces: &Vec<Namespace>) -> Option<(&'a str, usize)> {
@@ -152,11 +157,20 @@ impl<'a, W> TurtleWriter<'a, W>
     fn write_triple<T>(&mut self, triple: &T) -> Result<()>
         where T: Triple
     {
-        try!(self.write_subject(&triple.subject()));
-        try!(self.writer.write_all(b" "));
+        let subject = triple.subject();
+        if self.last_subject.eq(&subject) {
+            try!(self.writer.write_all(b" ;\n\t"));
+        } else {
+            if self.open_statement {
+                try!(self.writer.write_all(b" .\n"));
+            }
+            try!(self.write_subject(&triple.subject()));
+            self.last_subject.assign(&subject);
+            try!(self.writer.write_all(b" "));
+        }
+        self.open_statement = true;
         try!(self.write_predicate(&triple.predicate()));
         try!(self.writer.write_all(b" "));
-        try!(self.write_object(&triple.object()));
-        self.writer.write_all(b" .\n")
+        self.write_object(&triple.object())
     }
 }
