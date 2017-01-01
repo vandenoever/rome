@@ -91,6 +91,9 @@ impl GraphWriter {
             highest_blank_node: 0,
         }
     }
+    pub fn highest_blank_node(&self) -> u32 {
+        self.highest_blank_node
+    }
     fn add_s_iri(&mut self, s: &str, p: &str, ot: TripleObjectType, o: u32, d: u32) {
         let s = check_prev(s, &mut self.prev_subject_iri, &mut self.string_collector);
         let p = check_prev(p, &mut self.prev_predicate, &mut self.string_collector);
@@ -303,7 +306,7 @@ impl<T> graph::Triple for GraphTriple<T>
         if self.triple.object_is_iri() {
             graph::Object::IRI(self.strings.get(StringId { id: self.triple.object() }))
         } else if self.triple.object_is_blank_node() {
-            graph::Object::BlankNode((0, 0))
+            graph::Object::BlankNode((self.triple.object() as usize, 0))
         } else if self.triple.has_language() {
             graph::Object::Literal(graph::Literal {
                 lexical: self.strings.get(StringId { id: self.triple.object() }),
@@ -605,4 +608,16 @@ impl<'a> graph::Graph<'a> for Graph {
 fn collect_empty() {
     let mut writer = GraphWriter::with_capacity(0);
     writer.collect();
+}
+
+#[test]
+fn keep_blank_subject() {
+    let mut writer = GraphWriter::with_capacity(0);
+    writer.add_blank_blank(1, "", 2);
+    let graph = writer.collect();
+    use graph::{Graph, Triple};
+    let triple = graph.iter().next().unwrap();
+    assert_eq!(triple.subject(), graph::Subject::BlankNode((1, 0)));
+    assert_eq!(triple.predicate(), "");
+    assert_eq!(triple.object(), graph::Object::BlankNode((2, 0)));
 }
