@@ -11,7 +11,7 @@ use rdfio::graph::Graph;
 use rdfio::graph::Triple;
 use std::env::args;
 use std::rc::Rc;
-use rdfio::ntriples_writer;
+use rdfio::turtle_writer;
 
 macro_rules! println_stderr(
     ($($arg:tt)*) => { {
@@ -122,7 +122,6 @@ impl TripleObject for Assertion {
         output.add_blank_lit(assertion_blank_node, DC_DATE, date.as_str(), XSD_DATE_TIME);
 
         let result_blank_node = output.highest_blank_node() + 1;
-        println_stderr!("bla {} {}", assertion_blank_node, result_blank_node);
         output.add_blank_iri(result_blank_node, RDF_TYPE, EARL_TEST_RESULT);
         output.add_blank_blank(assertion_blank_node, EARL_RESULT, result_blank_node);
         let outcome = match self.result.outcome {
@@ -452,7 +451,12 @@ fn output_as_turtle(assertions: &Vec<Assertion>) -> rdfio::Result<()> {
         try!(a.write_as_triples(&mut writer));
     }
     let graph = writer.collect().sort_blank_nodes();
-    try!(ntriples_writer::write_ntriples(graph.iter(), &mut ::std::io::stdout()));
+    let mut ns = turtle_writer::Namespaces::new();
+    ns.add("http://purl.org/dc/elements/1.1/", b"dc");
+    ns.add("http://www.w3.org/ns/earl#", b"earl");
+    ns.add("http://www.w3.org/2001/XMLSchema#", b"xsd");
+    ns.add("http://www.w3.org/2013/TurtleTests/manifest.ttl#", b"test");
+    try!(turtle_writer::write_turtle(&ns, graph.iter(), &mut ::std::io::stdout()));
     Ok(())
 }
 
