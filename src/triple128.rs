@@ -4,42 +4,49 @@ use compact_triple::*;
 /// - number of bits for blanks, iri, literals (bil)
 /// - number of bits for datatypes and languages (dl)
 /// - total number of bits: 3 + 3*bil + dl
-///     e.g. 3 + 3*18 + 7 = 64
+///     e.g. 3 + 3*32 + 29 = 128
 /// - order of fields, e.g. subject, predicate, object, language
 ///     or object, predicate, subject
 
 /// 1 bit to determine blank or iri
-/// 18 bits for subject id
-/// 18 bits for predicate id
+/// 32 bits for subject id
+/// 32 bits for predicate id
 /// 1 bit to determine non-literal or literal
 /// 1 bit to determine blank or iri (for non-literal)
 ///          or has lang (0) or has no lang (1)
-/// 18 bits for object id
-///  7 bits for for datatype or language id
-const BIL: u32 = 18;
-const DL: u32 = 7;
+/// 32 bits for object id
+/// 29 bits for for datatype or language id
+const BIL: u32 = 32;
+const DL: u32 = 29;
 
-macro_rules! triple64{(
+macro_rules! triple128{(
     $name:ident,
+    $subject_var:ident,
     $subject_offset:expr,
     $predicate_offset:expr,
+    $object_var:ident,
     $object_offset:expr) => {
-        triple64_helper!($name, $subject_offset, $predicate_offset,
-            $object_offset, ($subject_offset + BIL), ($object_offset + BIL));
+        triple128_helper!($name, $subject_var, $subject_offset, $predicate_offset,
+            (64 - $predicate_offset), $object_var, $object_offset,
+            ($subject_offset + BIL), ($object_offset + BIL));
     };
 }
 
-macro_rules! triple64_helper{(
+macro_rules! triple128_helper{(
     $name:ident,
+    $subject_var:ident,
     $subject_offset:expr,
-    $predicate_offset:expr,
+    $predicate_offset_1:expr,
+    $predicate_offset_2:expr,
+    $object_var:ident,
     $object_offset:expr,
     $subject_type_offset:expr,
     $object_type_offset:expr) => {
 
 #[derive(PartialEq,Eq,Hash,PartialOrd,Ord,Clone,Copy,Debug)]
 pub struct $name {
-    value: u64,
+    v1: u64,
+    v2: u64,
 }
 
 impl CompactTriple<u32> for $name {
@@ -56,53 +63,67 @@ impl CompactTriple<u32> for $name {
               object: u32,
               datatype_or_lang: u32)
               -> $name {
-        let mut val = (subject_is_iri as u64) << $subject_type_offset;
-        val += (subject as u64) << $subject_offset;
-        val += (predicate as u64) << $predicate_offset;
-        val += (object as u64) << $object_offset;
+        let mut s = (subject_is_iri as u64) << $subject_type_offset;
+        s += (subject as u64) << $subject_offset;
+        let mut o = (object as u64) << $object_offset;
+        let mut d = 0;
         match object_type {
             TripleObjectType::BlankNode => {}
             TripleObjectType::IRI => {
-                val += 1 << $object_type_offset;
+                o += 1 << $object_type_offset;
             }
             TripleObjectType::Literal => {
-                val += 3 << $object_type_offset;
-                val += datatype_or_lang as u64;
+                o += 3 << $object_type_offset;
+                d += datatype_or_lang as u64;
             }
             TripleObjectType::LiteralLang => {
-                val += 2 << $object_type_offset;
-                val += datatype_or_lang as u64
+                o += 2 << $object_type_offset;
+                d += datatype_or_lang as u64
             }
         }
-        $name { value: val }
+        if $subject_offset > $object_offset { // subject is in v1
+            s += (predicate as u64) >> $predicate_offset_1;
+            o += (predicate as u64) << $predicate_offset_2;
+            o += d;
+        } else {
+            o += (predicate as u64) >> $predicate_offset_1;
+            s += (predicate as u64) << $predicate_offset_2;
+            s += d;
+        }
+        $name {
+            $subject_var: s,
+            $object_var: o
+        }
     }
     fn set_subject(&mut self, subject: u32) {
-        self.value &= !(0x3ffff << $subject_offset);
-        self.value += (subject as u64) << $subject_offset;
+        self.$subject_var &= !(0xffffffff << $subject_offset);
+        self.$subject_var += (subject as u64) << $subject_offset;
     }
     fn set_predicate(&mut self, predicate: u32) {
-        self.value &= !(0x3ffff << $predicate_offset);
-        self.value += (predicate as u64) << $predicate_offset;
+        self.v1 &= !(0xffffffff >> $predicate_offset_1);
+        self.v1 += (predicate as u64) >> $predicate_offset_1;
+        self.v2 &= !(0xffffffff << $predicate_offset_2);
+        self.v2 += (predicate as u64) << $predicate_offset_2;
     }
     fn set_object(&mut self, object: u32) {
-        self.value &= !(0x3ffff << $object_offset);
-        self.value += (object as u64) << $object_offset;
+        self.$object_var &= !(0xffffffff << $object_offset);
+        self.$object_var += (object as u64) << $object_offset;
     }
     fn set_datatype_or_lang(&mut self, datatype_or_lang: u32) {
-        self.value &= !0x7f;
-        self.value += datatype_or_lang as u64;
+        self.v2 &= !0x1fffffff;
+        self.v2 += datatype_or_lang as u64;
     }
     fn subject_is_iri(&self) -> bool {
-        self.value & (1 << $subject_type_offset) == 1 << $subject_type_offset
+        self.$subject_var & (1 << $subject_type_offset) == 1 << $subject_type_offset
     }
     fn object_is_iri(&self) -> bool {
-        self.value & (3 << $object_type_offset) == 1 << $object_type_offset
+        self.$object_var & (3 << $object_type_offset) == 1 << $object_type_offset
     }
     fn object_is_blank_node(&self) -> bool {
-        self.value & (3 << $object_type_offset) == 0
+        self.$object_var & (3 << $object_type_offset) == 0
     }
     fn object_type(&self) -> TripleObjectType {
-        match (self.value >> $object_type_offset) & 3 {
+        match (self.$object_var >> $object_type_offset) & 3 {
             0 => TripleObjectType::BlankNode,
             1 => TripleObjectType::IRI,
             2 => TripleObjectType::Literal,
@@ -110,31 +131,32 @@ impl CompactTriple<u32> for $name {
         }
     }
     fn has_language(&self) -> bool {
-        self.value & (3 << $object_type_offset) == 2 << $object_type_offset
+        self.$object_var & (3 << $object_type_offset) == 2 << $object_type_offset
     }
     fn subject(&self) -> u32 {
-        ((self.value >> $subject_offset) & 0x3ffff) as u32
+        ((self.$subject_var >> $subject_offset) & 0xffffffff) as u32
     }
     fn predicate(&self) -> u32 {
-        ((self.value >> $predicate_offset) & 0x3ffff) as u32
+        (((self.v1 << $predicate_offset_1) & 0xffffffff) as u32)+
+        (((self.v2 >> $predicate_offset_2) & 0xffffffff) as u32)
     }
     fn object(&self) -> u32 {
-        ((self.value >> $object_offset) & 0x3ffff) as u32
+        ((self.$object_var >> $object_offset) & 0xffffffff) as u32
     }
     fn datatype_or_lang(&self) -> u32 {
-        (self.value & 0x7f) as u32
+        (self.v2 & 0x1fffffff) as u32
     }
 }
 
     };
 }
 
-triple64!(Triple64SPO, 45, 27, 7);
-triple64!(Triple64OPS, 7, 26, 44);
+triple128!(Triple128SPO, v1, 31, 1, v2, 29);
+triple128!(Triple128OPS, v2, 29, 2, v1, 30);
 
 #[test]
 fn test_triple1() {
-    let t = Triple64SPO::triple(false, 1, 2, TripleObjectType::BlankNode, 3, 4);
+    let t = Triple128SPO::triple(false, 1, 2, TripleObjectType::BlankNode, 3, 4);
     assert_eq!(t.subject_is_iri(), false);
     assert_eq!(t.subject(), 1);
     assert_eq!(t.predicate(), 2);
@@ -146,7 +168,7 @@ fn test_triple1() {
 }
 #[test]
 fn test_triple2() {
-    let t = Triple64SPO::triple(true, 1, 2, TripleObjectType::IRI, 3, 4);
+    let t = Triple128SPO::triple(true, 1, 2, TripleObjectType::IRI, 3, 4);
     assert_eq!(t.subject_is_iri(), true);
     assert_eq!(t.subject(), 1);
     assert_eq!(t.predicate(), 2);
@@ -158,7 +180,7 @@ fn test_triple2() {
 }
 #[test]
 fn test_triple3() {
-    let t = Triple64SPO::triple(false, 1, 2, TripleObjectType::Literal, 3, 4);
+    let t = Triple128SPO::triple(false, 1, 2, TripleObjectType::Literal, 3, 4);
     assert_eq!(t.subject_is_iri(), false);
     assert_eq!(t.subject(), 1);
     assert_eq!(t.predicate(), 2);
@@ -170,7 +192,7 @@ fn test_triple3() {
 }
 #[test]
 fn test_triple4() {
-    let t = Triple64SPO::triple(false, 1, 2, TripleObjectType::LiteralLang, 3, 4);
+    let t = Triple128SPO::triple(false, 1, 2, TripleObjectType::LiteralLang, 3, 4);
     assert_eq!(t.subject_is_iri(), false);
     assert_eq!(t.subject(), 1);
     assert_eq!(t.predicate(), 2);
@@ -182,26 +204,26 @@ fn test_triple4() {
 }
 #[test]
 fn test_triple_set_subject() {
-    let mut t = Triple64SPO::triple(false, 1, 2, TripleObjectType::BlankNode, 3, 4);
+    let mut t = Triple128SPO::triple(false, 1, 2, TripleObjectType::BlankNode, 3, 4);
     t.set_subject(2);
     assert_eq!(t.subject(), 2);
 }
 #[test]
 fn test_triple_set_predicate() {
-    let mut t = Triple64SPO::triple(false, 1, 2, TripleObjectType::BlankNode, 3, 4);
+    let mut t = Triple128SPO::triple(false, 1, 2, TripleObjectType::BlankNode, 3, 4);
     t.set_predicate(3);
     assert_eq!(t.predicate(), 3);
 }
 #[test]
 fn test_triple_set_object() {
-    let mut t = Triple64SPO::triple(false, 1, 2, TripleObjectType::BlankNode, 3, 4);
+    let mut t = Triple128SPO::triple(false, 1, 2, TripleObjectType::BlankNode, 3, 4);
     t.set_object(4);
     assert_eq!(t.object(), 4);
 }
 
 #[test]
 fn test_triple1_ops() {
-    let t = Triple64OPS::triple(false, 1, 2, TripleObjectType::BlankNode, 3, 4);
+    let t = Triple128OPS::triple(false, 1, 2, TripleObjectType::BlankNode, 3, 4);
     assert_eq!(t.subject_is_iri(), false);
     assert_eq!(t.subject(), 1);
     assert_eq!(t.predicate(), 2);
@@ -213,7 +235,7 @@ fn test_triple1_ops() {
 }
 #[test]
 fn test_triple2_ops() {
-    let t = Triple64OPS::triple(true, 1, 2, TripleObjectType::IRI, 3, 4);
+    let t = Triple128OPS::triple(true, 1, 2, TripleObjectType::IRI, 3, 4);
     assert_eq!(t.subject_is_iri(), true);
     assert_eq!(t.subject(), 1);
     assert_eq!(t.predicate(), 2);
@@ -225,7 +247,7 @@ fn test_triple2_ops() {
 }
 #[test]
 fn test_triple3_ops() {
-    let t = Triple64OPS::triple(false, 1, 2, TripleObjectType::Literal, 3, 4);
+    let t = Triple128OPS::triple(false, 1, 2, TripleObjectType::Literal, 3, 4);
     assert_eq!(t.subject_is_iri(), false);
     assert_eq!(t.subject(), 1);
     assert_eq!(t.predicate(), 2);
@@ -237,7 +259,7 @@ fn test_triple3_ops() {
 }
 #[test]
 fn test_triple4_ops() {
-    let t = Triple64OPS::triple(false, 1, 2, TripleObjectType::LiteralLang, 3, 4);
+    let t = Triple128OPS::triple(false, 1, 2, TripleObjectType::LiteralLang, 3, 4);
     assert_eq!(t.subject_is_iri(), false);
     assert_eq!(t.subject(), 1);
     assert_eq!(t.predicate(), 2);
@@ -249,19 +271,19 @@ fn test_triple4_ops() {
 }
 #[test]
 fn test_triple_set_subject_ops() {
-    let mut t = Triple64OPS::triple(false, 1, 2, TripleObjectType::BlankNode, 3, 4);
+    let mut t = Triple128OPS::triple(false, 1, 2, TripleObjectType::BlankNode, 3, 4);
     t.set_subject(2);
     assert_eq!(t.subject(), 2);
 }
 #[test]
 fn test_triple_set_predicate_ops() {
-    let mut t = Triple64OPS::triple(false, 1, 2, TripleObjectType::BlankNode, 3, 4);
+    let mut t = Triple128OPS::triple(false, 1, 2, TripleObjectType::BlankNode, 3, 4);
     t.set_predicate(3);
     assert_eq!(t.predicate(), 3);
 }
 #[test]
 fn test_triple_set_object_ops() {
-    let mut t = Triple64OPS::triple(false, 1, 2, TripleObjectType::BlankNode, 3, 4);
+    let mut t = Triple128OPS::triple(false, 1, 2, TripleObjectType::BlankNode, 3, 4);
     t.set_object(4);
     assert_eq!(t.object(), 4);
 }
