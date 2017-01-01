@@ -12,6 +12,7 @@ use rdfio::graph::Triple;
 use std::env::args;
 use std::rc::Rc;
 use rdfio::turtle_writer;
+use rdfio::graph::GraphCreator;
 
 macro_rules! println_stderr(
     ($($arg:tt)*) => { {

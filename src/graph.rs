@@ -5,6 +5,12 @@ pub trait Graph<'a> {
     fn len(&self) -> usize;
 }
 
+pub trait GraphCreator<'a> {
+    type Graph: Graph<'a>;
+    fn add_triple<T>(&mut self, triple: &T) where T: Triple;
+    fn collect(&mut self) -> Self::Graph;
+}
+
 pub trait WritableGraph {
     fn add_triple_si_oi(&mut self, s: &String, p: &String, o: &String);
     /// Add a new triple
@@ -12,8 +18,6 @@ pub trait WritableGraph {
     fn add_triple<T>(&mut self, triple: &T) where T: Triple;
     fn remove_triple<T>(&mut self, triple: &T) where T: Triple;
     fn create_blank_node(&mut self) -> BlankNode;
-    // Retains only the triples specified by the function.
-    // fn retain<F>(&mut self, f: F) where F: FnMut(&Triple) -> bool;
 }
 
 pub type BlankNode = (usize, usize);
@@ -105,4 +109,12 @@ pub enum Object<'a> {
     IRI(&'a str),
     BlankNode(BlankNode),
     Literal(Literal<'a>),
+}
+impl<'a> From<Subject<'a>> for Object<'a> {
+    fn from(s: Subject<'a>) -> Object<'a> {
+        match s {
+            Subject::IRI(iri) => Object::IRI(iri),
+            Subject::BlankNode(b) => Object::BlankNode(b),
+        }
+    }
 }

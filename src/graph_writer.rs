@@ -5,7 +5,8 @@ use grammar;
 use graph;
 use string_collector::*;
 use std::fmt::Debug;
-use triple_to_uint::*;
+use triple64::*;
+use compact_triple::*;
 use std::cmp;
 
 pub struct GraphWriter {
@@ -148,7 +149,25 @@ impl GraphWriter {
         let l = check_prev(lang, &mut self.prev_lang, &mut self.datatype_lang_collector).id;
         self.add_s_blank(subject, predicate, TripleObjectType::LiteralLang, o.id, l);
     }
-    pub fn add_triple<T>(&mut self, triple: &T)
+}
+
+fn create_ops(spo: &[Triple64SPO]) -> Vec<Triple64OPS> {
+    let mut ops = Vec::with_capacity(spo.len());
+    for t in spo {
+        ops.push(Triple64OPS::triple(t.subject_is_iri(),
+                                     t.subject(),
+                                     t.predicate(),
+                                     t.object_type(),
+                                     t.object(),
+                                     t.datatype_or_lang()));
+    }
+    ops.sort();
+    ops
+}
+
+impl<'a> graph::GraphCreator<'a> for GraphWriter {
+    type Graph = Graph;
+    fn add_triple<T>(&mut self, triple: &T)
         where T: graph::Triple
     {
         match triple.subject() {
@@ -207,7 +226,7 @@ impl GraphWriter {
         }
     }
 
-    pub fn collect(&mut self) -> Graph {
+    fn collect(&mut self) -> Graph {
         let (translation, string_collection) = self.string_collector.collect();
         let (datatrans, datatype_lang_collection) = self.datatype_lang_collector.collect();
         let mut spo = Vec::new();
@@ -228,20 +247,6 @@ impl GraphWriter {
             highest_blank_node: self.highest_blank_node,
         }
     }
-}
-
-fn create_ops(spo: &[Triple64SPO]) -> Vec<Triple64OPS> {
-    let mut ops = Vec::with_capacity(spo.len());
-    for t in spo {
-        ops.push(Triple64OPS::triple(t.subject_is_iri(),
-                                     t.subject(),
-                                     t.predicate(),
-                                     t.object_type(),
-                                     t.object(),
-                                     t.datatype_or_lang()));
-    }
-    ops.sort();
-    ops
 }
 
 pub struct GraphTriple<T>
@@ -503,7 +508,7 @@ impl Graph {
             cmp
         })
     }
-    pub fn sort_blank_nodes_by<F>(&self, compare: F) -> Graph
+    fn sort_blank_nodes_by<F>(&self, compare: F) -> Graph
         where F: FnMut(&BlankNodeInfo, &BlankNodeInfo) -> cmp::Ordering
     {
         let len = self.highest_blank_node as usize + 1;
@@ -582,7 +587,7 @@ fn compare_without_blank_nodes<T>(mut a: T, mut b: T) -> cmp::Ordering
     a.cmp(&b)
 }
 
-pub struct BlankNodeInfo {
+struct BlankNodeInfo {
     blank_node: u32,
     times_a_subject: u32,
     times_a_subject_with_blank_object: u32,
@@ -607,6 +612,7 @@ impl<'a> graph::Graph<'a> for Graph {
 #[test]
 fn collect_empty() {
     let mut writer = GraphWriter::with_capacity(0);
+    use graph::GraphCreator;
     writer.collect();
 }
 
@@ -614,8 +620,8 @@ fn collect_empty() {
 fn keep_blank_subject() {
     let mut writer = GraphWriter::with_capacity(0);
     writer.add_blank_blank(1, "", 2);
+    use graph::{GraphCreator, Graph, Triple};
     let graph = writer.collect();
-    use graph::{Graph, Triple};
     let triple = graph.iter().next().unwrap();
     assert_eq!(triple.subject(), graph::Subject::BlankNode((1, 0)));
     assert_eq!(triple.predicate(), "");

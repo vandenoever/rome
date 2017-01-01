@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 #[derive(PartialEq,Eq)]
 pub struct Triple<'a> {
     pub subject: SingleSubject<'a>,

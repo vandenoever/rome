@@ -44,6 +44,7 @@ impl StringCollector {
     /// Return the number of bytes available for writing.
     /// It is possible to write more, but that would give a potentially costly
     /// reallocation.
+    #[cfg(unstable)]
     pub fn space(&self) -> usize {
         self.buffer.capacity() - self.buffer.len()
     }

@@ -4,10 +4,18 @@ version = "0.1.0"
 authors = ["Jos van den Oever <jos@vandenoever.info>"]
 
 [dependencies]
-nom = "*"
-walkdir = "*"
-rand = "*"
-url = "*"
+# library
 lazy_static = "*"
+nom = "*"
+rand = "*"
 regex = "*"
+
+# examples
 time = "*"
+
+[features]
+default = []
+
+# Unstable parts of this crate are hidden behind this feature.
+# There are no API guarantees for the functionality exposed by this feature.
+unstable = []
