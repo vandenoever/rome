@@ -7,12 +7,13 @@ use std::path::Path;
 use rdfio::triple_stream::*;
 use rdfio::graph;
 use rdfio::graph_writer;
-use rdfio::graph::Graph;
-use rdfio::graph::Triple;
+use rdfio::graph::{Graph, GraphCreator, Triple};
 use std::env::args;
 use std::rc::Rc;
 use rdfio::turtle_writer;
-use rdfio::graph::GraphCreator;
+use rdfio::triple64::*;
+
+type MyGraph = graph_writer::Graph<Triple64SPO, Triple64OPS>;
 
 macro_rules! println_stderr(
     ($($arg:tt)*) => { {
@@ -111,30 +112,31 @@ struct TestResult {
     info: String,
 }
 
-trait TripleObject {
-    fn write_as_triples(&self, output: &mut graph_writer::GraphWriter) -> rdfio::Result<()>;
-}
-
-impl TripleObject for Assertion {
-    fn write_as_triples(&self, output: &mut graph_writer::GraphWriter) -> rdfio::Result<()> {
-        let assertion_blank_node = output.highest_blank_node() + 1;
-        output.add_blank_iri(assertion_blank_node, RDF_TYPE, EARL_ASSERTION);
-        let date = format!("{}", self.date.rfc3339());
-        output.add_blank_lit(assertion_blank_node, DC_DATE, date.as_str(), XSD_DATE_TIME);
-
-        let result_blank_node = output.highest_blank_node() + 1;
-        output.add_blank_iri(result_blank_node, RDF_TYPE, EARL_TEST_RESULT);
-        output.add_blank_blank(assertion_blank_node, EARL_RESULT, result_blank_node);
-        let outcome = match self.result.outcome {
-            Outcome::Passed => EARL_PASSED,
-            Outcome::Failed => EARL_FAILED,
-            Outcome::CannotTell => EARL_CANT_TELL,
-        };
-        output.add_blank_iri(result_blank_node, EARL_OUTCOME, outcome);
-        output.add_blank_iri(assertion_blank_node, EARL_TEST, self.test.as_str());
-
-        Ok(())
-    }
+fn write_assertion<'a, W>(assertion: &'a Assertion, output: &mut W) -> rdfio::Result<()>
+    where W: GraphCreator
+{
+    let assertion_blank_node = output.create_blank_node();
+    output.add(assertion_blank_node, RDF_TYPE, EARL_ASSERTION);
+    let date = format!("{}", assertion.date.rfc3339());
+    output.add(assertion_blank_node,
+               DC_DATE,
+               graph::Literal {
+                   lexical: date.as_str(),
+                   datatype: XSD_DATE_TIME,
+                   language: None,
+               });
+    let result_blank_node = output.create_blank_node();
+    output.add(result_blank_node, RDF_TYPE, EARL_TEST_RESULT);
+    output.add(assertion_blank_node, EARL_RESULT, result_blank_node);
+    output.add(assertion_blank_node, EARL_RESULT, result_blank_node);
+    let outcome = match assertion.result.outcome {
+        Outcome::Passed => EARL_PASSED,
+        Outcome::Failed => EARL_FAILED,
+        Outcome::CannotTell => EARL_CANT_TELL,
+    };
+    output.add(result_blank_node, EARL_OUTCOME, outcome);
+    output.add(assertion_blank_node, EARL_TEST, assertion.test.as_str());
+    Ok(())
 }
 
 fn read_file(path: &str) -> io::Result<String> {
@@ -150,7 +152,7 @@ fn read_file(path: &str) -> io::Result<String> {
     Ok(s)
 }
 
-fn load_graph(data: &str, base: &str) -> rdfio::Result<graph_writer::Graph> {
+fn load_graph(data: &str, base: &str) -> rdfio::Result<MyGraph> {
     let mut writer = graph_writer::GraphWriter::with_capacity(65000);
     let mut triples = try!(TripleIterator::new(data, base));
     while let Some(triple) = triples.next() {
@@ -194,9 +196,7 @@ fn to_approval(object: &graph::Object) -> Result<Approval, String> {
     }
 }
 
-fn load_test_turtle_eval(graph: &graph_writer::Graph,
-                         subject: &Rc<String>)
-                         -> Result<TestTurtleEval, String> {
+fn load_test_turtle_eval(graph: &MyGraph, subject: &Rc<String>) -> Result<TestTurtleEval, String> {
     let mut i = graph.iter_subject(&graph::Subject::IRI(subject.as_str()));
     let (comment, prev) = try!(read(None, &mut i, RDFS_COMMENT, to_string));
     let (action, prev) = try!(read(prev, &mut i, MF_ACTION, to_string));
@@ -212,7 +212,7 @@ fn load_test_turtle_eval(graph: &graph_writer::Graph,
         result: result,
     })
 }
-fn load_positive_syntax(graph: &graph_writer::Graph,
+fn load_positive_syntax(graph: &MyGraph,
                         subject: &Rc<String>)
                         -> Result<TestTurtlePositiveSyntax, String> {
     let mut i = graph.iter_subject(&graph::Subject::IRI(subject.as_str()));
@@ -228,7 +228,7 @@ fn load_positive_syntax(graph: &graph_writer::Graph,
         action: action,
     })
 }
-fn load_negative_syntax(graph: &graph_writer::Graph,
+fn load_negative_syntax(graph: &MyGraph,
                         subject: &Rc<String>)
                         -> Result<TestTurtleNegativeSyntax, String> {
     let mut i = graph.iter_subject(&graph::Subject::IRI(subject.as_str()));
@@ -244,7 +244,7 @@ fn load_negative_syntax(graph: &graph_writer::Graph,
         action: action,
     })
 }
-fn load_negative_eval(graph: &graph_writer::Graph,
+fn load_negative_eval(graph: &MyGraph,
                       subject: &Rc<String>)
                       -> Result<TestTurtleNegativeEval, String> {
     let mut i = graph.iter_subject(&graph::Subject::IRI(subject.as_str()));
@@ -281,10 +281,7 @@ fn subject_to_string<T>(triple: &T) -> Rc<String>
     }
 }
 
-fn run_tests<'a>(graph: &'a graph_writer::Graph,
-                 base: &str,
-                 base_dir: &str)
-                 -> rdfio::Result<Vec<Assertion>> {
+fn run_tests<'a>(graph: &'a MyGraph, base: &str, base_dir: &str) -> rdfio::Result<Vec<Assertion>> {
     let mut assertions = Vec::new();
     for t in
         graph.iter_object_iri_predicate("http://www.w3.org/ns/rdftest#TestTurtleEval", RDF_TYPE) {
@@ -449,9 +446,9 @@ fn run_eval_negative_eval<'a>(test: &TestTurtleNegativeEval,
 fn output_as_turtle(assertions: &Vec<Assertion>) -> rdfio::Result<()> {
     let mut writer = graph_writer::GraphWriter::with_capacity(100000);
     for a in assertions {
-        try!(a.write_as_triples(&mut writer));
+        try!(write_assertion(&a, &mut writer));
     }
-    let graph = writer.collect().sort_blank_nodes();
+    let graph: MyGraph = writer.collect().sort_blank_nodes();
     let mut ns = turtle_writer::Namespaces::new();
     ns.add("http://purl.org/dc/elements/1.1/", b"dc");
     ns.add("http://www.w3.org/ns/earl#", b"earl");

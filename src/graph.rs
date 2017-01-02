@@ -1,13 +1,17 @@
-pub trait Graph<'a> {
-    type Triple: Triple + 'a;
-    fn iter(&'a self) -> Box<Iterator<Item = Self::Triple> + 'a>;
+pub trait Graph {
+    type Triple: Triple;
+    fn iter<'a>(&'a self) -> Box<Iterator<Item = Self::Triple> + 'a>;
     /// return the number of triples in the graph
     fn len(&self) -> usize;
 }
 
-pub trait GraphCreator<'a> {
-    type Graph: Graph<'a>;
+pub trait GraphCreator {
+    type Graph: Graph;
+    fn create_blank_node(&mut self) -> BlankNode;
     fn add_triple<T>(&mut self, triple: &T) where T: Triple;
+    fn add<'b, S, O>(&mut self, subject: S, predicate: &str, object: O)
+        where S: IntoSubject<'b>,
+              O: IntoObject<'b>;
     fn collect(&mut self) -> Self::Graph;
 }
 
@@ -38,6 +42,54 @@ pub trait Triple: PartialEq {
 pub enum Subject<'a> {
     IRI(&'a str),
     BlankNode(BlankNode),
+}
+
+#[derive(PartialEq,Eq,Hash,Clone,PartialOrd,Ord,Debug)]
+pub struct Literal<'a> {
+    pub lexical: &'a str,
+    pub datatype: &'a str,
+    pub language: Option<&'a str>,
+}
+
+#[derive(PartialEq,Eq,Hash,Clone,PartialOrd,Ord,Debug)]
+pub enum Object<'a> {
+    IRI(&'a str),
+    BlankNode(BlankNode),
+    Literal(Literal<'a>),
+}
+
+pub trait IntoSubject<'a> {
+    fn subject(self) -> Subject<'a>;
+}
+pub trait IntoObject<'a> {
+    fn object(self) -> Object<'a>;
+}
+
+impl<'a> IntoSubject<'a> for &'a str {
+    fn subject(self) -> Subject<'a> {
+        Subject::IRI(self)
+    }
+}
+impl<'a> IntoSubject<'a> for BlankNode {
+    fn subject(self) -> Subject<'a> {
+        Subject::BlankNode(self)
+    }
+}
+impl<'a> IntoObject<'a> for &'a str {
+    fn object(self) -> Object<'a> {
+        Object::IRI(self)
+    }
+}
+impl<'a> IntoObject<'a> for BlankNode {
+    fn object(self) -> Object<'a> {
+        Object::BlankNode(self)
+    }
+}
+
+impl<'a> IntoObject<'a> for Literal<'a> {
+    fn object(self) -> Object<'a> {
+        Object::Literal(self)
+    }
 }
 
 pub struct SubjectClone {
@@ -97,19 +149,6 @@ impl<'a> From<Subject<'a>> for SubjectClone {
     }
 }
 
-#[derive(PartialEq,Eq,Hash,Clone,PartialOrd,Ord,Debug)]
-pub struct Literal<'a> {
-    pub lexical: &'a str,
-    pub datatype: &'a str,
-    pub language: Option<&'a str>,
-}
-
-#[derive(PartialEq,Eq,Hash,Clone,PartialOrd,Ord,Debug)]
-pub enum Object<'a> {
-    IRI(&'a str),
-    BlankNode(BlankNode),
-    Literal(Literal<'a>),
-}
 impl<'a> From<Subject<'a>> for Object<'a> {
     fn from(s: Subject<'a>) -> Object<'a> {
         match s {

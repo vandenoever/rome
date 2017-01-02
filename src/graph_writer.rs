@@ -5,25 +5,34 @@ use grammar;
 use graph;
 use string_collector::*;
 use std::fmt::Debug;
+#[cfg(test)]
 use triple64::*;
 use compact_triple::*;
 use std::cmp;
+use std::marker::PhantomData;
 
-pub struct GraphWriter {
+pub struct GraphWriter<SPO, OPS>
+    where SPO: CompactTriple<u32>,
+          OPS: CompactTriple<u32>
+{
     string_collector: StringCollector,
     datatype_lang_collector: StringCollector,
-    triples: Vec<Triple64SPO>,
+    triples: Vec<SPO>,
     prev_subject_iri: Option<(String, StringId)>,
     prev_predicate: Option<(String, StringId)>,
     prev_datatype: Option<(String, StringId)>,
     prev_lang: Option<(String, StringId)>,
     highest_blank_node: u32,
+    phantom: PhantomData<OPS>,
 }
-pub struct Graph {
+pub struct Graph<SPO, OPS>
+    where SPO: CompactTriple<u32>,
+          OPS: CompactTriple<u32>
+{
     strings: Rc<StringCollection>,
     datatype_or_lang: Rc<StringCollection>,
-    spo: Vec<Triple64SPO>,
-    ops: Vec<Triple64OPS>,
+    spo: Vec<SPO>,
+    ops: Vec<OPS>,
     highest_blank_node: u32,
 }
 
@@ -79,8 +88,11 @@ fn check_prev(string: &str,
     }
     id
 }
-impl GraphWriter {
-    pub fn with_capacity(capacity: usize) -> GraphWriter {
+impl<SPO, OPS> GraphWriter<SPO, OPS>
+    where SPO: CompactTriple<u32>,
+          OPS: CompactTriple<u32>
+{
+    pub fn with_capacity(capacity: usize) -> GraphWriter<SPO, OPS> {
         GraphWriter {
             string_collector: StringCollector::with_capacity(capacity),
             datatype_lang_collector: StringCollector::with_capacity(capacity),
@@ -90,6 +102,7 @@ impl GraphWriter {
             prev_datatype: None,
             prev_lang: None,
             highest_blank_node: 0,
+            phantom: PhantomData,
         }
     }
     pub fn highest_blank_node(&self) -> u32 {
@@ -98,7 +111,7 @@ impl GraphWriter {
     fn add_s_iri(&mut self, s: &str, p: &str, ot: TripleObjectType, o: u32, d: u32) {
         let s = check_prev(s, &mut self.prev_subject_iri, &mut self.string_collector);
         let p = check_prev(p, &mut self.prev_predicate, &mut self.string_collector);
-        let t = Triple64SPO::triple(true, s.id, p.id, ot, o, d);
+        let t = SPO::triple(true, s.id, p.id, ot, o, d);
         self.triples.push(t);
     }
     pub fn add_iri_blank(&mut self, subject: &str, predicate: &str, object: u32) {
@@ -125,7 +138,7 @@ impl GraphWriter {
     fn add_s_blank(&mut self, s: u32, p: &str, ot: TripleObjectType, o: u32, d: u32) {
         self.highest_blank_node = cmp::max(self.highest_blank_node, s);
         let p = check_prev(p, &mut self.prev_predicate, &mut self.string_collector);
-        let t = Triple64SPO::triple(false, s, p.id, ot, o, d);
+        let t = SPO::triple(false, s, p.id, ot, o, d);
         self.triples.push(t);
     }
     pub fn add_blank_blank(&mut self, subject: u32, predicate: &str, object: u32) {
@@ -149,73 +162,50 @@ impl GraphWriter {
         let l = check_prev(lang, &mut self.prev_lang, &mut self.datatype_lang_collector).id;
         self.add_s_blank(subject, predicate, TripleObjectType::LiteralLang, o.id, l);
     }
-}
-
-fn create_ops(spo: &[Triple64SPO]) -> Vec<Triple64OPS> {
-    let mut ops = Vec::with_capacity(spo.len());
-    for t in spo {
-        ops.push(Triple64OPS::triple(t.subject_is_iri(),
-                                     t.subject(),
-                                     t.predicate(),
-                                     t.object_type(),
-                                     t.object(),
-                                     t.datatype_or_lang()));
-    }
-    ops.sort();
-    ops
-}
-
-impl<'a> graph::GraphCreator<'a> for GraphWriter {
-    type Graph = Graph;
-    fn add_triple<T>(&mut self, triple: &T)
-        where T: graph::Triple
-    {
-        match triple.subject() {
+    fn add_(&mut self, subject: graph::Subject, predicate: &str, object: graph::Object) {
+        match subject {
             graph::Subject::IRI(subject) => {
-                match triple.object() {
+                match object {
                     graph::Object::IRI(object) => {
-                        self.add_iri_iri(subject, triple.predicate(), object);
+                        self.add_iri_iri(subject, predicate, object);
                     }
                     graph::Object::BlankNode(object) => {
-                        self.add_iri_blank(subject, triple.predicate(), object.0 as u32);
+                        self.add_iri_blank(subject, predicate, object.0 as u32);
                     }
                     graph::Object::Literal(object) => {
                         match object.language {
                             None => {
                                 self.add_iri_lit(subject,
-                                                 triple.predicate(),
+                                                 predicate,
                                                  object.lexical,
                                                  object.datatype);
                             }
                             Some(lang) => {
-                                self.add_iri_lit_lang(subject,
-                                                      triple.predicate(),
-                                                      object.lexical,
-                                                      lang);
+                                self.add_iri_lit_lang(subject, predicate, object.lexical, lang);
                             }
                         }
                     }
                 }
             }
             graph::Subject::BlankNode(subject) => {
-                match triple.object() {
+                match object {
                     graph::Object::IRI(object) => {
-                        self.add_blank_iri(subject.0 as u32, triple.predicate(), object);
+                        self.add_blank_iri(subject.0 as u32, predicate, object);
                     }
                     graph::Object::BlankNode(object) => {
-                        self.add_blank_blank(subject.0 as u32, triple.predicate(), object.0 as u32);
+                        self.add_blank_blank(subject.0 as u32, predicate, object.0 as u32);
                     }
                     graph::Object::Literal(object) => {
                         match object.language {
                             None => {
                                 self.add_blank_lit(subject.0 as u32,
-                                                   triple.predicate(),
+                                                   predicate,
                                                    object.lexical,
                                                    object.datatype);
                             }
                             Some(lang) => {
                                 self.add_blank_lit_lang(subject.0 as u32,
-                                                        triple.predicate(),
+                                                        predicate,
                                                         object.lexical,
                                                         lang);
                             }
@@ -225,8 +215,37 @@ impl<'a> graph::GraphCreator<'a> for GraphWriter {
             }
         }
     }
+}
 
-    fn collect(&mut self) -> Graph {
+fn create_ops<SPO, OPS>(spo: &[SPO]) -> Vec<OPS>
+    where SPO: CompactTriple<u32>,
+          OPS: CompactTriple<u32> + Ord
+{
+    let mut ops = Vec::with_capacity(spo.len());
+    for t in spo {
+        ops.push(OPS::triple(t.subject_is_iri(),
+                             t.subject(),
+                             t.predicate(),
+                             t.object_type(),
+                             t.object(),
+                             t.datatype_or_lang()));
+    }
+    ops.sort();
+    ops
+}
+
+impl<SPO, OPS> graph::GraphCreator for GraphWriter<SPO, OPS>
+    where SPO: CompactTriple<u32> + Ord + Copy,
+          OPS: CompactTriple<u32> + Ord
+{
+    type Graph = Graph<SPO, OPS>;
+    fn add_triple<T>(&mut self, triple: &T)
+        where T: graph::Triple
+    {
+        self.add_(triple.subject(), triple.predicate(), triple.object());
+    }
+
+    fn collect(&mut self) -> Graph<SPO, OPS> {
         let (translation, string_collection) = self.string_collector.collect();
         let (datatrans, datatype_lang_collection) = self.datatype_lang_collector.collect();
         let mut spo = Vec::new();
@@ -246,6 +265,16 @@ impl<'a> graph::GraphCreator<'a> for GraphWriter {
             ops: ops,
             highest_blank_node: self.highest_blank_node,
         }
+    }
+    fn create_blank_node(&mut self) -> graph::BlankNode {
+        self.highest_blank_node += 1;
+        (self.highest_blank_node as usize, 0)
+    }
+    fn add<'b, S, O>(&mut self, subject: S, predicate: &str, object: O)
+        where S: graph::IntoSubject<'b>,
+              O: graph::IntoObject<'b>
+    {
+        self.add_(subject.subject(), predicate, object.object());
     }
 }
 
@@ -357,23 +386,36 @@ impl<'a, T> Iterator for TripleRangeIterator<'a, T>
     }
 }
 
-fn subject_blank_node(subject: u32) -> Triple64SPO {
-    Triple64SPO::triple(false, subject, 0, TripleObjectType::BlankNode, 0, 0)
+fn subject_blank_node<SPO>(subject: u32) -> SPO
+    where SPO: CompactTriple<u32>
+{
+    SPO::triple(false, subject, 0, TripleObjectType::BlankNode, 0, 0)
 }
-fn subject_iri(subject: u32) -> Triple64SPO {
-    Triple64SPO::triple(true, subject, 0, TripleObjectType::BlankNode, 0, 0)
+fn subject_iri<SPO>(subject: u32) -> SPO
+    where SPO: CompactTriple<u32>
+{
+    SPO::triple(true, subject, 0, TripleObjectType::BlankNode, 0, 0)
 }
-fn object_blank_node(object: u32) -> Triple64OPS {
-    Triple64OPS::triple(false, 0, 0, TripleObjectType::BlankNode, object, 0)
+fn object_blank_node<OPS>(object: u32) -> OPS
+    where OPS: CompactTriple<u32>
+{
+    OPS::triple(false, 0, 0, TripleObjectType::BlankNode, object, 0)
 }
-fn object_iri(object: u32) -> Triple64OPS {
-    Triple64OPS::triple(false, 0, 0, TripleObjectType::IRI, object, 0)
+fn object_iri<OPS>(object: u32) -> OPS
+    where OPS: CompactTriple<u32>
+{
+    OPS::triple(false, 0, 0, TripleObjectType::IRI, object, 0)
 }
-fn object_iri_predicate(object: u32, predicate: u32) -> Triple64OPS {
-    Triple64OPS::triple(true, 0, predicate, TripleObjectType::IRI, object, 0)
+fn object_iri_predicate<OPS>(object: u32, predicate: u32) -> OPS
+    where OPS: CompactTriple<u32>
+{
+    OPS::triple(true, 0, predicate, TripleObjectType::IRI, object, 0)
 }
 
-impl Graph {
+impl<SPO, OPS> Graph<SPO, OPS>
+    where SPO: CompactTriple<u32> + Copy + Ord + Debug,
+          OPS: CompactTriple<u32> + Copy + Ord + Debug
+{
     fn range_iter<'a, T>(&self, index: &'a [T], start: T, end: T) -> TripleRangeIterator<'a, T>
         where T: CompactTriple<u32> + Ord + Copy
     {
@@ -400,19 +442,19 @@ impl Graph {
         }
     }
     /// iterator over all triples with the same subject
-    fn iter_subject_(&self, triple: Triple64SPO) -> TripleRangeIterator<Triple64SPO> {
+    fn iter_subject_(&self, triple: SPO) -> TripleRangeIterator<SPO> {
         let mut end = triple;
         end.set_subject(triple.subject() + 1);
         self.range_iter(&self.spo, triple, end)
     }
-    pub fn iter_subject(&self, subject: &graph::Subject) -> TripleRangeIterator<Triple64SPO> {
+    pub fn iter_subject(&self, subject: &graph::Subject) -> TripleRangeIterator<SPO> {
         match *subject {
             graph::Subject::IRI(iri) => self.iter_subject_iri(iri),
             graph::Subject::BlankNode(_) => self.empty_range_iter(),
         }
     }
     /// iterator over all triples with the same subject
-    pub fn iter_subject_iri(&self, iri: &str) -> TripleRangeIterator<Triple64SPO> {
+    pub fn iter_subject_iri(&self, iri: &str) -> TripleRangeIterator<SPO> {
         match self.strings.find(iri) {
             None => self.empty_range_iter(),
             Some(id) => {
@@ -422,13 +464,13 @@ impl Graph {
         }
     }
     /// iterator over all triples with the same object
-    fn iter_object(&self, triple: Triple64OPS) -> TripleRangeIterator<Triple64OPS> {
+    fn iter_object(&self, triple: OPS) -> TripleRangeIterator<OPS> {
         let mut end = triple;
         end.set_object(triple.object() + 1);
         self.range_iter(&self.ops, triple, end)
     }
     /// iterator over all triples with the same object
-    pub fn iter_object_iri(&self, iri: &str) -> TripleRangeIterator<Triple64OPS> {
+    pub fn iter_object_iri(&self, iri: &str) -> TripleRangeIterator<OPS> {
         match self.strings.find(iri) {
             None => self.empty_range_iter(),
             Some(id) => {
@@ -438,7 +480,7 @@ impl Graph {
         }
     }
     /// iterator over all triples with the same object and predicate
-    fn iter_object_predicate(&self, triple: Triple64OPS) -> TripleRangeIterator<Triple64OPS> {
+    fn iter_object_predicate(&self, triple: OPS) -> TripleRangeIterator<OPS> {
         let mut end = triple;
         end.set_predicate(triple.predicate() + 1);
         self.range_iter(&self.ops, triple, end)
@@ -447,7 +489,7 @@ impl Graph {
     pub fn iter_object_iri_predicate(&self,
                                      object_iri: &str,
                                      predicate: &str)
-                                     -> TripleRangeIterator<Triple64OPS> {
+                                     -> TripleRangeIterator<OPS> {
         match self.strings.find(object_iri) {
             None => self.empty_range_iter(),
             Some(object) => {
@@ -462,18 +504,18 @@ impl Graph {
         }
     }
     /// iterate over all triple with a blank node subject
-    pub fn iter_subject_blank_nodes(&self) -> TripleRangeIterator<Triple64SPO> {
+    pub fn iter_subject_blank_nodes(&self) -> TripleRangeIterator<SPO> {
         let start = subject_blank_node(0);
         let end = subject_iri(0);
         self.range_iter(&self.spo, start, end)
     }
     /// iterate over all triple with a blank node object
-    pub fn iter_object_blank_nodes(&self) -> TripleRangeIterator<Triple64OPS> {
+    pub fn iter_object_blank_nodes(&self) -> TripleRangeIterator<OPS> {
         let start = object_blank_node(0);
         let end = object_iri(0);
         self.range_iter(&self.ops, start, end)
     }
-    pub fn sort_blank_nodes(&self) -> Graph {
+    pub fn sort_blank_nodes(&self) -> Graph<SPO, OPS> {
         // sort nodes by usage (least used last)
         self.sort_blank_nodes_by(|b1, b2| {
             let mut cmp = b2.times_a_subject.cmp(&b1.times_a_subject);
@@ -508,7 +550,7 @@ impl Graph {
             cmp
         })
     }
-    fn sort_blank_nodes_by<F>(&self, compare: F) -> Graph
+    fn sort_blank_nodes_by<F>(&self, compare: F) -> Graph<SPO, OPS>
         where F: FnMut(&BlankNodeInfo, &BlankNodeInfo) -> cmp::Ordering
     {
         let len = self.highest_blank_node as usize + 1;
@@ -595,9 +637,12 @@ struct BlankNodeInfo {
     times_an_object_with_blank_subject: u32,
 }
 
-impl<'a> graph::Graph<'a> for Graph {
-    type Triple = GraphTriple<Triple64SPO>;
-    fn iter(&'a self) -> Box<Iterator<Item = Self::Triple> + 'a> {
+impl<SPO, OPS> graph::Graph for Graph<SPO, OPS>
+    where SPO: CompactTriple<u32> + PartialEq + Copy,
+          OPS: CompactTriple<u32>
+{
+    type Triple = GraphTriple<SPO>;
+    fn iter<'a>(&'a self) -> Box<Iterator<Item = Self::Triple> + 'a> {
         Box::new(GraphIterator {
             strings: self.strings.clone(),
             datatype_or_lang: self.datatype_or_lang.clone(),
@@ -611,14 +656,14 @@ impl<'a> graph::Graph<'a> for Graph {
 
 #[test]
 fn collect_empty() {
-    let mut writer = GraphWriter::with_capacity(0);
+    let mut writer: GraphWriter<Triple64SPO, Triple64OPS> = GraphWriter::with_capacity(0);
     use graph::GraphCreator;
     writer.collect();
 }
 
 #[test]
 fn keep_blank_subject() {
-    let mut writer = GraphWriter::with_capacity(0);
+    let mut writer: GraphWriter<Triple64SPO, Triple64OPS> = GraphWriter::with_capacity(0);
     writer.add_blank_blank(1, "", 2);
     use graph::{GraphCreator, Graph, Triple};
     let graph = writer.collect();

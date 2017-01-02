@@ -21,8 +21,8 @@ mod grammar_helper;
 mod grammar_structs;
 mod string_collector;
 mod compact_triple;
-mod triple64;
-mod triple128;
+pub mod triple64;
+pub mod triple128;
 
 #[cfg(unstable)]
 mod string_store;
