@@ -14,6 +14,7 @@ use rdfio::graph::{Object, Graph, GraphCreator, Triple};
 use rdfio::triple_stream::*;
 use rdfio::turtle_writer;
 use rdfio::triple64::*;
+use rdfio::namespaces::Namespaces;
 
 type MyGraph = graph_writer::Graph<Triple64SPO, Triple64OPS>;
 
@@ -47,8 +48,8 @@ fn load_graph(data: &str, base: &str) -> rdfio::Result<MyGraph> {
 }
 
 fn output_as_turtle(graph: &MyGraph) -> rdfio::Result<()> {
-    let mut ns = turtle_writer::Namespaces::new();
-    ns.add("http://www.w3.org/2000/01/rdf-schema#", b"rdfs");
+    let mut ns = Namespaces::new();
+    ns.set(b"rdfs", "http://www.w3.org/2000/01/rdf-schema#");
     try!(turtle_writer::write_turtle(&ns, graph.iter(), &mut ::std::io::stdout()));
     Ok(())
 }

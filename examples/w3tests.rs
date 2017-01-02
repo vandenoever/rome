@@ -11,6 +11,7 @@ use rdfio::graph_writer;
 use rdfio::graph::{Graph, GraphCreator, Triple};
 use rdfio::triple_stream::*;
 use rdfio::turtle_writer;
+use rdfio::namespaces::Namespaces;
 use rdfio::triple64::*;
 
 type MyGraph = graph_writer::Graph<Triple64SPO, Triple64OPS>;
@@ -449,11 +450,11 @@ fn output_as_turtle(assertions: &Vec<Assertion>) -> rdfio::Result<()> {
         try!(write_assertion(&a, &mut writer));
     }
     let graph: MyGraph = writer.collect().sort_blank_nodes();
-    let mut ns = turtle_writer::Namespaces::new();
-    ns.add("http://purl.org/dc/elements/1.1/", b"dc");
-    ns.add("http://www.w3.org/ns/earl#", b"earl");
-    ns.add("http://www.w3.org/2001/XMLSchema#", b"xsd");
-    ns.add("http://www.w3.org/2013/TurtleTests/manifest.ttl#", b"test");
+    let mut ns = Namespaces::new();
+    ns.set(b"dc", "http://purl.org/dc/elements/1.1/");
+    ns.set(b"earl", "http://www.w3.org/ns/earl#");
+    ns.set(b"xsd", "http://www.w3.org/2001/XMLSchema#");
+    ns.set(b"test", "http://www.w3.org/2013/TurtleTests/manifest.ttl#");
     try!(turtle_writer::write_turtle(&ns, graph.iter(), &mut ::std::io::stdout()));
     Ok(())
 }

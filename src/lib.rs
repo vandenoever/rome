@@ -13,6 +13,7 @@ pub mod graph;
 pub mod graph_writer;
 pub mod triple_stream;
 pub mod turtle_writer;
+pub mod namespaces;
 
 pub use error::Result;
 

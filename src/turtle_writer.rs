@@ -1,37 +1,7 @@
 use std::io::{Result, Write};
 use graph::*;
+use namespaces::*;
 use grammar;
-
-#[derive (Clone)]
-pub struct Namespaces {
-    namespaces: Vec<Namespace>,
-}
-
-impl Namespaces {
-    pub fn new() -> Namespaces {
-        Namespaces { namespaces: Vec::new() }
-    }
-    pub fn add(&mut self, namespace: &str, prefix: &[u8]) {
-        self.namespaces.push(Namespace {
-            namespace: String::from(namespace),
-            prefix: Vec::from(prefix),
-        });
-    }
-    fn find_prefix<'a>(&self, iri: &'a str) -> Option<(&[u8], &'a str)> {
-        for ns in self.namespaces.iter() {
-            if iri.starts_with(&ns.namespace) {
-                return Some((ns.prefix.as_slice(), &iri[ns.namespace.len()..]));
-            }
-        }
-        None
-    }
-}
-
-#[derive (Clone)]
-struct Namespace {
-    namespace: String,
-    prefix: Vec<u8>,
-}
 
 struct TurtleWriter<'a, W>
     where W: Write + 'a
@@ -55,7 +25,7 @@ pub fn write_turtle<T, I, W>(namespaces: &Namespaces, triples: I, writer: &mut W
         last_subject: SubjectClone::new(),
         open_statement: false,
     };
-    for ns in namespaces.namespaces.iter() {
+    for ns in namespaces.iter() {
         try!(writer.write_prefix(&ns));
     }
     try!(writer.writer.write_all(b"\n"));
@@ -71,9 +41,9 @@ impl<'a, W> TurtleWriter<'a, W>
 {
     fn write_prefix(&mut self, ns: &Namespace) -> Result<()> {
         try!(self.writer.write_all(b"@prefix "));
-        try!(self.writer.write_all(ns.prefix.as_slice()));
+        try!(self.writer.write_all(ns.prefix()));
         try!(self.writer.write_all(b": "));
-        try!(self.write_full_iri(ns.namespace.as_str()));
+        try!(self.write_full_iri(ns.namespace()));
         self.writer.write_all(b" .\n")
     }
     fn write_iri(&mut self, iri: &str, namespaces: &Namespaces) -> Result<()> {

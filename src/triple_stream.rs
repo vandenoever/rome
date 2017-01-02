@@ -4,6 +4,7 @@ use grammar_helper::*;
 use std::collections::HashMap;
 use nom::IResult;
 use graph;
+use namespaces::*;
 use std::rc::Rc;
 use error::{Error, Result};
 use regex::Regex;
@@ -143,7 +144,7 @@ pub struct TripleIterator<'a> {
     statement_iterator: StatementIterator<'a>,
     buffer: String,
     base: String,
-    prefixes: HashMap<&'a str, String>,
+    prefixes: Namespaces,
     blank_nodes: BlankNodes<'a>,
     triple_buffer: Vec<Triple<'a>>,
     done: bool,
@@ -182,7 +183,7 @@ impl<'a> TripleIterator<'a> {
             statement_iterator: try!(StatementIterator::new(src)),
             buffer: String::new(),
             base: String::from(base),
-            prefixes: HashMap::new(),
+            prefixes: Namespaces::new(),
             blank_nodes: BlankNodes {
                 blank_nodes: HashMap::new(),
                 next_blank: 0,
@@ -198,11 +199,11 @@ impl<'a> TripleIterator<'a> {
             },
         })
     }
-    pub fn prefixes(&self) -> HashMap<String, String> {
-        self.prefixes.iter().map(|(&k, v)| (String::from(k), v.clone())).collect()
+    pub fn prefixes(&self) -> &Namespaces {
+        &self.prefixes
     }
     fn set_prefix(&mut self, prefix: &'a str, value: String) {
-        self.prefixes.insert(prefix, value);
+        self.prefixes.insert(prefix.as_bytes(), value);
     }
     fn fill_buffer(&mut self) -> Result<usize> {
         while let Some(statement) = self.statement_iterator.next() {
@@ -232,7 +233,7 @@ impl<'a> TripleIterator<'a> {
 }
 
 fn resolve_triple(triple: Triple,
-                  prefixes: &HashMap<&str, String>,
+                  prefixes: &Namespaces,
                   base: &str,
                   buffer: &mut String,
                   strings: &mut Strings)
@@ -298,7 +299,7 @@ fn unescape_literal(string: &str, to: &mut Rc<String>) -> Result<()> {
     Ok(())
 }
 fn resolve_iri(iri: IRI,
-               prefixes: &HashMap<&str, String>,
+               prefixes: &Namespaces,
                base: &str,
                buffer: &mut String,
                to: &mut Rc<String>)
@@ -311,10 +312,10 @@ fn resolve_iri(iri: IRI,
             try!(unescape_iri(iri, buffer));
             try!(join_iri(base, buffer.as_str(), p));
         }
-        IRI::PrefixedName(ns, local) => {
-            match prefixes.get(ns) {
-                Some(prefix) => {
-                    p.push_str(prefix);
+        IRI::PrefixedName(prefix, local) => {
+            match prefixes.find_namespace(prefix.as_bytes()) {
+                Some(ns) => {
+                    p.push_str(ns);
                     try!(pn_local_unescape(local, p));
                 }
                 None => return Err(Error::Custom("Cannot find prefix.")),
