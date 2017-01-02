@@ -1,15 +1,15 @@
 extern crate rdfio;
 extern crate time;
+use std::env::args;
+use std::fs;
 use std::io;
 use std::io::{Read, Write};
-use std::fs;
 use std::path::Path;
-use rdfio::triple_stream::*;
+use std::rc::Rc;
 use rdfio::graph;
 use rdfio::graph_writer;
 use rdfio::graph::{Graph, GraphCreator, Triple};
-use std::env::args;
-use std::rc::Rc;
+use rdfio::triple_stream::*;
 use rdfio::turtle_writer;
 use rdfio::triple64::*;
 
@@ -499,7 +499,7 @@ fn main() {
         }
     }
     if !args_ok {
-        println_stderr!("Usage: w3tests [--output-turtle] [MANIFEST_FILE]");
+        println_stderr!("Usage: w3tests [--output-turtle] MANIFEST_FILE");
         std::process::exit(-1);
     }
     if let Err(e) = run(manifest_path.as_str(), output_turtle) {

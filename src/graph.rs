@@ -15,15 +15,6 @@ pub trait GraphCreator {
     fn collect(&mut self) -> Self::Graph;
 }
 
-pub trait WritableGraph {
-    fn add_triple_si_oi(&mut self, s: &String, p: &String, o: &String);
-    /// Add a new triple
-    /// This can fail if an incoming blank node is invalid
-    fn add_triple<T>(&mut self, triple: &T) where T: Triple;
-    fn remove_triple<T>(&mut self, triple: &T) where T: Triple;
-    fn create_blank_node(&mut self) -> BlankNode;
-}
-
 pub type BlankNode = (usize, usize);
 
 pub trait Triple: PartialEq {
@@ -65,6 +56,11 @@ pub trait IntoObject<'a> {
     fn object(self) -> Object<'a>;
 }
 
+impl<'a> IntoSubject<'a> for Subject<'a> {
+    fn subject(self) -> Subject<'a> {
+        self
+    }
+}
 impl<'a> IntoSubject<'a> for &'a str {
     fn subject(self) -> Subject<'a> {
         Subject::IRI(self)
@@ -73,6 +69,11 @@ impl<'a> IntoSubject<'a> for &'a str {
 impl<'a> IntoSubject<'a> for BlankNode {
     fn subject(self) -> Subject<'a> {
         Subject::BlankNode(self)
+    }
+}
+impl<'a> IntoObject<'a> for Object<'a> {
+    fn object(self) -> Object<'a> {
+        self
     }
 }
 impl<'a> IntoObject<'a> for &'a str {
@@ -85,12 +86,17 @@ impl<'a> IntoObject<'a> for BlankNode {
         Object::BlankNode(self)
     }
 }
-
 impl<'a> IntoObject<'a> for Literal<'a> {
     fn object(self) -> Object<'a> {
         Object::Literal(self)
     }
 }
+impl<'a> IntoObject<'a> for Subject<'a> {
+    fn object(self) -> Object<'a> {
+        Subject::into(self)
+    }
+}
+
 
 pub struct SubjectClone {
     iri: String,
