@@ -121,7 +121,7 @@ impl StringCollection {
         &self.buffer[start..end]
     }
     pub fn find(&self, s: &str) -> Option<StringId> {
-        match binary_search_by_index(self.starts.len(),
+        match binary_search_by_index(self.starts.len() - 1,
                                      |i| self.get(StringId { id: i as u32 }).cmp(s)) {
             Ok(pos) => Some(StringId { id: pos as u32 }),
             Err(_) => None,

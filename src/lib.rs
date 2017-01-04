@@ -24,6 +24,9 @@ mod string_collector;
 mod compact_triple;
 pub mod triple64;
 pub mod triple128;
+#[macro_use]
+pub mod resource;
+pub mod ontology;
 
 #[cfg(unstable)]
 mod string_store;

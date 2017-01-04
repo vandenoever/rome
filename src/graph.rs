@@ -1,6 +1,14 @@
 pub trait Graph {
-    type Triple: Triple;
-    fn iter<'a>(&'a self) -> Box<Iterator<Item = Self::Triple> + 'a>;
+    type SPOTriple: Triple;
+    type SPOIter: Iterator<Item = Self::SPOTriple>;
+    type SPORangeIter: Iterator<Item = Self::SPOTriple>;
+    fn iter(&self) -> Self::SPOIter;
+
+    /// iterator over all triples with the same subject and predicate
+    fn iter_subject_predicate(&self, subject: &Subject, predicate: &str) -> Self::SPORangeIter;
+    /// iterator that returns no results
+    fn empty_spo_range(&self) -> Self::SPORangeIter;
+
     /// return the number of triples in the graph
     fn len(&self) -> usize;
 }
@@ -17,7 +25,7 @@ pub trait GraphCreator {
 
 pub type BlankNode = (usize, usize);
 
-pub trait Triple: PartialEq {
+pub trait Triple: Eq {
     fn subject(&self) -> Subject;
     fn predicate(&self) -> &str;
     fn object(&self) -> Object;
@@ -96,7 +104,6 @@ impl<'a> IntoObject<'a> for Subject<'a> {
         Subject::into(self)
     }
 }
-
 
 pub struct SubjectClone {
     iri: String,

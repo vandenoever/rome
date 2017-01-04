@@ -1,12 +1,12 @@
 #[derive (Debug)]
 pub enum TripleObjectType {
-    BlankNode,
-    IRI,
-    Literal,
-    LiteralLang,
+    BlankNode = 0,
+    IRI = 1,
+    Literal = 2,
+    LiteralLang = 3,
 }
 
-pub trait CompactTriple<T>
+pub trait CompactTriple<T>: Ord + Copy + Eq
     where T: Ord + Copy
 {
     fn triple(subject_is_iri: bool,

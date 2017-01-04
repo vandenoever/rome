@@ -80,27 +80,27 @@ struct BlankNodes<'a> {
     next_blank: usize,
 }
 
-#[derive (PartialEq,Clone,Debug)]
+#[derive (PartialEq,Eq,Clone,Debug)]
 pub struct IteratorTriple {
     pub subject: IteratorSubject,
     pub predicate: Rc<String>,
     pub object: IteratorObject,
 }
 
-#[derive (PartialEq,Clone,Debug)]
+#[derive (PartialEq,Eq,Clone,Debug)]
 pub enum IteratorSubject {
     IRI(Rc<String>),
     BlankNode(graph::BlankNode),
 }
 
-#[derive (PartialEq,Clone,Debug)]
+#[derive (PartialEq,Eq,Clone,Debug)]
 pub struct IteratorLiteral {
     pub lexical: Rc<String>,
     pub datatype: Rc<String>,
     pub language: Option<Rc<String>>,
 }
 
-#[derive (PartialEq,Clone,Debug)]
+#[derive (PartialEq,Eq,Clone,Debug)]
 pub enum IteratorObject {
     IRI(Rc<String>),
     BlankNode(graph::BlankNode),
