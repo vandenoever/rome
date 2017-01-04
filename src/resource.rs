@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 use std::rc::Rc;
 
 
-#[derive (Clone,Debug)]
+#[derive (Clone,Debug,PartialEq,Eq)]
 pub enum Resource {
     IRI(Rc<String>),
     Literal(Rc<String>),
@@ -63,7 +63,7 @@ impl<G, R> Iterator for ObjectIter<G, R>
     }
 }
 
-pub trait ResourceBase<G>
+pub trait ResourceBase<G>: Eq
     where G: graph::Graph
 {
     fn new(iri: &Resource, graph: &Rc<G>) -> Self;
@@ -95,6 +95,7 @@ macro_rules! class{(
     $iri:expr,
     $name:ident) => {
 
+/// $iri
 pub struct $name<G>
     where G: graph::Graph
 {
@@ -108,6 +109,14 @@ impl<G> $name<G>
         $iri
     }
 }
+impl<G> PartialEq for $name<G>
+    where G: graph::Graph
+{
+    fn eq(&self, rhs: &$name<G>) -> bool {
+        self.resource.eq(&rhs.resource)
+    }
+}
+impl<G> Eq for $name<G> where G: graph::Graph {}
 impl<'a, G> resource::ResourceBase<G> for $name<G>
     where G: graph::Graph
 {
