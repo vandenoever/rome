@@ -115,11 +115,7 @@ impl graph::PredicatePtr for Dummy {
     }
 }
 impl graph::SubjectPtr for Dummy {
-    type PredicatePtr = Dummy;
     fn iri(&self) -> Option<&str> {
-        None
-    }
-    fn predicate_ptr(self) -> Option<Self::PredicatePtr> {
         None
     }
 }

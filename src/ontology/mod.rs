@@ -7,7 +7,8 @@ use ontology_adapter;
 pub fn adapter<G>(graph: &std::rc::Rc<G>) -> ontology_adapter::OntologyAdapter<G>
     where G: graph::Graph
 {
-    let mut iris = Vec::with_capacity(32);
+    let mut iris = Vec::with_capacity(33);
+    iris.push(graph.predicate_ptr("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"));
     iris.push(graph.predicate_ptr("http://www.w3.org/1999/02/22-rdf-syntax-ns#Alt"));
     iris.push(graph.predicate_ptr("http://www.w3.org/1999/02/22-rdf-syntax-ns#Bag"));
     iris.push(graph.predicate_ptr("http://www.w3.org/1999/02/22-rdf-syntax-ns#HTML"));

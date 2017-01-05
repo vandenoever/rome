@@ -205,7 +205,6 @@ fn generate_code<G>(classes: &Vec<Class<G>>,
 
 const RDFS_SUB_CLASS_OF: &'static str = "http://www.w3.org/2000/01/rdf-schema#subClassOf";
 const RDFS_CLASS: &'static str = "http://www.w3.org/2000/01/rdf-schema#Class";
-const RDF_PROPERTY: &'static str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#Property";
 const RDF_TYPE: &'static str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 
 fn infer(graph: &MyGraph) -> rdfio::Result<MyGraph> {
@@ -230,20 +229,18 @@ fn infer(graph: &MyGraph) -> rdfio::Result<MyGraph> {
     Ok(writer.collect().sort_blank_nodes())
 }
 
-fn get_classes(graph: &Rc<MyGraph>, oa: &Rc<OA>) -> rdfio::Result<Vec<Class<MyGraph>>> {
+fn get_classes(oa: &Rc<OA>) -> rdfio::Result<Vec<Class<MyGraph>>> {
     let mut classes = Vec::new();
-    for t in graph.iter_object_iri_predicate(RDFS_CLASS, RDF_TYPE) {
-        let object = graph.subject_to_object(t.subject_ptr());
-        classes.push(Class::new(object, oa));
+    for c in Class::iter(oa) {
+        classes.push(c);
     }
     Ok(classes)
 }
 
-fn get_properties(graph: &Rc<MyGraph>, oa: &Rc<OA>) -> rdfio::Result<Vec<Property<MyGraph>>> {
+fn get_properties(oa: &Rc<OA>) -> rdfio::Result<Vec<Property<MyGraph>>> {
     let mut properties = Vec::new();
-    for t in graph.iter_object_iri_predicate(RDF_PROPERTY, RDF_TYPE) {
-        let object = graph.subject_to_object(t.subject_ptr());
-        properties.push(Property::new(object, oa));
+    for p in Property::iter(oa) {
+        properties.push(p);
     }
     Ok(properties)
 }
@@ -309,8 +306,8 @@ fn generate(output_dir: &Path, inputs: &Vec<String>) -> rdfio::Result<()> {
     let graph = try!(infer(&graph));
     let graph = Rc::new(graph);
     let oa = Rc::new(ontology::adapter(&graph));
-    let classes = try!(get_classes(&graph, &oa));
-    let properties = try!(get_properties(&graph, &oa));
+    let classes = try!(get_classes(&oa));
+    let properties = try!(get_properties(&oa));
 
     let mut outputs = HashMap::new();
     let mut mod_uses = HashMap::new();
@@ -319,6 +316,7 @@ fn generate(output_dir: &Path, inputs: &Vec<String>) -> rdfio::Result<()> {
         mod_uses.insert(Vec::from(ns.prefix()), HashSet::new());
     }
     let mut iris = Vec::new();
+    iris.push(String::from(RDF_TYPE));
     try!(generate_code(&classes, &properties, &prefixes, &mut outputs, &mut iris, &mut mod_uses));
     try!(write_code(output_dir, &outputs, &iris, &mod_uses));
     Ok(())

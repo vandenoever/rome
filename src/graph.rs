@@ -1,30 +1,40 @@
 pub trait Graph {
-    type SPOTriple: Triple;
+    type SubjectPtr: SubjectPtr;
+    type PredicatePtr: PredicatePtr;
+    type ObjectPtr: ObjectPtr;
+    type SPOTriple: Triple<SubjectPtr = Self::SubjectPtr,
+           PredicatePtr = Self::PredicatePtr,
+           ObjectPtr = Self::ObjectPtr>;
     type SPOIter: Iterator<Item = Self::SPOTriple>;
     type SPORangeIter: Iterator<Item = Self::SPOTriple>;
+    type OPSTriple: Triple<SubjectPtr = Self::SubjectPtr,
+           PredicatePtr = Self::PredicatePtr,
+           ObjectPtr = Self::ObjectPtr>;
+    type OPSRangeIter: Iterator<Item = Self::OPSTriple>;
     fn iter(&self) -> Self::SPOIter;
 
-    fn subject_ptr<'a, S>(&self, subject: S) -> Option<<Self::SPOTriple as Triple>::SubjectPtr>
-        where S: IntoSubject<'a>;
-    fn predicate_ptr<'a>(&self,
-                         predicate: &str)
-                         -> Option<<Self::SPOTriple as Triple>::PredicatePtr>;
-    fn object_ptr<'a, O>(&self, object: O) -> Option<<Self::SPOTriple as Triple>::ObjectPtr>
-        where O: IntoObject<'a>;
-    fn object_to_subject(&self, object: <Self::SPOTriple as Triple>::ObjectPtr)
-            -> Option<<Self::SPOTriple as Triple>::SubjectPtr>;
-    fn subject_to_object(&self, object: <Self::SPOTriple as Triple>::SubjectPtr)
-            -> <Self::SPOTriple as Triple>::ObjectPtr;
+    fn subject_ptr<'a, S>(&self, subject: S) -> Option<Self::SubjectPtr> where S: IntoSubject<'a>;
+    fn predicate_ptr<'a>(&self, predicate: &str) -> Option<Self::PredicatePtr>;
+    fn object_ptr<'a, O>(&self, object: O) -> Option<Self::ObjectPtr> where O: IntoObject<'a>;
+    fn object_to_subject(&self, object: Self::ObjectPtr) -> Option<Self::SubjectPtr>;
+    fn subject_to_object(&self, subject: Self::SubjectPtr) -> Self::ObjectPtr;
+    fn predicate_to_object(&self, predicate: Self::PredicatePtr) -> Self::ObjectPtr;
 
     fn iter_s_p(&self,
-                subject: <Self::SPOTriple as Triple>::SubjectPtr,
-                predicate: <Self::SPOTriple as Triple>::PredicatePtr)
+                subject: Self::SubjectPtr,
+                predicate: Self::PredicatePtr)
                 -> Self::SPORangeIter;
+    fn iter_o_p(&self,
+                object: Self::ObjectPtr,
+                predicate: Self::PredicatePtr)
+                -> Self::OPSRangeIter;
 
     /// iterator over all triples with the same subject and predicate
     fn iter_subject_predicate(&self, subject: &Subject, predicate: &str) -> Self::SPORangeIter;
     /// iterator that returns no results
     fn empty_spo_range(&self) -> Self::SPORangeIter;
+    /// iterator that returns no results
+    fn empty_ops_range(&self) -> Self::OPSRangeIter;
 
     /// return the number of triples in the graph
     fn len(&self) -> usize;
@@ -63,9 +73,7 @@ pub trait PredicatePtr: Eq + Clone {
     fn iri(&self) -> &str;
 }
 pub trait SubjectPtr: Eq + Clone {
-    type PredicatePtr: PredicatePtr;
     fn iri(&self) -> Option<&str>;
-    fn predicate_ptr(self) -> Option<Self::PredicatePtr>;
 }
 pub trait ObjectPtr: SubjectPtr {
     fn literal(&self) -> Option<&str>;
