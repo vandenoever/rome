@@ -4,6 +4,23 @@ pub trait Graph {
     type SPORangeIter: Iterator<Item = Self::SPOTriple>;
     fn iter(&self) -> Self::SPOIter;
 
+    fn subject_ptr<'a, S>(&self, subject: S) -> Option<<Self::SPOTriple as Triple>::SubjectPtr>
+        where S: IntoSubject<'a>;
+    fn predicate_ptr<'a>(&self,
+                         predicate: &str)
+                         -> Option<<Self::SPOTriple as Triple>::PredicatePtr>;
+    fn object_ptr<'a, O>(&self, object: O) -> Option<<Self::SPOTriple as Triple>::ObjectPtr>
+        where O: IntoObject<'a>;
+    fn object_to_subject(&self, object: <Self::SPOTriple as Triple>::ObjectPtr)
+            -> Option<<Self::SPOTriple as Triple>::SubjectPtr>;
+    fn subject_to_object(&self, object: <Self::SPOTriple as Triple>::SubjectPtr)
+            -> <Self::SPOTriple as Triple>::ObjectPtr;
+
+    fn iter_s_p(&self,
+                subject: <Self::SPOTriple as Triple>::SubjectPtr,
+                predicate: <Self::SPOTriple as Triple>::PredicatePtr)
+                -> Self::SPORangeIter;
+
     /// iterator over all triples with the same subject and predicate
     fn iter_subject_predicate(&self, subject: &Subject, predicate: &str) -> Self::SPORangeIter;
     /// iterator that returns no results
@@ -26,15 +43,32 @@ pub trait GraphCreator {
 pub type BlankNode = (usize, usize);
 
 pub trait Triple: Eq {
+    type SubjectPtr: SubjectPtr;
+    type PredicatePtr: PredicatePtr;
+    type ObjectPtr: ObjectPtr;
     fn subject(&self) -> Subject;
+    fn subject_ptr(&self) -> Self::SubjectPtr;
     fn predicate(&self) -> &str;
     fn object(&self) -> Object;
+    fn object_ptr(&self) -> Self::ObjectPtr;
     fn eq<Rhs>(&self, other: &Rhs) -> bool
         where Rhs: Triple
     {
         self.subject().eq(&other.subject()) && self.predicate().eq(other.predicate()) &&
         self.object().eq(&other.object())
     }
+}
+
+pub trait PredicatePtr: Eq + Clone {
+    fn iri(&self) -> &str;
+}
+pub trait SubjectPtr: Eq + Clone {
+    type PredicatePtr: PredicatePtr;
+    fn iri(&self) -> Option<&str>;
+    fn predicate_ptr(self) -> Option<Self::PredicatePtr>;
+}
+pub trait ObjectPtr: SubjectPtr {
+    fn literal(&self) -> Option<&str>;
 }
 
 #[derive(PartialEq,Eq,Hash,Clone,Copy,PartialOrd,Ord,Debug)]

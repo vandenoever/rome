@@ -107,7 +107,33 @@ pub enum IteratorObject {
     Literal(IteratorLiteral),
 }
 
+#[derive (PartialEq,Eq,Clone)]
+pub struct Dummy;
+impl graph::PredicatePtr for Dummy {
+    fn iri(&self) -> &str {
+        ""
+    }
+}
+impl graph::SubjectPtr for Dummy {
+    type PredicatePtr = Dummy;
+    fn iri(&self) -> Option<&str> {
+        None
+    }
+    fn predicate_ptr(self) -> Option<Self::PredicatePtr> {
+        None
+    }
+}
+impl graph::ObjectPtr for Dummy {
+    fn literal(&self) -> Option<&str> {
+        None
+    }
+}
+
 impl graph::Triple for IteratorTriple {
+    type SubjectPtr = Dummy;
+    type PredicatePtr = Dummy;
+    type ObjectPtr = Dummy;
+
     fn subject(&self) -> graph::Subject {
         match self.subject {
             IteratorSubject::IRI(ref iri) => graph::Subject::IRI(iri.as_str()),
@@ -129,6 +155,12 @@ impl graph::Triple for IteratorTriple {
                 })
             }
         }
+    }
+    fn subject_ptr(&self) -> Self::SubjectPtr {
+        Dummy {}
+    }
+    fn object_ptr(&self) -> Self::ObjectPtr {
+        Dummy {}
     }
 }
 

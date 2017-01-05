@@ -27,6 +27,7 @@ pub mod triple128;
 #[macro_use]
 pub mod resource;
 pub mod ontology;
+pub mod ontology_adapter;
 
 #[cfg(unstable)]
 mod string_store;

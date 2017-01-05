@@ -109,6 +109,7 @@ impl StringCollector {
     }
 }
 
+#[derive (Clone)]
 pub struct StringCollection {
     buffer: String,
     starts: Vec<u32>,

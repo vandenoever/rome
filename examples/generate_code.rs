@@ -9,18 +9,22 @@ use std::io::{Read, Write};
 use std::path::Path;
 use std::rc::Rc;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use rdfio::graph_writer;
-use rdfio::graph::{Object, Graph, GraphCreator, Subject, Triple};
+use rdfio::graph::{Object, Graph, GraphCreator, Triple, SubjectPtr, ObjectPtr};
 use rdfio::triple_stream::*;
 use rdfio::triple64::*;
 use rdfio::namespaces::Namespaces;
-use rdfio::resource::{ResourceBase, Resource};
+use rdfio::resource::ResourceBase;
 use rdfio::ontology::rdf::Property;
 use rdfio::ontology::rdfs::{Class, Comment, Domain, Range, SubClassOf};
+use rdfio::ontology;
+use rdfio::ontology_adapter;
 
 type MyGraph = graph_writer::Graph<Triple64SPO, Triple64OPS>;
+type OA = ontology_adapter::OntologyAdapter<MyGraph>;
 
-type Writers = HashMap<Vec<u8>, fs::File>;
+type Writers = HashMap<Vec<u8>, Vec<u8>>;
 
 macro_rules! println_stderr(
     ($($arg:tt)*) => { {
@@ -70,19 +74,19 @@ fn comment_escape(str: &str) -> String {
     str.replace("\n", "")
 }
 
-
 fn write_impl_property<G, W>(class: &Class<G>,
                              property: &Property<G>,
                              prefixes: &Namespaces,
-                             writer: &mut W)
+                             writer: &mut W,
+                             mod_uses: &mut HashSet<Vec<u8>>)
                              -> rdfio::Result<()>
     where W: Write,
           G: Graph
 {
-    if let &Resource::IRI(ref iri) = property.this() {
-        if let Some((prop_prefix, prop)) = prefixes.find_prefix(iri.as_str()) {
-            if let &Resource::IRI(ref domain) = class.this() {
-                if let Some((prefix, domain)) = prefixes.find_prefix(domain.as_str()) {
+    if let Some(iri) = property.this().iri() {
+        if let Some((prop_prefix, prop)) = prefixes.find_prefix(iri) {
+            if let Some(domain) = class.this().iri() {
+                if let Some((prefix, domain)) = prefixes.find_prefix(domain) {
                     try!(writer.write_all(b"impl<G> "));
                     try!(writer.write_all(prop_prefix));
                     try!(writer.write_all(b"::"));
@@ -92,6 +96,8 @@ fn write_impl_property<G, W>(class: &Class<G>,
                     try!(writer.write_all(b"::"));
                     try!(writer.write_all(camel_case(domain).as_bytes()));
                     try!(writer.write_all(b"<G> where G: graph::Graph {}\n"));
+                    mod_uses.insert(Vec::from(prop_prefix));
+                    mod_uses.insert(Vec::from(prefix));
                 }
             }
         }
@@ -103,7 +109,8 @@ fn write_impl_properties<G, W>(class: &Class<G>,
                                parent: &Class<G>,
                                properties: &Vec<Property<G>>,
                                prefixes: &Namespaces,
-                               writer: &mut W)
+                               writer: &mut W,
+                               mod_uses: &mut HashSet<Vec<u8>>)
                                -> rdfio::Result<()>
     where W: Write,
           G: Graph
@@ -111,32 +118,34 @@ fn write_impl_properties<G, W>(class: &Class<G>,
     for property in properties {
         for domain in property.domain() {
             if domain == *parent {
-                try!(write_impl_property(class, property, prefixes, writer));
+                try!(write_impl_property(class, property, prefixes, writer, mod_uses));
             }
         }
     }
     for parent in parent.sub_class_of() {
-        try!(write_impl_properties(class, &parent, properties, prefixes, writer));
+        try!(write_impl_properties(class, &parent, properties, prefixes, writer, mod_uses));
     }
     Ok(())
 }
-fn write_code<G>(classes: &Vec<Class<G>>,
-                 properties: &Vec<Property<G>>,
-                 prefixes: &Namespaces,
-                 writers: &Writers)
-                 -> rdfio::Result<()>
+fn generate_code<G>(classes: &Vec<Class<G>>,
+                    properties: &Vec<Property<G>>,
+                    prefixes: &Namespaces,
+                    writers: &mut Writers,
+                    iris: &mut Vec<String>,
+                    mod_uses: &mut HashMap<Vec<u8>, HashSet<Vec<u8>>>)
+                    -> rdfio::Result<()>
     where G: Graph
 {
     for class in classes {
-        if let &Resource::IRI(ref iri) = class.this() {
-            if let Some((prefix, name)) = prefixes.find_prefix(iri.as_str()) {
-                if let Some(mut writer) = writers.get(prefix) {
+        if let Some(iri) = class.this().iri() {
+            if let Some((prefix, name)) = prefixes.find_prefix(iri) {
+                if let Some(mut writer) = writers.get_mut(prefix) {
                     try!(writer.write_all(b"\n/// "));
                     try!(writer.write_all(prefix));
                     try!(writer.write_all(b":"));
                     try!(writer.write_all(name.as_bytes()));
                     for comment in class.comment() {
-                        if let &Resource::Literal(ref l) = comment.this() {
+                        if let Some(l) = comment.this().literal() {
                             try!(writer.write_all(b"\n/// "));
                             try!(writer.write_all(comment_escape(l).as_bytes()));
                         }
@@ -145,26 +154,28 @@ fn write_code<G>(classes: &Vec<Class<G>>,
                     try!(writer.write_all(iri.as_bytes()));
                     try!(writer.write_all(b"\", "));
                     try!(writer.write_all(camel_case(name).as_bytes()));
-                    try!(writer.write_all(b");\n"));
-                    try!(write_impl_properties(class, class, properties, prefixes, &mut writer));
+                    try!(writer.write_all(format!(", {});\n", iris.len()).as_bytes()));
+                    try!(write_impl_properties(class, class, properties, prefixes,
+                            &mut writer, &mut mod_uses.get_mut(prefix).unwrap()));
+                    iris.push(String::from(iri));
                 }
             }
         }
     }
     for property in properties {
-        if let &Resource::IRI(ref iri) = property.this() {
-            if let Some((prop_prefix, prop)) = prefixes.find_prefix(iri.as_str()) {
+        if let Some(iri) = property.this().iri() {
+            if let Some((prop_prefix, prop)) = prefixes.find_prefix(iri) {
                 for range in property.range() {
-                    if let &Resource::IRI(ref range) = range.this() {
-                        if let Some((prefix, range)) = prefixes.find_prefix(range.as_str()) {
+                    if let Some(range) = range.this().iri() {
+                        if let Some((prefix, range)) = prefixes.find_prefix(range) {
 
-                            if let Some(mut writer) = writers.get(prop_prefix) {
+                            if let Some(mut writer) = writers.get_mut(prop_prefix) {
                                 try!(writer.write_all(b"\n/// "));
                                 try!(writer.write_all(prop_prefix));
                                 try!(writer.write_all(b":"));
                                 try!(writer.write_all(prop.as_bytes()));
                                 for comment in property.comment() {
-                                    if let &Resource::Literal(ref l) = comment.this() {
+                                    if let Some(l) = comment.this().literal() {
                                         try!(writer.write_all(b"\n/// "));
                                         try!(writer.write_all(comment_escape(l).as_bytes()));
                                     }
@@ -179,11 +190,13 @@ fn write_code<G>(classes: &Vec<Class<G>>,
                                 try!(writer.write_all(prefix));
                                 try!(writer.write_all(b"::"));
                                 try!(writer.write_all(camel_case(range).as_bytes()));
-                                try!(writer.write_all(b"<G>);\n"));
+                                try!(writer.write_all(format!("<G>, {});\n", iris.len()).as_bytes()));
+                                mod_uses.get_mut(prop_prefix).unwrap().insert(Vec::from(prefix));
                             }
                         }
                     }
                 }
+                iris.push(String::from(iri));
             }
         }
     }
@@ -217,37 +230,64 @@ fn infer(graph: &MyGraph) -> rdfio::Result<MyGraph> {
     Ok(writer.collect().sort_blank_nodes())
 }
 
-fn get_classes(graph: &Rc<MyGraph>) -> rdfio::Result<Vec<Class<MyGraph>>> {
+fn get_classes(graph: &Rc<MyGraph>, oa: &Rc<OA>) -> rdfio::Result<Vec<Class<MyGraph>>> {
     let mut classes = Vec::new();
     for t in graph.iter_object_iri_predicate(RDFS_CLASS, RDF_TYPE) {
-        if let Subject::IRI(iri) = t.subject() {
-            classes.push(Class::new(&Resource::IRI(Rc::new(String::from(iri))), &graph));
-        }
+        let object = graph.subject_to_object(t.subject_ptr());
+        classes.push(Class::new(object, oa));
     }
     Ok(classes)
 }
 
-fn get_properties(graph: &Rc<MyGraph>) -> rdfio::Result<Vec<Property<MyGraph>>> {
+fn get_properties(graph: &Rc<MyGraph>, oa: &Rc<OA>) -> rdfio::Result<Vec<Property<MyGraph>>> {
     let mut properties = Vec::new();
     for t in graph.iter_object_iri_predicate(RDF_PROPERTY, RDF_TYPE) {
-        if let Subject::IRI(iri) = t.subject() {
-            properties.push(Property::new(&Resource::IRI(Rc::new(String::from(iri))), &graph));
-        }
+        let object = graph.subject_to_object(t.subject_ptr());
+        properties.push(Property::new(object, oa));
     }
     Ok(properties)
 }
 
-fn open_writers(output_dir: &Path, prefixes: &Namespaces) -> rdfio::Result<Writers> {
-    let mut writers = HashMap::new();
-    for ns in prefixes.iter() {
-        let mut filename = String::from_utf8_lossy(ns.prefix()).into_owned();
-        filename.push_str(".rs");
-        let path = output_dir.join(filename);
-        let mut file = try!(fs::File::create(path));
-        try!(file.write_all(b"use std;\nuse graph;\nuse resource;\nuse ontology::rdf;\nuse ontology::rdfs;\n"));
-        writers.insert(Vec::from(ns.prefix()), file);
+fn write_code(output_dir: &Path,
+              writers: &Writers,
+              iris: &Vec<String>,
+              mod_uses: &HashMap<Vec<u8>, HashSet<Vec<u8>>>)
+              -> rdfio::Result<()> {
+    let path = output_dir.join("mod.rs");
+    let mut mod_rs = try!(fs::File::create(path));
+    for (prefix, content) in writers.iter() {
+        if content.len() > 0 {
+            let mut filename = String::from_utf8_lossy(prefix).into_owned();
+            filename.push_str(".rs");
+            let path = output_dir.join(filename);
+            let mut file = try!(fs::File::create(path));
+            try!(file.write_all(
+                b"use std;\nuse graph;\nuse resource;\nuse ontology_adapter;\n"));
+            for u in mod_uses[prefix].iter() {
+                try!(file.write_all(b"use ontology::"));
+                try!(file.write_all(&u));
+                try!(file.write_all(b";\n"));
+            }
+            try!(file.write_all(content));
+            try!(mod_rs.write_all(b"pub mod "));
+            try!(mod_rs.write_all(prefix));
+            try!(mod_rs.write_all(b";\n"));
+        }
     }
-    Ok(writers)
+    try!(mod_rs.write_all(b"use graph;
+use std;
+use ontology_adapter;
+
+pub fn adapter<G>(graph: &std::rc::Rc<G>) -> ontology_adapter::OntologyAdapter<G>
+    where G: graph::Graph
+{
+    let mut iris = Vec::with_capacity("));
+    try!(mod_rs.write_all(format!("{});\n", iris.len()).as_bytes()));
+    for iri in iris {
+        try!(mod_rs.write_all(format!("    iris.push(graph.predicate_ptr(\"{}\"));\n", iri).as_bytes()));
+    }
+    try!(mod_rs.write_all(b"    ontology_adapter::OntologyAdapter::new(graph, iris)\n}\n"));
+    Ok(())
 }
 
 fn generate(output_dir: &Path, inputs: &Vec<String>) -> rdfio::Result<()> {
@@ -268,10 +308,19 @@ fn generate(output_dir: &Path, inputs: &Vec<String>) -> rdfio::Result<()> {
     let graph: MyGraph = writer.collect().sort_blank_nodes();
     let graph = try!(infer(&graph));
     let graph = Rc::new(graph);
-    let classes = try!(get_classes(&graph));
-    let properties = try!(get_properties(&graph));
-    let writers = try!(open_writers(output_dir, &prefixes));
-    try!(write_code(&classes, &properties, &prefixes, &writers));
+    let oa = Rc::new(ontology::adapter(&graph));
+    let classes = try!(get_classes(&graph, &oa));
+    let properties = try!(get_properties(&graph, &oa));
+
+    let mut outputs = HashMap::new();
+    let mut mod_uses = HashMap::new();
+    for ns in prefixes.iter() {
+        outputs.insert(Vec::from(ns.prefix()), Vec::new());
+        mod_uses.insert(Vec::from(ns.prefix()), HashSet::new());
+    }
+    let mut iris = Vec::new();
+    try!(generate_code(&classes, &properties, &prefixes, &mut outputs, &mut iris, &mut mod_uses));
+    try!(write_code(output_dir, &outputs, &iris, &mod_uses));
     Ok(())
 }
 
