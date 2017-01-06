@@ -39,6 +39,9 @@ impl<G> OntologyAdapter<G>
     pub fn object_to_subject(&self, object: G::ObjectPtr) -> Option<G::SubjectPtr> {
         self.graph.object_to_subject(object)
     }
+    pub fn object_to_predicate(&self, object: G::ObjectPtr) -> Option<G::PredicatePtr> {
+        self.graph.object_to_predicate(object)
+    }
     pub fn subject_to_object(&self, subject: G::SubjectPtr) -> G::ObjectPtr {
         self.graph.subject_to_object(subject)
     }

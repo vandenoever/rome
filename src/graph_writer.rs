@@ -986,6 +986,12 @@ impl<SPO, OPS> graph::Graph for Graph<SPO, OPS>
             _ => None,
         }
     }
+    fn object_to_predicate(&self, object: Self::ObjectPtr) -> Option<Self::PredicatePtr> {
+        match object {
+            ObjectPtr::IRI(graph, iri) => Some(PredicatePtr(graph, iri)),
+            _ => None,
+        }
+    }
     fn subject_to_object(&self, subject: Self::SubjectPtr) -> Self::ObjectPtr {
         match subject {
             SubjectPtr::IRI(graph, iri) => ObjectPtr::IRI(graph, iri),

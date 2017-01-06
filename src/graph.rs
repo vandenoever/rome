@@ -17,6 +17,7 @@ pub trait Graph {
     fn predicate_ptr<'a>(&self, predicate: &str) -> Option<Self::PredicatePtr>;
     fn object_ptr<'a, O>(&self, object: O) -> Option<Self::ObjectPtr> where O: IntoObject<'a>;
     fn object_to_subject(&self, object: Self::ObjectPtr) -> Option<Self::SubjectPtr>;
+    fn object_to_predicate(&self, object: Self::ObjectPtr) -> Option<Self::PredicatePtr>;
     fn subject_to_object(&self, subject: Self::SubjectPtr) -> Self::ObjectPtr;
     fn predicate_to_object(&self, predicate: Self::PredicatePtr) -> Self::ObjectPtr;
 

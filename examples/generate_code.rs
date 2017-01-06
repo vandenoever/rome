@@ -15,7 +15,7 @@ use rdfio::graph::{Object, Graph, GraphCreator, Triple, SubjectPtr, ObjectPtr};
 use rdfio::triple_stream::*;
 use rdfio::triple128::*;
 use rdfio::namespaces::Namespaces;
-use rdfio::resource::ResourceBase;
+use rdfio::resource::{ResourceBase, IRI};
 use rdfio::ontology::classes::rdf::Property;
 use rdfio::ontology::classes::rdfs::Class;
 use rdfio::ontology::properties::rdfs::{Comment, Domain, Range, SubClassOf};
@@ -43,8 +43,8 @@ struct OntoData<G>
     where G: Graph
 {
     o: Output,
-    classes: Vec<Class<G>>,
-    properties: Vec<Property<G>>,
+    classes: Vec<IRI<G, Class<G>>>,
+    properties: Vec<IRI<G, Property<G>>>,
     prefixes: Namespaces,
 }
 
@@ -213,6 +213,20 @@ fn load_files(inputs: &Vec<String>) -> rdfio::Result<(Namespaces, Rc<MyGraph>)> 
     Ok((prefixes, Rc::new(graph)))
 }
 
+fn write_comment<W, C, G>(r: &IRI<G, C>, writer: &mut W) -> rdfio::Result<()>
+    where W: Write,
+          C: Comment<G>,
+          G: Graph
+{
+    for comment in r.comment() {
+        if let Some(l) = comment.this().literal() {
+            writer.write_all(b"\n/// ")?;
+            writer.write_all(comment_escape(l).as_bytes())?;
+        }
+    }
+    Ok(())
+}
+
 fn generate_classes<G>(d: &OntoData<G>, iris: &mut Vec<String>) -> rdfio::Result<()>
     where G: Graph
 {
@@ -221,27 +235,21 @@ fn generate_classes<G>(d: &OntoData<G>, iris: &mut Vec<String>) -> rdfio::Result
         outputs.insert(Vec::from(ns.prefix()), Vec::new());
     }
     for class in d.classes.iter() {
-        if let Some(iri) = class.this().iri() {
-            if let Some((prefix, name)) = d.prefixes.find_prefix(iri) {
-                if let Some(mut writer) = outputs.get_mut(prefix) {
-                    writer.write_all(b"\nclass!(\n/// **")?;
-                    writer.write_all(prefix)?;
-                    writer.write_all(b":")?;
-                    writer.write_all(name.as_bytes())?;
-                    writer.write_all(b"**")?;
-                    for comment in class.comment() {
-                        if let Some(l) = comment.this().literal() {
-                            writer.write_all(b"\n/// ")?;
-                            writer.write_all(comment_escape(l).as_bytes())?;
-                        }
-                    }
-                    writer.write_all(format!("\n:\"{}\", {},\n{});\n", iri,
+        let iri = class.iri();
+        if let Some((prefix, name)) = d.prefixes.find_prefix(iri) {
+            if let Some(mut writer) = outputs.get_mut(prefix) {
+                writer.write_all(b"\nclass!(\n/// **")?;
+                writer.write_all(prefix)?;
+                writer.write_all(b":")?;
+                writer.write_all(name.as_bytes())?;
+                writer.write_all(b"**")?;
+                write_comment(class, writer)?;
+                writer.write_all(format!("\n:\"{}\", {},\n{});\n", iri,
                             camel_case(name), iris.len())
-                            .as_bytes())?;
-                    let mut done = HashSet::new();
-                    write_impl_properties(&class, &class, d, &mut done, &mut writer)?;
-                    iris.push(String::from(iri));
-                }
+                        .as_bytes())?;
+                let mut done = HashSet::new();
+                write_impl_properties(&class, &class, d, &mut done, &mut writer)?;
+                iris.push(String::from(iri));
             }
         }
     }
@@ -256,34 +264,28 @@ fn generate_properties<G>(d: &OntoData<G>, iris: &mut Vec<String>) -> rdfio::Res
         outputs.insert(Vec::from(ns.prefix()), Vec::new());
     }
     for property in d.properties.iter() {
-        if let Some(iri) = property.this().iri() {
-            if let Some((prop_prefix, prop)) = d.prefixes.find_prefix(iri) {
-                for range in property.range() {
-                    if let Some((prefix, range)) =
-                        range.this().iri().and_then(|i| d.prefixes.find_prefix(i)) {
-                        if let Some(mut writer) = outputs.get_mut(prop_prefix) {
-                            writer.write_all(b"\nproperty!(\n/// **")?;
-                            writer.write_all(prop_prefix)?;
-                            writer.write_all(b":")?;
-                            writer.write_all(prop.as_bytes())?;
-                            writer.write_all(b"**")?;
-                            for comment in property.comment() {
-                                if let Some(l) = comment.this().literal() {
-                                    writer.write_all(b"\n/// ")?;
-                                    writer.write_all(comment_escape(l).as_bytes())?;
-                                }
-                            }
-                            writer.write_all(
+        let iri = property.iri();
+        if let Some((prop_prefix, prop)) = d.prefixes.find_prefix(iri) {
+            for range in property.range() {
+                if let Some((prefix, range)) =
+                    range.this().iri().and_then(|i| d.prefixes.find_prefix(i)) {
+                    if let Some(mut writer) = outputs.get_mut(prop_prefix) {
+                        writer.write_all(b"\nproperty!(\n/// **")?;
+                        writer.write_all(prop_prefix)?;
+                        writer.write_all(b":")?;
+                        writer.write_all(prop.as_bytes())?;
+                        writer.write_all(b"**")?;
+                        write_comment(property, writer)?;
+                        writer.write_all(
                                     format!("\n:\"{}\", {}, {},\n{}::classes::{}::{}<G>,\n{});\n",
                                         iri, camel_case(prop),
                                         snake_case(prop), d.o.mod_name,
                                         String::from_utf8_lossy(prefix),
                                         camel_case(range), iris.len()).as_bytes())?;
-                        }
                     }
                 }
-                iris.push(String::from(iri));
             }
+            iris.push(String::from(iri));
         }
     }
     write_files(&d.o, &outputs, "properties", false)
@@ -347,8 +349,8 @@ fn generate(output_dir: PathBuf,
             output_dir: output_dir,
             internal: internal,
         },
-        classes: Class::iter(&oa).collect(),
-        properties: Property::iter(&oa).collect(),
+        classes: Class::iter(&oa).filter_map(|c| c.iri()).collect(),
+        properties: Property::iter(&oa).filter_map(|c| c.iri()).collect(),
         prefixes: prefixes,
     };
 

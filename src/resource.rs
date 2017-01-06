@@ -27,6 +27,39 @@ impl<G, R> Iterator for ObjectIter<G, R>
     }
 }
 
+// a wrapper around 'ResourceBase' that guarantees that the resource
+// is an iri and not a blank node or a literal
+pub struct IRI<G, R>
+    where G: graph::Graph,
+          R: ResourceBase<G>
+{
+    resource: R,
+    pub phantom: PhantomData<G>,
+}
+
+impl<G, R> IRI<G, R>
+    where G: graph::Graph,
+          R: ResourceBase<G>
+{
+    pub fn iri(&self) -> &str {
+        use std::ops::Deref;
+        use graph::SubjectPtr;
+        self.deref().this().iri().unwrap()
+    }
+    pub fn this(&self) -> () {}
+}
+
+impl<G, R: ?Sized> std::ops::Deref for IRI<G, R>
+    where G: graph::Graph,
+          R: ResourceBase<G>
+{
+    type Target = R;
+
+    #[inline(always)]
+    fn deref(&self) -> &R {
+        &self.resource
+    }
+}
 
 pub struct SubjectIter<G, R>
     where G: graph::Graph
@@ -56,14 +89,20 @@ impl<G, R> Iterator for SubjectIter<G, R>
 pub trait ResourceBase<G>: Eq + std::marker::Sized
     where G: graph::Graph
 {
-    fn new(this: <G::SPOTriple as graph::Triple>::ObjectPtr,
-           graph: &Rc<ontology_adapter::OntologyAdapter<G>>)
-           -> Self;
+    fn new(this: G::ObjectPtr, graph: &Rc<ontology_adapter::OntologyAdapter<G>>) -> Self;
     fn iter(graph: &Rc<ontology_adapter::OntologyAdapter<G>>) -> SubjectIter<G, Self>;
-    fn this(&self) -> &<G::SPOTriple as graph::Triple>::ObjectPtr;
+    fn this(&self) -> &G::ObjectPtr;
     fn graph(&self) -> &ontology_adapter::OntologyAdapter<G>;
-    fn predicate<R>(&self, predicate: Option<<G::SPOTriple as graph::Triple>::PredicatePtr>)
-            -> ObjectIter<G, R> where R: ResourceBase<G>;
+    fn predicate<R>(&self, predicate: Option<G::PredicatePtr>) -> ObjectIter<G, R>
+        where R: ResourceBase<G>;
+    fn iri(self) -> Option<IRI<G, Self>> {
+        self.graph().object_to_predicate(self.this().clone()).map(|_| {
+            IRI {
+                resource: self,
+                phantom: PhantomData,
+            }
+        })
+    }
 }
 
 macro_rules! property{(
@@ -83,7 +122,7 @@ pub trait $trait_name<G>: resource::ResourceBase<G>
     fn property_iri() -> &'static str {
         $iri
     }
-    fn property_iri_ptr(&self) -> Option<<G::SPOTriple as graph::Triple>::PredicatePtr> {
+    fn property_iri_ptr(&self) -> Option<G::PredicatePtr> {
         self.graph().class_iri($pos).map(|i|i.clone())
     }
     fn $function(&self) -> resource::ObjectIter<G, $range> {
@@ -151,7 +190,7 @@ impl<'a, G> resource::ResourceBase<G> for $name<G>
             phantom: std::marker::PhantomData,
         }
     }
-    fn this(&self) -> &<G::SPOTriple as graph::Triple>::ObjectPtr {
+    fn this(&self) -> &G::ObjectPtr {
         &self.resource
     }
     fn graph(&self) -> &ontology_adapter::OntologyAdapter<G> {
