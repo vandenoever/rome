@@ -49,7 +49,7 @@ fn read_file(path: &str) -> io::Result<String> {
 fn camel_case(str: &str) -> String {
     let mut s = str[0..1].to_uppercase();
     s.push_str(&str[1..]);
-    s
+    s.replace("-", "_")
 }
 
 fn snake_case(str: &str) -> String {
@@ -67,7 +67,7 @@ fn snake_case(str: &str) -> String {
             s.push(c);
         }
     }
-    s
+    s.replace("-", "_")
 }
 
 fn comment_escape(str: &str) -> String {

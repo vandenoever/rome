@@ -422,14 +422,11 @@ impl<SPO, OPS, T> PartialEq for Triple<SPO, OPS, T>
 {
     fn eq(&self, other: &Self) -> bool {
         // if the triples use the same Graph, it's ok to compare
-        // the numeric value of the triple
-        if Rc::ptr_eq(&self.graph, &other.graph) {
-            self.triple.eq(&other.triple)
-        } else {
-            use graph::Triple;
-            self.subject().eq(&other.subject()) && self.predicate().eq(other.predicate()) &&
-            self.object().eq(&other.object())
-        }
+        // the numeric value of the triple, when Rc::ptr_eq becomes stable,
+        // we can use that.
+        use graph::Triple;
+        self.subject().eq(&other.subject()) && self.predicate().eq(other.predicate()) &&
+        self.object().eq(&other.object())
     }
 }
 impl<SPO, OPS, T> Eq for Triple<SPO, OPS, T>

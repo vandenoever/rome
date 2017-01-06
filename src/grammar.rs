@@ -12,7 +12,7 @@ macro_rules! one_if (
         if $f(c) {
           IResult::Done(&$i[1..], &$i[..1])
         } else {
-          IResult::Error(error_position!($crate::ErrorKind::OneOf, $i))
+          IResult::Error(error_position!(ErrorKind::OneOf, $i))
         }
       } else {
         IResult::Incomplete::<_, _>(Needed::Size(1))
@@ -197,7 +197,7 @@ named!(predicated_object<&str,PredicatedObjects>, do_parse!(
 ));
 
 /// [8] objectList ::= object (',' object)*
-named!(object_list<&str,Vec<Object>>, separated_nonempty_list!(
+named!(object_list<&str,Vec<Object> >, separated_nonempty_list!(
     tuple!(tws, tag_s!(","), tws),
     object
 ));
@@ -232,14 +232,14 @@ named!(object<&str,Object>, alt!(
 named!(literal<&str,Literal>, alt!(rdfliteral | boolean | double | decimal | integer));
 
 /// [14] blankNodePropertyList ::= '[' predicateObjectList ']'
-named!(blank_node_property_list<&str,Vec<PredicatedObjects>>, do_parse!(
+named!(blank_node_property_list<&str,Vec<PredicatedObjects> >, do_parse!(
     tag_s!("[") >> tws >>
     pol: predicated_objects_list >> tws >>
     tag_s!("]") >> (pol)
 ));
 
 /// [15] collection ::= '(' object* ')'
-named!(collection<&str,Vec<Object>>, do_parse!(
+named!(collection<&str,Vec<Object> >, do_parse!(
     tag_s!("(") >> tws >>
     objects: many0!(do_parse!(
         object: object >> tws >>

@@ -1,5 +1,5 @@
 use grammar_structs::*;
-use grammar::*;
+use grammar::{statement, tws};
 use grammar_helper::*;
 use std::collections::HashMap;
 use nom::IResult;

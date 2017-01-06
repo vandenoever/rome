@@ -1,12 +1,9 @@
-#![feature(ptr_eq)]
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
 extern crate nom;
 extern crate rand;
 extern crate regex;
-
-use nom::ErrorKind;
 
 pub mod error;
 pub mod graph;
