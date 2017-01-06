@@ -224,17 +224,18 @@ fn generate_classes<G>(d: &OntoData<G>, iris: &mut Vec<String>) -> rdfio::Result
         if let Some(iri) = class.this().iri() {
             if let Some((prefix, name)) = d.prefixes.find_prefix(iri) {
                 if let Some(mut writer) = outputs.get_mut(prefix) {
-                    writer.write_all(b"\n/// ")?;
+                    writer.write_all(b"\nclass!(\n/// **")?;
                     writer.write_all(prefix)?;
                     writer.write_all(b":")?;
                     writer.write_all(name.as_bytes())?;
+                    writer.write_all(b"**")?;
                     for comment in class.comment() {
                         if let Some(l) = comment.this().literal() {
                             writer.write_all(b"\n/// ")?;
                             writer.write_all(comment_escape(l).as_bytes())?;
                         }
                     }
-                    writer.write_all(format!("\nclass!(\"{}\", {}, {});\n", iri,
+                    writer.write_all(format!("\n:\"{}\", {},\n{});\n", iri,
                             camel_case(name), iris.len())
                             .as_bytes())?;
                     let mut done = HashSet::new();
@@ -261,10 +262,11 @@ fn generate_properties<G>(d: &OntoData<G>, iris: &mut Vec<String>) -> rdfio::Res
                     if let Some((prefix, range)) =
                         range.this().iri().and_then(|i| d.prefixes.find_prefix(i)) {
                         if let Some(mut writer) = outputs.get_mut(prop_prefix) {
-                            writer.write_all(b"\n/// ")?;
+                            writer.write_all(b"\nproperty!(\n/// **")?;
                             writer.write_all(prop_prefix)?;
                             writer.write_all(b":")?;
                             writer.write_all(prop.as_bytes())?;
+                            writer.write_all(b"**")?;
                             for comment in property.comment() {
                                 if let Some(l) = comment.this().literal() {
                                     writer.write_all(b"\n/// ")?;
@@ -272,7 +274,7 @@ fn generate_properties<G>(d: &OntoData<G>, iris: &mut Vec<String>) -> rdfio::Res
                                 }
                             }
                             writer.write_all(
-                                    format!("\nproperty!(\"{}\", {}, {}, {}::classes::{}::{}<G>, {});\n",
+                                    format!("\n:\"{}\", {}, {},\n{}::classes::{}::{}<G>,\n{});\n",
                                         iri, camel_case(prop),
                                         snake_case(prop), d.o.mod_name,
                                         String::from_utf8_lossy(prefix),

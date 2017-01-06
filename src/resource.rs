@@ -67,16 +67,19 @@ pub trait ResourceBase<G>: Eq + std::marker::Sized
 }
 
 macro_rules! property{(
-    $iri:expr,
+    $(#[$meta:meta])*
+    :$iri:expr,
     $trait_name:ident,
     $function:ident,
     $range:path,
     $pos:expr) => {
 
+$(#[$meta])*
 pub trait $trait_name<G>: resource::ResourceBase<G>
     where G: graph::Graph,
           Self: std::marker::Sized
 {
+    #[doc=$iri]
     fn property_iri() -> &'static str {
         $iri
     }
@@ -91,10 +94,12 @@ pub trait $trait_name<G>: resource::ResourceBase<G>
 }
 
 macro_rules! class{(
-    $iri:expr,
+    $(#[$meta:meta])*
+    :$iri:expr,
     $name:ident,
     $pos:expr) => {
 
+$(#[$meta])*
 pub struct $name<G>
     where G: graph::Graph
 {
@@ -105,6 +110,7 @@ pub struct $name<G>
 impl<G> $name<G>
     where G: graph::Graph
 {
+    #[doc=$iri]
     pub fn class_iri() -> &'static str {
         $iri
     }
@@ -202,15 +208,15 @@ pub fn adapter<G>(graph: &std::rc::Rc<G>) -> ontology_adapter::OntologyAdapter<G
     ontology_adapter::OntologyAdapter::new(graph, iris)
 }
 
-class!("http://www.w3.org/2000/01/rdf-schema#Class", Class, 1);
-class!("http://www.w3.org/1999/02/22-rdf-syntax-ns#Property",
+class!(:"http://www.w3.org/2000/01/rdf-schema#Class", Class, 1);
+class!(:"http://www.w3.org/1999/02/22-rdf-syntax-ns#Property",
        Property,
        2);
-class!("http://www.w3.org/2000/01/rdf-schema#Literal", Literal, 3);
-property!("http://www.w3.org/2000/01/rdf-schema#comment", Comment, comment, Literal<G>, 4);
-property!("http://www.w3.org/2000/01/rdf-schema#domain", Domain, domain, Class<G>, 5);
-property!("http://www.w3.org/2000/01/rdf-schema#range", Range, range, Class<G>, 6);
-property!("http://www.w3.org/2000/01/rdf-schema#subClassOf",
+class!(:"http://www.w3.org/2000/01/rdf-schema#Literal", Literal, 3);
+property!(:"http://www.w3.org/2000/01/rdf-schema#comment", Comment, comment, Literal<G>, 4);
+property!(:"http://www.w3.org/2000/01/rdf-schema#domain", Domain, domain, Class<G>, 5);
+property!(:"http://www.w3.org/2000/01/rdf-schema#range", Range, range, Class<G>, 6);
+property!(:"http://www.w3.org/2000/01/rdf-schema#subClassOf",
     SubClassOf, sub_class_of, Class<G>, 7);
 
 impl<G> SubClassOf<G> for Class<G> where G: graph::Graph {}
