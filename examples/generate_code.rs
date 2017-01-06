@@ -1,4 +1,4 @@
-/// Generate rust code from an ontology
+/// Generate rust code from a set of ontologies
 ///
 
 extern crate rdfio;
@@ -43,7 +43,7 @@ fn read_file(path: &str) -> io::Result<String> {
         Ok(f) => f,
     };
     let mut s = String::new();
-    try!(f.read_to_string(&mut s));
+    f.read_to_string(&mut s)?;
     Ok(s)
 }
 
@@ -77,6 +77,7 @@ fn comment_escape(str: &str) -> String {
 
 fn write_impl_property<G, W>(class: &Class<G>,
                              property: &Property<G>,
+                             mod_name: &str,
                              prefixes: &Namespaces,
                              writer: &mut W,
                              mod_uses: &mut BTreeSet<Vec<u8>>)
@@ -88,15 +89,12 @@ fn write_impl_property<G, W>(class: &Class<G>,
         if let Some((prop_prefix, prop)) = prefixes.find_prefix(iri) {
             if let Some(domain) = class.this().iri() {
                 if let Some((prefix, domain)) = prefixes.find_prefix(domain) {
-                    try!(writer.write_all(b"impl<G> "));
-                    try!(writer.write_all(prop_prefix));
-                    try!(writer.write_all(b"::"));
-                    try!(writer.write_all(camel_case(prop).as_bytes()));
-                    try!(writer.write_all(b"<G> for "));
-                    try!(writer.write_all(prefix));
-                    try!(writer.write_all(b"::"));
-                    try!(writer.write_all(camel_case(domain).as_bytes()));
-                    try!(writer.write_all(b"<G> where G: graph::Graph {}\n"));
+                    writer.write_all(
+                        format!("impl<G> {}::properties::{}::{}<G> for {}<G> where G: graph::Graph {{}}\n",
+                            mod_name,
+                            String::from_utf8_lossy(prop_prefix),
+                            camel_case(prop),
+                            camel_case(domain)).as_bytes())?;
                     mod_uses.insert(Vec::from(prop_prefix));
                     mod_uses.insert(Vec::from(prefix));
                 }
@@ -109,6 +107,7 @@ fn write_impl_property<G, W>(class: &Class<G>,
 fn write_impl_properties<G, W>(class: &Class<G>,
                                parent: &Class<G>,
                                properties: &Vec<Property<G>>,
+                               mod_name: &str,
                                prefixes: &Namespaces,
                                writer: &mut W,
                                mod_uses: &mut BTreeSet<Vec<u8>>)
@@ -119,87 +118,12 @@ fn write_impl_properties<G, W>(class: &Class<G>,
     for property in properties {
         for domain in property.domain() {
             if domain == *parent {
-                try!(write_impl_property(class, property, prefixes, writer, mod_uses));
+                write_impl_property(class, property, mod_name, prefixes, writer, mod_uses)?;
             }
         }
     }
     for parent in parent.sub_class_of() {
-        try!(write_impl_properties(class, &parent, properties, prefixes, writer, mod_uses));
-    }
-    Ok(())
-}
-fn generate_code<G>(classes: &Vec<Class<G>>,
-                    properties: &Vec<Property<G>>,
-                    prefixes: &Namespaces,
-                    writers: &mut Writers,
-                    iris: &mut Vec<String>,
-                    mod_uses: &mut BTreeMap<Vec<u8>, BTreeSet<Vec<u8>>>)
-                    -> rdfio::Result<()>
-    where G: Graph
-{
-    for class in classes {
-        if let Some(iri) = class.this().iri() {
-            if let Some((prefix, name)) = prefixes.find_prefix(iri) {
-                if let Some(mut writer) = writers.get_mut(prefix) {
-                    try!(writer.write_all(b"\n/// "));
-                    try!(writer.write_all(prefix));
-                    try!(writer.write_all(b":"));
-                    try!(writer.write_all(name.as_bytes()));
-                    for comment in class.comment() {
-                        if let Some(l) = comment.this().literal() {
-                            try!(writer.write_all(b"\n/// "));
-                            try!(writer.write_all(comment_escape(l).as_bytes()));
-                        }
-                    }
-                    try!(writer.write_all(b"\nclass!(\""));
-                    try!(writer.write_all(iri.as_bytes()));
-                    try!(writer.write_all(b"\", "));
-                    try!(writer.write_all(camel_case(name).as_bytes()));
-                    try!(writer.write_all(format!(", {});\n", iris.len()).as_bytes()));
-                    try!(write_impl_properties(class, class, properties, prefixes,
-                            &mut writer, &mut mod_uses.get_mut(prefix).unwrap()));
-                    iris.push(String::from(iri));
-                }
-            }
-        }
-    }
-    for property in properties {
-        if let Some(iri) = property.this().iri() {
-            if let Some((prop_prefix, prop)) = prefixes.find_prefix(iri) {
-                for range in property.range() {
-                    if let Some(range) = range.this().iri() {
-                        if let Some((prefix, range)) = prefixes.find_prefix(range) {
-
-                            if let Some(mut writer) = writers.get_mut(prop_prefix) {
-                                try!(writer.write_all(b"\n/// "));
-                                try!(writer.write_all(prop_prefix));
-                                try!(writer.write_all(b":"));
-                                try!(writer.write_all(prop.as_bytes()));
-                                for comment in property.comment() {
-                                    if let Some(l) = comment.this().literal() {
-                                        try!(writer.write_all(b"\n/// "));
-                                        try!(writer.write_all(comment_escape(l).as_bytes()));
-                                    }
-                                }
-                                try!(writer.write_all(b"\nproperty!(\""));
-                                try!(writer.write_all(iri.as_bytes()));
-                                try!(writer.write_all(b"\", "));
-                                try!(writer.write_all(camel_case(prop).as_bytes()));
-                                try!(writer.write_all(b", "));
-                                try!(writer.write_all(snake_case(prop).as_bytes()));
-                                try!(writer.write_all(b", "));
-                                try!(writer.write_all(prefix));
-                                try!(writer.write_all(b"::"));
-                                try!(writer.write_all(camel_case(range).as_bytes()));
-                                try!(writer.write_all(format!("<G>, {});\n", iris.len()).as_bytes()));
-                                mod_uses.get_mut(prop_prefix).unwrap().insert(Vec::from(prefix));
-                            }
-                        }
-                    }
-                }
-                iris.push(String::from(iri));
-            }
-        }
+        write_impl_properties(class, &parent, properties, mod_name, prefixes, writer, mod_uses)?;
     }
     Ok(())
 }
@@ -230,61 +154,28 @@ fn infer(graph: &MyGraph) -> rdfio::Result<MyGraph> {
     Ok(writer.collect().sort_blank_nodes())
 }
 
-fn get_classes(oa: &Rc<OA>) -> rdfio::Result<Vec<Class<MyGraph>>> {
-    let mut classes = Vec::new();
-    for c in Class::iter(oa) {
-        classes.push(c);
-    }
-    Ok(classes)
-}
-
-fn get_properties(oa: &Rc<OA>) -> rdfio::Result<Vec<Property<MyGraph>>> {
-    let mut properties = Vec::new();
-    for p in Property::iter(oa) {
-        properties.push(p);
-    }
-    Ok(properties)
-}
-
-fn write_code(output_dir: &Path,
-              writers: &Writers,
-              iris: &Vec<String>,
-              mod_uses: &BTreeMap<Vec<u8>, BTreeSet<Vec<u8>>>)
-              -> rdfio::Result<()> {
+fn write_mod(output_dir: &Path, internal: bool, iris: &Vec<String>) -> rdfio::Result<()> {
     let path = output_dir.join("mod.rs");
-    let mut mod_rs = try!(fs::File::create(path));
-    for (prefix, content) in writers.iter() {
-        if content.len() > 0 {
-            let mut filename = String::from_utf8_lossy(prefix).into_owned();
-            filename.push_str(".rs");
-            let path = output_dir.join(filename);
-            let mut file = try!(fs::File::create(path));
-            try!(file.write_all(
-                b"use std;\nuse graph;\nuse resource;\nuse ontology_adapter;\n"));
-            for u in mod_uses[prefix].iter() {
-                try!(file.write_all(b"use ontology::"));
-                try!(file.write_all(&u));
-                try!(file.write_all(b";\n"));
-            }
-            try!(file.write_all(content));
-            try!(mod_rs.write_all(b"pub mod "));
-            try!(mod_rs.write_all(prefix));
-            try!(mod_rs.write_all(b";\n"));
-        }
+    let mut mod_rs = fs::File::create(path)?;
+    mod_rs.write_all(b"pub mod classes;\n")?;
+    mod_rs.write_all(b"pub mod properties;\n")?;
+    mod_rs.write_all(b"use std;\n")?;
+    if internal {
+        mod_rs.write_all(b"use graph;\n")?;
+        mod_rs.write_all(b"use ontology_adapter;\n")?;
+    } else {
+        mod_rs.write_all(b"use rdfio::graph;\n")?;
+        mod_rs.write_all(b"use rdfio::ontology_adapter;\n")?;
     }
-    try!(mod_rs.write_all(b"use graph;
-use std;
-use ontology_adapter;
-
-pub fn adapter<G>(graph: &std::rc::Rc<G>) -> ontology_adapter::OntologyAdapter<G>
+    mod_rs.write_all(b"pub fn adapter<G>(graph: &std::rc::Rc<G>) -> ontology_adapter::OntologyAdapter<G>
     where G: graph::Graph
 {
-    let mut iris = Vec::with_capacity("));
-    try!(mod_rs.write_all(format!("{});\n", iris.len()).as_bytes()));
+    let mut iris = Vec::with_capacity(")?;
+    mod_rs.write_all(format!("{});\n", iris.len()).as_bytes())?;
     for iri in iris {
-        try!(mod_rs.write_all(format!("    iris.push(graph.predicate_ptr(\"{}\"));\n", iri).as_bytes()));
+        mod_rs.write_all(format!("    iris.push(graph.predicate_ptr(\"{}\"));\n", iri).as_bytes())?;
     }
-    try!(mod_rs.write_all(b"    ontology_adapter::OntologyAdapter::new(graph, iris)\n}\n"));
+    mod_rs.write_all(b"    ontology_adapter::OntologyAdapter::new(graph, iris)\n}\n")?;
     Ok(())
 }
 
@@ -308,15 +199,16 @@ fn load_files(inputs: &Vec<String>) -> rdfio::Result<(Namespaces, Rc<MyGraph>)> 
     Ok((prefixes, Rc::new(graph)))
 }
 
-fn generate(output_dir: &Path,
-            mod_name: &str,
-            internal: bool,
-            inputs: &Vec<String>)
-            -> rdfio::Result<()> {
-    let (prefixes, graph) = load_files(inputs)?;
-    let oa = Rc::new(ontology::adapter(&graph));
-    let classes = get_classes(&oa)?;
-    let properties = get_properties(&oa)?;
+fn generate_classes<G>(classes: &Vec<Class<G>>,
+                       properties: &Vec<Property<G>>,
+                       output_dir: &Path,
+                       mod_name: &str,
+                       internal: bool,
+                       prefixes: &Namespaces,
+                       iris: &mut Vec<String>)
+                       -> rdfio::Result<()>
+    where G: Graph
+{
 
     let mut outputs = BTreeMap::new();
     let mut mod_uses = BTreeMap::new();
@@ -324,15 +216,187 @@ fn generate(output_dir: &Path,
         outputs.insert(Vec::from(ns.prefix()), Vec::new());
         mod_uses.insert(Vec::from(ns.prefix()), BTreeSet::new());
     }
+
+    for class in classes {
+        if let Some(iri) = class.this().iri() {
+            if let Some((prefix, name)) = prefixes.find_prefix(iri) {
+                if let Some(mut writer) = outputs.get_mut(prefix) {
+                    writer.write_all(b"\n/// ")?;
+                    writer.write_all(prefix)?;
+                    writer.write_all(b":")?;
+                    writer.write_all(name.as_bytes())?;
+                    for comment in class.comment() {
+                        if let Some(l) = comment.this().literal() {
+                            writer.write_all(b"\n/// ")?;
+                            writer.write_all(comment_escape(l).as_bytes())?;
+                        }
+                    }
+                    writer.write_all(format!("\nclass!(\"{}\", {}, {});\n", iri,
+                            camel_case(name), iris.len())
+                            .as_bytes())?;
+                    write_impl_properties(&class,
+                                          &class,
+                                          properties,
+                                          mod_name,
+                                          prefixes,
+                                          &mut writer,
+                                          &mut mod_uses.get_mut(prefix).unwrap())?;
+                    iris.push(String::from(iri));
+                }
+            }
+        }
+    }
+    write_classes(output_dir, mod_name, internal, &outputs)?;
+    Ok(())
+}
+
+fn generate_properties<G>(properties: &Vec<Property<G>>,
+                          output_dir: &Path,
+                          mod_name: &str,
+                          internal: bool,
+                          prefixes: &Namespaces,
+                          iris: &mut Vec<String>)
+                          -> rdfio::Result<()>
+    where G: Graph
+{
+
+    let mut outputs = BTreeMap::new();
+    let mut mod_uses = BTreeMap::new();
+    for ns in prefixes.iter() {
+        outputs.insert(Vec::from(ns.prefix()), Vec::new());
+        mod_uses.insert(Vec::from(ns.prefix()), BTreeSet::new());
+    }
+
+    for property in properties {
+        if let Some(iri) = property.this().iri() {
+            if let Some((prop_prefix, prop)) = prefixes.find_prefix(iri) {
+                for range in property.range() {
+                    if let Some(range) = range.this().iri() {
+                        if let Some((prefix, range)) = prefixes.find_prefix(range) {
+                            if let Some(mut writer) = outputs.get_mut(prop_prefix) {
+                                writer.write_all(b"\n/// ")?;
+                                writer.write_all(prop_prefix)?;
+                                writer.write_all(b":")?;
+                                writer.write_all(prop.as_bytes())?;
+                                for comment in property.comment() {
+                                    if let Some(l) = comment.this().literal() {
+                                        writer.write_all(b"\n/// ")?;
+                                        writer.write_all(comment_escape(l).as_bytes())?;
+                                    }
+                                }
+                                writer.write_all(
+                                    format!("\nproperty!(\"{}\", {}, {}, {}::classes::{}::{}<G>, {});\n",
+                                        iri, camel_case(prop),
+                                        snake_case(prop), mod_name,
+                                        String::from_utf8_lossy(prefix),
+                                        camel_case(range), iris.len()).as_bytes())?;
+                                mod_uses.get_mut(prop_prefix).unwrap().insert(Vec::from(prefix));
+                            }
+                        }
+                    }
+                }
+                iris.push(String::from(iri));
+            }
+        }
+    }
+    write_properties(output_dir, mod_name, internal, &outputs)?;
+    Ok(())
+}
+
+fn uses(mod_name: &str, internal: bool, classes: bool) -> String {
+    let mut uses = String::new();
+    uses.push_str("use std;\n");
+    if internal {
+        uses.push_str("use graph;\n");
+        uses.push_str("use resource;\n");
+        if classes {
+            uses.push_str("use ontology_adapter;\n");
+        }
+    } else {
+        uses.push_str("use rdfio::graph;\n");
+        uses.push_str("use rdfio::resource;\n");
+        if classes {
+            uses.push_str("use rdfio::ontology_adapter;\n");
+        }
+    }
+    uses.push_str(&format!("use {};\n", mod_name));
+    uses
+}
+
+fn write_classes(output_dir: &Path,
+                 mod_name: &str,
+                 internal: bool,
+                 writers: &Writers)
+                 -> rdfio::Result<()> {
+    write_files(output_dir,
+                writers,
+                "classes",
+                &uses(mod_name, internal, true))
+}
+
+fn write_properties(output_dir: &Path,
+                    mod_name: &str,
+                    internal: bool,
+                    writers: &Writers)
+                    -> rdfio::Result<()> {
+    write_files(output_dir,
+                writers,
+                "properties",
+                &uses(mod_name, internal, false))
+}
+
+fn write_files(output_dir: &Path,
+               writers: &Writers,
+               folder: &str,
+               uses: &str)
+               -> rdfio::Result<()> {
+    let dir_path = output_dir.join(folder);
+    if !fs::metadata(&dir_path)?.is_dir() {
+        fs::create_dir(output_dir.join(folder))?;
+    }
+    let path = dir_path.join("mod.rs");
+    let mut mod_rs = fs::File::create(path)?;
+    for (prefix, content) in writers.iter() {
+        if content.len() > 0 {
+            let mut filename = String::from_utf8_lossy(prefix).into_owned();
+            filename.push_str(".rs");
+            let path = dir_path.join(filename);
+            let mut file = fs::File::create(path)?;
+            file.write_all(uses.as_bytes())?;
+            file.write_all(content)?;
+            mod_rs.write_all(b"pub mod ")?;
+            mod_rs.write_all(prefix)?;
+            mod_rs.write_all(b";\n")?;
+        }
+    }
+    Ok(())
+}
+
+fn generate(output_dir: &Path,
+            mod_name: &str,
+            internal: bool,
+            inputs: &Vec<String>)
+            -> rdfio::Result<()> {
+    let (prefixes, graph) = load_files(inputs)?;
+    let oa = Rc::new(ontology::adapter(&graph));
+    let classes = Class::iter(&oa).collect();
+    let properties = Property::iter(&oa).collect();
     let mut iris = Vec::new();
     iris.push(String::from(RDF_TYPE));
-    generate_code(&classes,
-                  &properties,
-                  &prefixes,
-                  &mut outputs,
-                  &mut iris,
-                  &mut mod_uses)?;
-    write_code(output_dir, &outputs, &iris, &mod_uses)?;
+    generate_classes(&classes,
+                     &properties,
+                     output_dir,
+                     mod_name,
+                     internal,
+                     &prefixes,
+                     &mut iris)?;
+    generate_properties(&properties,
+                        output_dir,
+                        mod_name,
+                        internal,
+                        &prefixes,
+                        &mut iris)?;
+    write_mod(output_dir, internal, &iris)?;
     Ok(())
 }
 

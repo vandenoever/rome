@@ -1,9 +1,8 @@
 pub mod classes;
 pub mod properties;
-use graph;
 use std;
+use graph;
 use ontology_adapter;
-
 pub fn adapter<G>(graph: &std::rc::Rc<G>) -> ontology_adapter::OntologyAdapter<G>
     where G: graph::Graph
 {
