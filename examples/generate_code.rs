@@ -13,7 +13,7 @@ use std::collections::BTreeSet;
 use rdfio::graph_writer;
 use rdfio::graph::{Object, Graph, GraphCreator, Triple, SubjectPtr, ObjectPtr};
 use rdfio::triple_stream::*;
-use rdfio::triple64::*;
+use rdfio::triple128::*;
 use rdfio::namespaces::Namespaces;
 use rdfio::resource::ResourceBase;
 use rdfio::ontology::rdf::Property;
@@ -21,7 +21,7 @@ use rdfio::ontology::rdfs::{Class, Comment, Domain, Range, SubClassOf};
 use rdfio::ontology;
 use rdfio::ontology_adapter;
 
-type MyGraph = graph_writer::Graph<Triple64SPO, Triple64OPS>;
+type MyGraph = graph_writer::Graph<Triple128SPO, Triple128OPS>;
 type OA = ontology_adapter::OntologyAdapter<MyGraph>;
 
 type Writers = BTreeMap<Vec<u8>, Vec<u8>>;

@@ -18,6 +18,8 @@ use compact_triple::*;
 /// 29 bits for for datatype or language id
 const BIL: u32 = 32;
 const DL: u32 = 29;
+const BILMASK: u64 = 0xffffffff;
+const DLMASK: u64 = 0x1fffffff;
 
 macro_rules! triple128{(
     $name:ident,
@@ -63,9 +65,20 @@ impl CompactTriple<u32> for $name {
               object: u32,
               datatype_or_lang: u32)
               -> $name {
+        let subject = subject as u64;
+        let predicate = predicate as u64;
+        let object = object as u64;
+        let datatype_or_lang = datatype_or_lang as u64;
+        // check that the values are within the allowed range
+        assert!(subject & !BILMASK == 0, "subject out of range {}", subject);
+        assert!(predicate & !BILMASK == 0, "predicate out of range {}", predicate);
+        assert!(object & !BILMASK == 0, "object out of range {}", object);
+        assert!(datatype_or_lang & !DLMASK == 0,
+            "datatype_or_lang out of range {}", datatype_or_lang);
+
         let mut s = (subject_is_iri as u64) << $subject_type_offset;
-        s += (subject as u64) << $subject_offset;
-        let mut o = (object as u64) << $object_offset;
+        s += subject << $subject_offset;
+        let mut o = object << $object_offset;
         let mut d = 0;
         match object_type {
             TripleObjectType::BlankNode => {}
@@ -74,20 +87,20 @@ impl CompactTriple<u32> for $name {
             }
             TripleObjectType::Literal => {
                 o += 3 << $object_type_offset;
-                d += datatype_or_lang as u64;
+                d += datatype_or_lang;
             }
             TripleObjectType::LiteralLang => {
                 o += 2 << $object_type_offset;
-                d += datatype_or_lang as u64
+                d += datatype_or_lang;
             }
         }
         if $subject_offset > $object_offset { // subject is in v1
-            s += (predicate as u64) >> $predicate_offset_1;
-            o += (predicate as u64) << $predicate_offset_2;
+            s += predicate >> $predicate_offset_1;
+            o += predicate << $predicate_offset_2;
             o += d;
         } else {
-            o += (predicate as u64) >> $predicate_offset_1;
-            s += (predicate as u64) << $predicate_offset_2;
+            o += predicate >> $predicate_offset_1;
+            s += predicate << $predicate_offset_2;
             s += d;
         }
         $name {
@@ -96,22 +109,31 @@ impl CompactTriple<u32> for $name {
         }
     }
     fn set_subject(&mut self, subject: u32) {
-        self.$subject_var &= !(0xffffffff << $subject_offset);
-        self.$subject_var += (subject as u64) << $subject_offset;
+        let subject = subject as u64;
+        assert!(subject & !BILMASK == 0, "subject out of range {}", subject);
+        self.$subject_var &= !(BILMASK << $subject_offset);
+        self.$subject_var += subject << $subject_offset;
     }
     fn set_predicate(&mut self, predicate: u32) {
-        self.v1 &= !(0xffffffff >> $predicate_offset_1);
-        self.v1 += (predicate as u64) >> $predicate_offset_1;
-        self.v2 &= !(0xffffffff << $predicate_offset_2);
-        self.v2 += (predicate as u64) << $predicate_offset_2;
+        let predicate = predicate as u64;
+        assert!(predicate & !BILMASK == 0, "predicate out of range {}", predicate);
+        self.v1 &= !(BILMASK >> $predicate_offset_1);
+        self.v1 += predicate >> $predicate_offset_1;
+        self.v2 &= !(BILMASK << $predicate_offset_2);
+        self.v2 += predicate << $predicate_offset_2;
     }
     fn set_object(&mut self, object: u32) {
-        self.$object_var &= !(0xffffffff << $object_offset);
-        self.$object_var += (object as u64) << $object_offset;
+        let object = object as u64;
+        assert!(object & !BILMASK == 0, "object out of range {}", object);
+        self.$object_var &= !(BILMASK << $object_offset);
+        self.$object_var += object << $object_offset;
     }
     fn set_datatype_or_lang(&mut self, datatype_or_lang: u32) {
-        self.v2 &= !0x1fffffff;
-        self.v2 += datatype_or_lang as u64;
+        let datatype_or_lang = datatype_or_lang as u64;
+        assert!(datatype_or_lang & !DLMASK == 0,
+            "datatype_or_lang out of range {}", datatype_or_lang);
+        self.v2 &= !DLMASK;
+        self.v2 += datatype_or_lang;
     }
     fn subject_is_iri(&self) -> bool {
         self.$subject_var & (1 << $subject_type_offset) == 1 << $subject_type_offset
@@ -134,17 +156,17 @@ impl CompactTriple<u32> for $name {
         self.$object_var & (3 << $object_type_offset) == 2 << $object_type_offset
     }
     fn subject(&self) -> u32 {
-        ((self.$subject_var >> $subject_offset) & 0xffffffff) as u32
+        ((self.$subject_var >> $subject_offset) & BILMASK) as u32
     }
     fn predicate(&self) -> u32 {
-        (((self.v1 << $predicate_offset_1) & 0xffffffff) as u32)+
-        (((self.v2 >> $predicate_offset_2) & 0xffffffff) as u32)
+        (((self.v1 << $predicate_offset_1) & BILMASK) as u32)+
+        (((self.v2 >> $predicate_offset_2) & BILMASK) as u32)
     }
     fn object(&self) -> u32 {
-        ((self.$object_var >> $object_offset) & 0xffffffff) as u32
+        ((self.$object_var >> $object_offset) & BILMASK) as u32
     }
     fn datatype_or_lang(&self) -> u32 {
-        (self.v2 & 0x1fffffff) as u32
+        (self.v2 & DLMASK) as u32
     }
 }
 
