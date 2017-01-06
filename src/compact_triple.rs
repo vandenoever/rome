@@ -1,4 +1,5 @@
-#[derive (Debug)]
+use std::fmt::Debug;
+#[derive (Debug,Clone)]
 pub enum TripleObjectType {
     BlankNode = 0,
     IRI = 1,
@@ -6,7 +7,7 @@ pub enum TripleObjectType {
     LiteralLang = 3,
 }
 
-pub trait CompactTriple<T>: Ord + Copy + Eq
+pub trait CompactTriple<T>: Ord + Copy + Eq + Debug
     where T: Ord + Copy
 {
     fn triple(subject_is_iri: bool,
