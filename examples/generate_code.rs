@@ -8,8 +8,8 @@ use std::io;
 use std::io::{Read, Write};
 use std::path::Path;
 use std::rc::Rc;
-use std::collections::HashMap;
-use std::collections::HashSet;
+use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 use rdfio::graph_writer;
 use rdfio::graph::{Object, Graph, GraphCreator, Triple, SubjectPtr, ObjectPtr};
 use rdfio::triple_stream::*;
@@ -24,7 +24,7 @@ use rdfio::ontology_adapter;
 type MyGraph = graph_writer::Graph<Triple64SPO, Triple64OPS>;
 type OA = ontology_adapter::OntologyAdapter<MyGraph>;
 
-type Writers = HashMap<Vec<u8>, Vec<u8>>;
+type Writers = BTreeMap<Vec<u8>, Vec<u8>>;
 
 macro_rules! println_stderr(
     ($($arg:tt)*) => { {
@@ -78,7 +78,7 @@ fn write_impl_property<G, W>(class: &Class<G>,
                              property: &Property<G>,
                              prefixes: &Namespaces,
                              writer: &mut W,
-                             mod_uses: &mut HashSet<Vec<u8>>)
+                             mod_uses: &mut BTreeSet<Vec<u8>>)
                              -> rdfio::Result<()>
     where W: Write,
           G: Graph
@@ -110,7 +110,7 @@ fn write_impl_properties<G, W>(class: &Class<G>,
                                properties: &Vec<Property<G>>,
                                prefixes: &Namespaces,
                                writer: &mut W,
-                               mod_uses: &mut HashSet<Vec<u8>>)
+                               mod_uses: &mut BTreeSet<Vec<u8>>)
                                -> rdfio::Result<()>
     where W: Write,
           G: Graph
@@ -132,7 +132,7 @@ fn generate_code<G>(classes: &Vec<Class<G>>,
                     prefixes: &Namespaces,
                     writers: &mut Writers,
                     iris: &mut Vec<String>,
-                    mod_uses: &mut HashMap<Vec<u8>, HashSet<Vec<u8>>>)
+                    mod_uses: &mut BTreeMap<Vec<u8>, BTreeSet<Vec<u8>>>)
                     -> rdfio::Result<()>
     where G: Graph
 {
@@ -248,7 +248,7 @@ fn get_properties(oa: &Rc<OA>) -> rdfio::Result<Vec<Property<MyGraph>>> {
 fn write_code(output_dir: &Path,
               writers: &Writers,
               iris: &Vec<String>,
-              mod_uses: &HashMap<Vec<u8>, HashSet<Vec<u8>>>)
+              mod_uses: &BTreeMap<Vec<u8>, BTreeSet<Vec<u8>>>)
               -> rdfio::Result<()> {
     let path = output_dir.join("mod.rs");
     let mut mod_rs = try!(fs::File::create(path));
@@ -309,11 +309,11 @@ fn generate(output_dir: &Path, inputs: &Vec<String>) -> rdfio::Result<()> {
     let classes = try!(get_classes(&oa));
     let properties = try!(get_properties(&oa));
 
-    let mut outputs = HashMap::new();
-    let mut mod_uses = HashMap::new();
+    let mut outputs = BTreeMap::new();
+    let mut mod_uses = BTreeMap::new();
     for ns in prefixes.iter() {
         outputs.insert(Vec::from(ns.prefix()), Vec::new());
-        mod_uses.insert(Vec::from(ns.prefix()), HashSet::new());
+        mod_uses.insert(Vec::from(ns.prefix()), BTreeSet::new());
     }
     let mut iris = Vec::new();
     iris.push(String::from(RDF_TYPE));
