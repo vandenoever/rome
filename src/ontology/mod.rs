@@ -1,5 +1,5 @@
-pub mod rdf;
-pub mod rdfs;
+pub mod classes;
+pub mod properties;
 use graph;
 use std;
 use ontology_adapter;

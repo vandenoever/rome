@@ -16,8 +16,9 @@ use rdfio::triple_stream::*;
 use rdfio::triple128::*;
 use rdfio::namespaces::Namespaces;
 use rdfio::resource::ResourceBase;
-use rdfio::ontology::rdf::Property;
-use rdfio::ontology::rdfs::{Class, Comment, Domain, Range, SubClassOf};
+use rdfio::ontology::classes::rdf::Property;
+use rdfio::ontology::classes::rdfs::Class;
+use rdfio::ontology::properties::rdfs::{Comment, Domain, Range, SubClassOf};
 use rdfio::ontology;
 use rdfio::ontology_adapter;
 
@@ -287,27 +288,35 @@ pub fn adapter<G>(graph: &std::rc::Rc<G>) -> ontology_adapter::OntologyAdapter<G
     Ok(())
 }
 
-fn generate(output_dir: &Path, inputs: &Vec<String>) -> rdfio::Result<()> {
+fn load_files(inputs: &Vec<String>) -> rdfio::Result<(Namespaces, Rc<MyGraph>)> {
     let mut writer = graph_writer::GraphWriter::with_capacity(65000);
     let mut prefixes = Namespaces::new();
     for input in inputs {
-        let data = try!(read_file(input));
+        let data = read_file(input)?;
         let mut base = String::from("file:");
         base.push_str(input);
-        let mut triples = try!(TripleIterator::new(data.as_str(), &base));
+        let mut triples = TripleIterator::new(data.as_str(), &base)?;
         while let Some(triple) = triples.next() {
-            writer.add_triple(&try!(triple));
+            writer.add_triple(&triple?);
         }
         for ns in triples.prefixes().iter() {
             prefixes.set(ns.prefix(), ns.namespace());
         }
     }
-    let graph: MyGraph = writer.collect().sort_blank_nodes();
-    let graph = try!(infer(&graph));
-    let graph = Rc::new(graph);
+    let graph = writer.collect();
+    let graph = infer(&graph)?;
+    Ok((prefixes, Rc::new(graph)))
+}
+
+fn generate(output_dir: &Path,
+            mod_name: &str,
+            internal: bool,
+            inputs: &Vec<String>)
+            -> rdfio::Result<()> {
+    let (prefixes, graph) = load_files(inputs)?;
     let oa = Rc::new(ontology::adapter(&graph));
-    let classes = try!(get_classes(&oa));
-    let properties = try!(get_properties(&oa));
+    let classes = get_classes(&oa)?;
+    let properties = get_properties(&oa)?;
 
     let mut outputs = BTreeMap::new();
     let mut mod_uses = BTreeMap::new();
@@ -317,8 +326,13 @@ fn generate(output_dir: &Path, inputs: &Vec<String>) -> rdfio::Result<()> {
     }
     let mut iris = Vec::new();
     iris.push(String::from(RDF_TYPE));
-    try!(generate_code(&classes, &properties, &prefixes, &mut outputs, &mut iris, &mut mod_uses));
-    try!(write_code(output_dir, &outputs, &iris, &mod_uses));
+    generate_code(&classes,
+                  &properties,
+                  &prefixes,
+                  &mut outputs,
+                  &mut iris,
+                  &mut mod_uses)?;
+    write_code(output_dir, &outputs, &iris, &mod_uses)?;
     Ok(())
 }
 
@@ -326,13 +340,24 @@ fn main() {
     let mut args = args();
     let exe = args.next().unwrap();
     if args.len() < 2 {
-        println_stderr!("Usage: {} OUTPUT_DIR INPUT_FILES", exe);
+        println_stderr!("Usage: {} [--mod MOD] OUTPUT_DIR INPUT_FILES", exe);
         std::process::exit(-1);
     }
-    let output_dir = args.next().unwrap();
-    println!("output_dir {}", output_dir);
+    let arg = args.next().unwrap();
+    let internal; // is the command run for rdfio itself?
+    let mod_name;
+    let output_dir;
+    if args.len() > 2 && arg == "--mod" {
+        mod_name = args.next().unwrap();
+        internal = false;
+        output_dir = args.next().unwrap();
+    } else {
+        mod_name = String::from("ontology");
+        internal = true;
+        output_dir = arg;
+    }
     let inputs = args.collect();
-    if let Err(e) = generate(Path::new(&output_dir), &inputs) {
+    if let Err(e) = generate(Path::new(&output_dir), &mod_name, internal, &inputs) {
         println_stderr!("ERROR {:?}", e);
         std::process::exit(-1);
     }
