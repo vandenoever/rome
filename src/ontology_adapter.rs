@@ -16,7 +16,6 @@ impl<G> OntologyAdapter<G>
             graph: graph.clone(),
             iris: iris,
         }
-
     }
     pub fn class_iri(&self, i: usize) -> Option<&G::PredicatePtr> {
         match self.iris.get(i) {

@@ -6,17 +6,15 @@ use ontology_adapter;
 use std;
 use resource;
 
-pub struct ObjectIter<G, R>
-    where G: graph::Graph
+pub struct ObjectIter<R>
+    where R: ResourceBase
 {
-    pub graph: Rc<ontology_adapter::OntologyAdapter<G>>,
-    pub iter: G::SPORangeIter,
-    pub phantom: PhantomData<R>,
+    pub graph: Rc<ontology_adapter::OntologyAdapter<R::Graph>>,
+    pub iter: <R::Graph as graph::Graph>::SPORangeIter,
 }
 
-impl<G, R> Iterator for ObjectIter<G, R>
-    where G: graph::Graph,
-          R: ResourceBase<G>
+impl<R> Iterator for ObjectIter<R>
+    where R: ResourceBase
 {
     type Item = R;
     fn next(&mut self) -> Option<Self::Item> {
@@ -29,17 +27,14 @@ impl<G, R> Iterator for ObjectIter<G, R>
 
 // a wrapper around 'ResourceBase' that guarantees that the resource
 // is an iri and not a blank node or a literal
-pub struct IRI<G, R>
-    where G: graph::Graph,
-          R: ResourceBase<G>
+pub struct IRI<R>
+    where R: ResourceBase
 {
     resource: R,
-    pub phantom: PhantomData<G>,
 }
 
-impl<G, R> IRI<G, R>
-    where G: graph::Graph,
-          R: ResourceBase<G>
+impl<R> IRI<R>
+    where R: ResourceBase
 {
     pub fn iri(&self) -> &str {
         use std::ops::Deref;
@@ -49,9 +44,8 @@ impl<G, R> IRI<G, R>
     pub fn this(&self) -> () {}
 }
 
-impl<G, R: ?Sized> std::ops::Deref for IRI<G, R>
-    where G: graph::Graph,
-          R: ResourceBase<G>
+impl<R: ?Sized> std::ops::Deref for IRI<R>
+    where R: ResourceBase
 {
     type Target = R;
 
@@ -61,17 +55,16 @@ impl<G, R: ?Sized> std::ops::Deref for IRI<G, R>
     }
 }
 
-pub struct SubjectIter<G, R>
-    where G: graph::Graph
+pub struct SubjectIter<R>
+    where R: ResourceBase
 {
-    pub graph: Rc<ontology_adapter::OntologyAdapter<G>>,
-    pub iter: G::OPSRangeIter,
+    pub graph: Rc<ontology_adapter::OntologyAdapter<R::Graph>>,
+    pub iter: <R::Graph as graph::Graph>::OPSRangeIter,
     pub phantom: PhantomData<R>,
 }
 
-impl<G, R> Iterator for SubjectIter<G, R>
-    where G: graph::Graph,
-          R: ResourceBase<G>
+impl<R> Iterator for SubjectIter<R>
+    where R: ResourceBase
 {
     type Item = R;
     fn next(&mut self) -> Option<Self::Item> {
@@ -86,20 +79,22 @@ impl<G, R> Iterator for SubjectIter<G, R>
     }
 }
 
-pub trait ResourceBase<G>: Eq + std::marker::Sized
-    where G: graph::Graph
-{
-    fn new(this: G::ObjectPtr, graph: &Rc<ontology_adapter::OntologyAdapter<G>>) -> Self;
-    fn iter(graph: &Rc<ontology_adapter::OntologyAdapter<G>>) -> SubjectIter<G, Self>;
-    fn this(&self) -> &G::ObjectPtr;
-    fn graph(&self) -> &ontology_adapter::OntologyAdapter<G>;
-    fn predicate<R>(&self, predicate: Option<G::PredicatePtr>) -> ObjectIter<G, R>
-        where R: ResourceBase<G>;
-    fn iri(self) -> Option<IRI<G, Self>> {
+pub trait ResourceBase: Eq + std::marker::Sized {
+    type Graph: graph::Graph;
+    fn new(this: <Self::Graph as graph::Graph>::ObjectPtr,
+           graph: &Rc<ontology_adapter::OntologyAdapter<Self::Graph>>)
+           -> Self;
+    fn iter(graph: &Rc<ontology_adapter::OntologyAdapter<Self::Graph>>) -> SubjectIter<Self>;
+    fn this(&self) -> &<Self::Graph as graph::Graph>::ObjectPtr;
+    fn graph(&self) -> &ontology_adapter::OntologyAdapter<Self::Graph>;
+    fn predicate<R>(&self,
+                    predicate: Option<<Self::Graph as graph::Graph>::PredicatePtr>)
+                    -> ObjectIter<R>
+        where R: ResourceBase<Graph = Self::Graph>;
+    fn iri(self) -> Option<IRI<Self>> {
         self.graph().object_to_predicate(self.this().clone()).map(|_| {
             IRI {
                 resource: self,
-                phantom: PhantomData,
             }
         })
     }
@@ -114,18 +109,19 @@ macro_rules! property{(
     $pos:expr) => {
 
 $(#[$meta])*
-pub trait $trait_name<G>: resource::ResourceBase<G>
-    where G: graph::Graph,
+pub trait $trait_name: resource::ResourceBase where
           Self: std::marker::Sized
 {
     #[doc=$iri]
     fn property_iri() -> &'static str {
         $iri
     }
-    fn property_iri_ptr(&self) -> Option<G::PredicatePtr> {
+    fn property_iri_ptr(&self) -> Option<<Self::Graph as graph::Graph>::PredicatePtr> {
         self.graph().class_iri($pos).map(|i|i.clone())
     }
-    fn $function(&self) -> resource::ObjectIter<G, $range> {
+    $(#[$meta])*
+    #[doc=$iri]
+    fn $function<G>(&self) -> resource::ObjectIter<$range> where $range: resource::ResourceBase<Graph = Self::Graph>, G:graph::Graph {
         resource::ResourceBase::predicate(self, self.property_iri_ptr())
     }
 }
@@ -165,9 +161,10 @@ impl<G> PartialEq for $name<G>
     }
 }
 impl<G> Eq for $name<G> where G: graph::Graph {}
-impl<'a, G> resource::ResourceBase<G> for $name<G>
+impl<'a, G> resource::ResourceBase for $name<G>
     where G: graph::Graph
 {
+    type Graph = G;
     fn new(resource: G::ObjectPtr,
             graph: &std::rc::Rc<ontology_adapter::OntologyAdapter<G>>) -> Self {
         $name {
@@ -177,7 +174,7 @@ impl<'a, G> resource::ResourceBase<G> for $name<G>
         }
     }
     fn iter(graph: &std::rc::Rc<ontology_adapter::OntologyAdapter<G>>)
-            -> resource::SubjectIter<G, Self> {
+            -> resource::SubjectIter<Self> {
         let a = graph.class_iri(0);
         let c = graph.class_iri($pos);
         let iter = match (a, c) {
@@ -198,8 +195,8 @@ impl<'a, G> resource::ResourceBase<G> for $name<G>
     }
 
     fn predicate<R>(&self, predicate: Option<G::PredicatePtr>)
-            -> resource::ObjectIter<G, R>
-        where R: resource::ResourceBase<G>
+            -> resource::ObjectIter<R>
+        where R: resource::ResourceBase<Graph = G>
     {
         let iter = match predicate {
             None => self.graph.empty_spo_range(),
@@ -211,7 +208,6 @@ impl<'a, G> resource::ResourceBase<G> for $name<G>
         resource::ObjectIter {
             graph: self.graph.clone(),
             iter: iter,
-            phantom: std::marker::PhantomData,
         }
     }
 }
@@ -258,8 +254,8 @@ property!(:"http://www.w3.org/2000/01/rdf-schema#range", Range, range, Class<G>,
 property!(:"http://www.w3.org/2000/01/rdf-schema#subClassOf",
     SubClassOf, sub_class_of, Class<G>, 7);
 
-impl<G> SubClassOf<G> for Class<G> where G: graph::Graph {}
-impl<G> Comment<G> for Class<G> where G: graph::Graph {}
-impl<G> Domain<G> for Property<G> where G: graph::Graph {}
-impl<G> Range<G> for Property<G> where G: graph::Graph {}
-impl<G> Comment<G> for Property<G> where G: graph::Graph {}
+impl<G> SubClassOf for Class<G> where G: graph::Graph {}
+impl<G> Comment for Class<G> where G: graph::Graph {}
+impl<G> Domain for Property<G> where G: graph::Graph {}
+impl<G> Range for Property<G> where G: graph::Graph {}
+impl<G> Comment for Property<G> where G: graph::Graph {}

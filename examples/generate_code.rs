@@ -43,8 +43,8 @@ struct OntoData<G>
     where G: Graph
 {
     o: Output,
-    classes: Vec<IRI<G, Class<G>>>,
-    properties: Vec<IRI<G, Property<G>>>,
+    classes: Vec<IRI<Class<G>>>,
+    properties: Vec<IRI<Property<G>>>,
     prefixes: Namespaces,
 }
 
@@ -107,7 +107,7 @@ fn write_impl_property<G, W>(class: &Class<G>,
             if let Some(domain) = class.this().iri() {
                 if let Some((_, domain)) = prefixes.find_prefix(domain) {
                     writer.write_all(
-                        format!("impl<G> {}::properties::{}::{}<G> for {}<G> where G: graph::Graph {{}}\n",
+                        format!("impl<G> {}::properties::{}::{} for {}<G> where G: graph::Graph {{}}\n",
                             mod_name,
                             String::from_utf8_lossy(prop_prefix),
                             camel_case(prop),
@@ -213,10 +213,9 @@ fn load_files(inputs: &Vec<String>) -> rdfio::Result<(Namespaces, Rc<MyGraph>)> 
     Ok((prefixes, Rc::new(graph)))
 }
 
-fn write_comment<W, C, G>(r: &IRI<G, C>, writer: &mut W) -> rdfio::Result<()>
+fn write_comment<W, C>(r: &IRI<C>, writer: &mut W) -> rdfio::Result<()>
     where W: Write,
-          C: Comment<G>,
-          G: Graph
+          C: Comment
 {
     for comment in r.comment() {
         if let Some(l) = comment.this().literal() {
