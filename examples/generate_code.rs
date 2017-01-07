@@ -112,6 +112,12 @@ fn write_impl_property<G, W>(class: &Class<G>,
                             String::from_utf8_lossy(prop_prefix),
                             camel_case(prop),
                             camel_case(domain)).as_bytes())?;
+                    writer.write_all(
+                        format!("impl<G> {}::properties::{}::{} for resource::IRI<{}<G>> where G: graph::Graph {{}}\n",
+                            mod_name,
+                            String::from_utf8_lossy(prop_prefix),
+                            camel_case(prop),
+                            camel_case(domain)).as_bytes())?;
                     done.insert(String::from(iri));
                 }
             }
@@ -213,7 +219,7 @@ fn load_files(inputs: &Vec<String>) -> rdfio::Result<(Namespaces, Rc<MyGraph>)> 
     Ok((prefixes, Rc::new(graph)))
 }
 
-fn write_comment<W, C>(r: &IRI<C>, writer: &mut W) -> rdfio::Result<()>
+fn write_comment<W, C>(r: &C, writer: &mut W) -> rdfio::Result<()>
     where W: Write,
           C: Comment
 {
@@ -348,8 +354,8 @@ fn generate(output_dir: PathBuf,
             output_dir: output_dir,
             internal: internal,
         },
-        classes: Class::iter(&oa).filter_map(|c| c.iri()).collect(),
-        properties: Property::iter(&oa).filter_map(|c| c.iri()).collect(),
+        classes: IRI::iter(&oa).collect(),
+        properties: IRI::iter(&oa).collect(),
         prefixes: prefixes,
     };
 

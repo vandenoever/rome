@@ -1,27 +1,25 @@
 use graph;
 use graph::Triple;
-use std::marker::PhantomData;
 use std::rc::Rc;
 use ontology_adapter;
 use std;
 use resource;
 
-pub struct ObjectIter<R>
-    where R: ResourceBase
-{
-    pub graph: Rc<ontology_adapter::OntologyAdapter<R::Graph>>,
-    pub iter: <R::Graph as graph::Graph>::SPORangeIter,
-}
-
-impl<R> Iterator for ObjectIter<R>
-    where R: ResourceBase
-{
-    type Item = R;
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.iter.next() {
-            Some(triple) => Some(R::new(triple.object_ptr(), &self.graph)),
-            None => None,
-        }
+pub trait ResourceBase: Eq + std::marker::Sized {
+    type Graph: graph::Graph;
+    type SubjectIter: Iterator<Item = Self>;
+    fn new(this: <Self::Graph as graph::Graph>::ObjectPtr,
+           graph: &Rc<ontology_adapter::OntologyAdapter<Self::Graph>>)
+           -> Self;
+    fn iter(graph: &Rc<ontology_adapter::OntologyAdapter<Self::Graph>>) -> Self::SubjectIter;
+    fn this(&self) -> &<Self::Graph as graph::Graph>::ObjectPtr;
+    fn graph(&self) -> &ontology_adapter::OntologyAdapter<Self::Graph>;
+    fn predicate<R>(&self,
+                    predicate: Option<<Self::Graph as graph::Graph>::PredicatePtr>)
+                    -> ObjectIter<R>
+        where R: ResourceBase<Graph = Self::Graph>;
+    fn iri(self) -> Option<IRI<Self>> {
+        self.graph().object_to_predicate(self.this().clone()).map(|_| IRI { resource: self })
     }
 }
 
@@ -55,12 +53,66 @@ impl<R: ?Sized> std::ops::Deref for IRI<R>
     }
 }
 
+impl<R> PartialEq for IRI<R>
+    where R: ResourceBase
+{
+    fn eq(&self, rhs: &IRI<R>) -> bool {
+        self.resource.eq(&rhs.resource)
+    }
+}
+impl<R> Eq for IRI<R> where R: ResourceBase {}
+
+impl<R> ResourceBase for IRI<R>
+    where R: ResourceBase
+{
+    type Graph = R::Graph;
+    type SubjectIter = IRISubjectIter<R>;
+    fn new(this: <Self::Graph as graph::Graph>::ObjectPtr,
+           graph: &Rc<ontology_adapter::OntologyAdapter<Self::Graph>>)
+           -> Self {
+        IRI { resource: R::new(this, graph) }
+    }
+    fn iter(graph: &Rc<ontology_adapter::OntologyAdapter<Self::Graph>>) -> Self::SubjectIter {
+        IRISubjectIter { iter: R::iter(graph) }
+    }
+    fn this(&self) -> &<Self::Graph as graph::Graph>::ObjectPtr {
+        self.resource.this()
+    }
+    fn graph(&self) -> &ontology_adapter::OntologyAdapter<Self::Graph> {
+        self.resource.graph()
+    }
+    fn predicate<O>(&self,
+                    predicate: Option<<Self::Graph as graph::Graph>::PredicatePtr>)
+                    -> ObjectIter<O>
+        where O: ResourceBase<Graph = Self::Graph>{
+        self.resource.predicate(predicate)
+    }
+}
+
+pub struct ObjectIter<R>
+    where R: ResourceBase
+{
+    pub graph: Rc<ontology_adapter::OntologyAdapter<R::Graph>>,
+    pub iter: <R::Graph as graph::Graph>::SPORangeIter,
+}
+
+impl<R> Iterator for ObjectIter<R>
+    where R: ResourceBase
+{
+    type Item = R;
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.iter.next() {
+            Some(triple) => Some(R::new(triple.object_ptr(), &self.graph)),
+            None => None,
+        }
+    }
+}
+
 pub struct SubjectIter<R>
     where R: ResourceBase
 {
     pub graph: Rc<ontology_adapter::OntologyAdapter<R::Graph>>,
     pub iter: <R::Graph as graph::Graph>::OPSRangeIter,
-    pub phantom: PhantomData<R>,
 }
 
 impl<R> Iterator for SubjectIter<R>
@@ -79,24 +131,23 @@ impl<R> Iterator for SubjectIter<R>
     }
 }
 
-pub trait ResourceBase: Eq + std::marker::Sized {
-    type Graph: graph::Graph;
-    fn new(this: <Self::Graph as graph::Graph>::ObjectPtr,
-           graph: &Rc<ontology_adapter::OntologyAdapter<Self::Graph>>)
-           -> Self;
-    fn iter(graph: &Rc<ontology_adapter::OntologyAdapter<Self::Graph>>) -> SubjectIter<Self>;
-    fn this(&self) -> &<Self::Graph as graph::Graph>::ObjectPtr;
-    fn graph(&self) -> &ontology_adapter::OntologyAdapter<Self::Graph>;
-    fn predicate<R>(&self,
-                    predicate: Option<<Self::Graph as graph::Graph>::PredicatePtr>)
-                    -> ObjectIter<R>
-        where R: ResourceBase<Graph = Self::Graph>;
-    fn iri(self) -> Option<IRI<Self>> {
-        self.graph().object_to_predicate(self.this().clone()).map(|_| {
-            IRI {
-                resource: self,
+pub struct IRISubjectIter<R>
+    where R: ResourceBase
+{
+    iter: R::SubjectIter,
+}
+
+impl<R> Iterator for IRISubjectIter<R>
+    where R: ResourceBase
+{
+    type Item = IRI<R>;
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some(r) = self.iter.next() {
+            if let Some(iri) = r.iri() {
+                return Some(iri);
             }
-        })
+        }
+        None
     }
 }
 
@@ -165,6 +216,7 @@ impl<'a, G> resource::ResourceBase for $name<G>
     where G: graph::Graph
 {
     type Graph = G;
+    type SubjectIter = resource::SubjectIter<Self>;
     fn new(resource: G::ObjectPtr,
             graph: &std::rc::Rc<ontology_adapter::OntologyAdapter<G>>) -> Self {
         $name {
@@ -184,7 +236,6 @@ impl<'a, G> resource::ResourceBase for $name<G>
         resource::SubjectIter {
             graph: graph.clone(),
             iter: iter,
-            phantom: std::marker::PhantomData,
         }
     }
     fn this(&self) -> &G::ObjectPtr {
