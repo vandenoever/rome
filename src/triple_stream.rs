@@ -119,13 +119,18 @@ impl graph::SubjectPtr for Dummy {
         None
     }
 }
-impl graph::ObjectPtr for Dummy {
+impl<'t> graph::ObjectPtr<'t> for Dummy {
     fn literal(&self) -> Option<&str> {
         None
     }
 }
+impl<'a> graph::IntoObject<'a> for Dummy {
+    fn object(self) -> graph::Object<'a> {
+        graph::Object::IRI("")
+    }
+}
 
-impl graph::Triple for IteratorTriple {
+impl<'t> graph::Triple<'t> for IteratorTriple {
     type SubjectPtr = Dummy;
     type PredicatePtr = Dummy;
     type ObjectPtr = Dummy;

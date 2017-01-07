@@ -3,8 +3,8 @@ pub mod properties;
 use std;
 use graph;
 use ontology_adapter;
-pub fn adapter<G>(graph: &std::rc::Rc<G>) -> ontology_adapter::OntologyAdapter<G>
-    where G: graph::Graph
+pub fn adapter<'g, G>(graph: &std::rc::Rc<G>) -> ontology_adapter::OntologyAdapter<'g,G>
+    where G: graph::Graph<'g>
 {
     let mut iris = Vec::with_capacity(33);
     iris.push(graph.predicate_ptr("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"));

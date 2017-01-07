@@ -242,13 +242,13 @@ fn create_ops<SPO, OPS>(spo: &[SPO]) -> Vec<OPS>
     ops
 }
 
-impl<SPO, OPS> graph::GraphCreator for GraphWriter<SPO, OPS>
+impl<'g, SPO:'g, OPS:'g> graph::GraphCreator<'g> for GraphWriter<SPO, OPS>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>
 {
     type Graph = Graph<SPO, OPS>;
-    fn add_triple<T>(&mut self, triple: &T)
-        where T: graph::Triple
+    fn add_triple<'t, T>(&mut self, triple: &T)
+        where T: graph::Triple<'t>
     {
         self.add_(triple.subject(), triple.predicate(), triple.object());
     }
@@ -420,7 +420,7 @@ impl<SPO, OPS> graph::SubjectPtr for ObjectPtr<SPO, OPS>
         }
     }
 }
-impl<SPO, OPS> graph::ObjectPtr for ObjectPtr<SPO, OPS>
+impl<'g, SPO:'g, OPS:'g> graph::ObjectPtr<'g> for ObjectPtr<SPO, OPS>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>
 {
@@ -428,6 +428,18 @@ impl<SPO, OPS> graph::ObjectPtr for ObjectPtr<SPO, OPS>
         match self {
             &ObjectPtr::Literal(ref graph, l) => Some(graph.strings.get(StringId { id: l })),
             _ => None,
+        }
+    }
+}
+impl<'g, SPO:'g, OPS:'g> graph::IntoObject<'g> for ObjectPtr<SPO, OPS>
+    where SPO: CompactTriple<u32>,
+          OPS: CompactTriple<u32>
+{
+    fn object(self) -> graph::Object<'g> {
+        match self {
+            ObjectPtr::IRI(graph, a) => graph::Object::IRI(""),
+            ObjectPtr::BlankNode(_, a) => graph::Object::IRI(""),
+            ObjectPtr::Literal(_, a) => graph::Object::IRI(""),
         }
     }
 }
@@ -462,7 +474,7 @@ impl<SPO, OPS, T> Eq for Triple<SPO, OPS, T>
 {
 }
 
-impl<SPO, OPS, T> graph::Triple for Triple<SPO, OPS, T>
+impl<'g, SPO:'g, OPS:'g, T> graph::Triple<'g> for Triple<SPO, OPS, T>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>,
           T: CompactTriple<u32>
@@ -957,7 +969,7 @@ struct BlankNodeInfo {
     times_an_object_with_blank_subject: u32,
 }
 
-impl<SPO, OPS> graph::Graph for Graph<SPO, OPS>
+impl<'g, SPO:'g, OPS:'g> graph::Graph<'g> for Graph<SPO, OPS>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>
 {

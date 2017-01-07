@@ -1,13 +1,13 @@
-pub trait Graph {
+pub trait Graph<'g> {
     type SubjectPtr: SubjectPtr;
     type PredicatePtr: PredicatePtr;
-    type ObjectPtr: ObjectPtr;
-    type SPOTriple: Triple<SubjectPtr = Self::SubjectPtr,
+    type ObjectPtr: ObjectPtr<'g>;
+    type SPOTriple: Triple<'g, SubjectPtr = Self::SubjectPtr,
            PredicatePtr = Self::PredicatePtr,
            ObjectPtr = Self::ObjectPtr>;
     type SPOIter: Iterator<Item = Self::SPOTriple>;
     type SPORangeIter: Iterator<Item = Self::SPOTriple>;
-    type OPSTriple: Triple<SubjectPtr = Self::SubjectPtr,
+    type OPSTriple: Triple<'g, SubjectPtr = Self::SubjectPtr,
            PredicatePtr = Self::PredicatePtr,
            ObjectPtr = Self::ObjectPtr>;
     type OPSRangeIter: Iterator<Item = Self::OPSTriple>;
@@ -41,10 +41,10 @@ pub trait Graph {
     fn len(&self) -> usize;
 }
 
-pub trait GraphCreator {
-    type Graph: Graph;
+pub trait GraphCreator<'g> {
+    type Graph: Graph<'g>;
     fn create_blank_node(&mut self) -> BlankNode;
-    fn add_triple<T>(&mut self, triple: &T) where T: Triple;
+    fn add_triple<'t,T>(&mut self, triple: &T) where T: Triple<'t>;
     fn add<'b, S, O>(&mut self, subject: S, predicate: &str, object: O)
         where S: IntoSubject<'b>,
               O: IntoObject<'b>;
@@ -53,17 +53,17 @@ pub trait GraphCreator {
 
 pub type BlankNode = (usize, usize);
 
-pub trait Triple: Eq {
+pub trait Triple<'g>: Eq {
     type SubjectPtr: SubjectPtr;
     type PredicatePtr: PredicatePtr;
-    type ObjectPtr: ObjectPtr;
+    type ObjectPtr: ObjectPtr<'g>;
     fn subject(&self) -> Subject;
     fn subject_ptr(&self) -> Self::SubjectPtr;
     fn predicate(&self) -> &str;
     fn object(&self) -> Object;
     fn object_ptr(&self) -> Self::ObjectPtr;
-    fn eq<Rhs>(&self, other: &Rhs) -> bool
-        where Rhs: Triple
+    fn eq<'a, Rhs>(&self, other: &Rhs) -> bool
+        where Rhs: Triple<'a>
     {
         self.subject().eq(&other.subject()) && self.predicate().eq(other.predicate()) &&
         self.object().eq(&other.object())
@@ -76,7 +76,7 @@ pub trait PredicatePtr: Eq + Clone {
 pub trait SubjectPtr: Eq + Clone {
     fn iri(&self) -> Option<&str>;
 }
-pub trait ObjectPtr: SubjectPtr + Ord {
+pub trait ObjectPtr<'g>: SubjectPtr + Ord + IntoObject<'g> {
     fn literal(&self) -> Option<&str>;
 }
 

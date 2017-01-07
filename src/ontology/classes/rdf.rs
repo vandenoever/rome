@@ -9,213 +9,213 @@ class!(
 /// The class of containers of alternatives.
 :"http://www.w3.org/1999/02/22-rdf-syntax-ns#Alt", Alt,
 1);
-impl<G> ontology::properties::rdf::Type for Alt<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Type for resource::IRI<Alt<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Value for Alt<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Value for resource::IRI<Alt<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Comment for Alt<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Comment for resource::IRI<Alt<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::IsDefinedBy for Alt<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::IsDefinedBy for resource::IRI<Alt<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Label for Alt<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Label for resource::IRI<Alt<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Member for Alt<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Member for resource::IRI<Alt<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::SeeAlso for Alt<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::SeeAlso for resource::IRI<Alt<G>> where G: graph::Graph {}
+impl<'g, G> ontology::properties::rdf::Type<'g> for Alt<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Type<'g> for resource::IRI<Alt<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Value<'g> for Alt<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Value<'g> for resource::IRI<Alt<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Comment<'g> for Alt<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Comment<'g> for resource::IRI<Alt<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::IsDefinedBy<'g> for Alt<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::IsDefinedBy<'g> for resource::IRI<Alt<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Label<'g> for Alt<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Label<'g> for resource::IRI<Alt<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Member<'g> for Alt<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Member<'g> for resource::IRI<Alt<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::SeeAlso<'g> for Alt<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::SeeAlso<'g> for resource::IRI<Alt<'g,G>> where G: graph::Graph<'g> {}
 
 class!(
 /// **rdf:Bag**
 /// The class of unordered containers.
 :"http://www.w3.org/1999/02/22-rdf-syntax-ns#Bag", Bag,
 2);
-impl<G> ontology::properties::rdf::Type for Bag<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Type for resource::IRI<Bag<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Value for Bag<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Value for resource::IRI<Bag<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Comment for Bag<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Comment for resource::IRI<Bag<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::IsDefinedBy for Bag<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::IsDefinedBy for resource::IRI<Bag<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Label for Bag<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Label for resource::IRI<Bag<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Member for Bag<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Member for resource::IRI<Bag<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::SeeAlso for Bag<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::SeeAlso for resource::IRI<Bag<G>> where G: graph::Graph {}
+impl<'g, G> ontology::properties::rdf::Type<'g> for Bag<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Type<'g> for resource::IRI<Bag<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Value<'g> for Bag<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Value<'g> for resource::IRI<Bag<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Comment<'g> for Bag<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Comment<'g> for resource::IRI<Bag<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::IsDefinedBy<'g> for Bag<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::IsDefinedBy<'g> for resource::IRI<Bag<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Label<'g> for Bag<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Label<'g> for resource::IRI<Bag<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Member<'g> for Bag<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Member<'g> for resource::IRI<Bag<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::SeeAlso<'g> for Bag<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::SeeAlso<'g> for resource::IRI<Bag<'g,G>> where G: graph::Graph<'g> {}
 
 class!(
 /// **rdf:HTML**
 /// The datatype of RDF literals storing fragments of HTML content
 :"http://www.w3.org/1999/02/22-rdf-syntax-ns#HTML", HTML,
 3);
-impl<G> ontology::properties::rdf::Type for HTML<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Type for resource::IRI<HTML<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Value for HTML<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Value for resource::IRI<HTML<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Comment for HTML<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Comment for resource::IRI<HTML<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::IsDefinedBy for HTML<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::IsDefinedBy for resource::IRI<HTML<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Label for HTML<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Label for resource::IRI<HTML<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Member for HTML<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Member for resource::IRI<HTML<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::SeeAlso for HTML<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::SeeAlso for resource::IRI<HTML<G>> where G: graph::Graph {}
+impl<'g, G> ontology::properties::rdf::Type<'g> for HTML<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Type<'g> for resource::IRI<HTML<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Value<'g> for HTML<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Value<'g> for resource::IRI<HTML<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Comment<'g> for HTML<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Comment<'g> for resource::IRI<HTML<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::IsDefinedBy<'g> for HTML<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::IsDefinedBy<'g> for resource::IRI<HTML<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Label<'g> for HTML<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Label<'g> for resource::IRI<HTML<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Member<'g> for HTML<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Member<'g> for resource::IRI<HTML<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::SeeAlso<'g> for HTML<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::SeeAlso<'g> for resource::IRI<HTML<'g,G>> where G: graph::Graph<'g> {}
 
 class!(
 /// **rdf:List**
 /// The class of RDF Lists.
 :"http://www.w3.org/1999/02/22-rdf-syntax-ns#List", List,
 4);
-impl<G> ontology::properties::rdf::First for List<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::First for resource::IRI<List<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Rest for List<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Rest for resource::IRI<List<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Type for List<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Type for resource::IRI<List<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Value for List<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Value for resource::IRI<List<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Comment for List<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Comment for resource::IRI<List<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::IsDefinedBy for List<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::IsDefinedBy for resource::IRI<List<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Label for List<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Label for resource::IRI<List<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Member for List<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Member for resource::IRI<List<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::SeeAlso for List<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::SeeAlso for resource::IRI<List<G>> where G: graph::Graph {}
+impl<'g, G> ontology::properties::rdf::First<'g> for List<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::First<'g> for resource::IRI<List<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Rest<'g> for List<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Rest<'g> for resource::IRI<List<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Type<'g> for List<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Type<'g> for resource::IRI<List<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Value<'g> for List<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Value<'g> for resource::IRI<List<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Comment<'g> for List<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Comment<'g> for resource::IRI<List<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::IsDefinedBy<'g> for List<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::IsDefinedBy<'g> for resource::IRI<List<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Label<'g> for List<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Label<'g> for resource::IRI<List<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Member<'g> for List<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Member<'g> for resource::IRI<List<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::SeeAlso<'g> for List<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::SeeAlso<'g> for resource::IRI<List<'g,G>> where G: graph::Graph<'g> {}
 
 class!(
 /// **rdf:PlainLiteral**
 /// The class of plain (i.e. untyped) literal values, as used in RIF and OWL 2
 :"http://www.w3.org/1999/02/22-rdf-syntax-ns#PlainLiteral", PlainLiteral,
 5);
-impl<G> ontology::properties::rdf::Type for PlainLiteral<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Type for resource::IRI<PlainLiteral<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Value for PlainLiteral<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Value for resource::IRI<PlainLiteral<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Comment for PlainLiteral<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Comment for resource::IRI<PlainLiteral<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::IsDefinedBy for PlainLiteral<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::IsDefinedBy for resource::IRI<PlainLiteral<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Label for PlainLiteral<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Label for resource::IRI<PlainLiteral<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Member for PlainLiteral<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Member for resource::IRI<PlainLiteral<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::SeeAlso for PlainLiteral<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::SeeAlso for resource::IRI<PlainLiteral<G>> where G: graph::Graph {}
+impl<'g, G> ontology::properties::rdf::Type<'g> for PlainLiteral<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Type<'g> for resource::IRI<PlainLiteral<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Value<'g> for PlainLiteral<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Value<'g> for resource::IRI<PlainLiteral<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Comment<'g> for PlainLiteral<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Comment<'g> for resource::IRI<PlainLiteral<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::IsDefinedBy<'g> for PlainLiteral<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::IsDefinedBy<'g> for resource::IRI<PlainLiteral<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Label<'g> for PlainLiteral<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Label<'g> for resource::IRI<PlainLiteral<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Member<'g> for PlainLiteral<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Member<'g> for resource::IRI<PlainLiteral<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::SeeAlso<'g> for PlainLiteral<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::SeeAlso<'g> for resource::IRI<PlainLiteral<'g,G>> where G: graph::Graph<'g> {}
 
 class!(
 /// **rdf:Property**
 /// The class of RDF properties.
 :"http://www.w3.org/1999/02/22-rdf-syntax-ns#Property", Property,
 6);
-impl<G> ontology::properties::rdfs::Domain for Property<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Domain for resource::IRI<Property<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Range for Property<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Range for resource::IRI<Property<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::SubPropertyOf for Property<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::SubPropertyOf for resource::IRI<Property<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Type for Property<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Type for resource::IRI<Property<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Value for Property<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Value for resource::IRI<Property<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Comment for Property<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Comment for resource::IRI<Property<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::IsDefinedBy for Property<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::IsDefinedBy for resource::IRI<Property<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Label for Property<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Label for resource::IRI<Property<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Member for Property<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Member for resource::IRI<Property<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::SeeAlso for Property<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::SeeAlso for resource::IRI<Property<G>> where G: graph::Graph {}
+impl<'g, G> ontology::properties::rdfs::Domain<'g> for Property<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Domain<'g> for resource::IRI<Property<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Range<'g> for Property<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Range<'g> for resource::IRI<Property<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::SubPropertyOf<'g> for Property<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::SubPropertyOf<'g> for resource::IRI<Property<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Type<'g> for Property<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Type<'g> for resource::IRI<Property<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Value<'g> for Property<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Value<'g> for resource::IRI<Property<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Comment<'g> for Property<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Comment<'g> for resource::IRI<Property<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::IsDefinedBy<'g> for Property<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::IsDefinedBy<'g> for resource::IRI<Property<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Label<'g> for Property<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Label<'g> for resource::IRI<Property<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Member<'g> for Property<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Member<'g> for resource::IRI<Property<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::SeeAlso<'g> for Property<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::SeeAlso<'g> for resource::IRI<Property<'g,G>> where G: graph::Graph<'g> {}
 
 class!(
 /// **rdf:Seq**
 /// The class of ordered containers.
 :"http://www.w3.org/1999/02/22-rdf-syntax-ns#Seq", Seq,
 7);
-impl<G> ontology::properties::rdf::Type for Seq<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Type for resource::IRI<Seq<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Value for Seq<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Value for resource::IRI<Seq<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Comment for Seq<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Comment for resource::IRI<Seq<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::IsDefinedBy for Seq<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::IsDefinedBy for resource::IRI<Seq<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Label for Seq<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Label for resource::IRI<Seq<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Member for Seq<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Member for resource::IRI<Seq<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::SeeAlso for Seq<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::SeeAlso for resource::IRI<Seq<G>> where G: graph::Graph {}
+impl<'g, G> ontology::properties::rdf::Type<'g> for Seq<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Type<'g> for resource::IRI<Seq<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Value<'g> for Seq<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Value<'g> for resource::IRI<Seq<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Comment<'g> for Seq<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Comment<'g> for resource::IRI<Seq<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::IsDefinedBy<'g> for Seq<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::IsDefinedBy<'g> for resource::IRI<Seq<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Label<'g> for Seq<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Label<'g> for resource::IRI<Seq<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Member<'g> for Seq<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Member<'g> for resource::IRI<Seq<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::SeeAlso<'g> for Seq<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::SeeAlso<'g> for resource::IRI<Seq<'g,G>> where G: graph::Graph<'g> {}
 
 class!(
 /// **rdf:Statement**
 /// The class of RDF statements.
 :"http://www.w3.org/1999/02/22-rdf-syntax-ns#Statement", Statement,
 8);
-impl<G> ontology::properties::rdf::Object for Statement<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Object for resource::IRI<Statement<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Predicate for Statement<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Predicate for resource::IRI<Statement<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Subject for Statement<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Subject for resource::IRI<Statement<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Type for Statement<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Type for resource::IRI<Statement<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Value for Statement<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Value for resource::IRI<Statement<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Comment for Statement<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Comment for resource::IRI<Statement<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::IsDefinedBy for Statement<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::IsDefinedBy for resource::IRI<Statement<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Label for Statement<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Label for resource::IRI<Statement<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Member for Statement<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Member for resource::IRI<Statement<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::SeeAlso for Statement<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::SeeAlso for resource::IRI<Statement<G>> where G: graph::Graph {}
+impl<'g, G> ontology::properties::rdf::Object<'g> for Statement<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Object<'g> for resource::IRI<Statement<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Predicate<'g> for Statement<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Predicate<'g> for resource::IRI<Statement<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Subject<'g> for Statement<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Subject<'g> for resource::IRI<Statement<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Type<'g> for Statement<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Type<'g> for resource::IRI<Statement<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Value<'g> for Statement<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Value<'g> for resource::IRI<Statement<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Comment<'g> for Statement<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Comment<'g> for resource::IRI<Statement<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::IsDefinedBy<'g> for Statement<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::IsDefinedBy<'g> for resource::IRI<Statement<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Label<'g> for Statement<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Label<'g> for resource::IRI<Statement<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Member<'g> for Statement<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Member<'g> for resource::IRI<Statement<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::SeeAlso<'g> for Statement<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::SeeAlso<'g> for resource::IRI<Statement<'g,G>> where G: graph::Graph<'g> {}
 
 class!(
 /// **rdf:XMLLiteral**
 /// The datatype of XML literal values.
 :"http://www.w3.org/1999/02/22-rdf-syntax-ns#XMLLiteral", XMLLiteral,
 9);
-impl<G> ontology::properties::rdf::Type for XMLLiteral<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Type for resource::IRI<XMLLiteral<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Value for XMLLiteral<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Value for resource::IRI<XMLLiteral<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Comment for XMLLiteral<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Comment for resource::IRI<XMLLiteral<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::IsDefinedBy for XMLLiteral<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::IsDefinedBy for resource::IRI<XMLLiteral<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Label for XMLLiteral<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Label for resource::IRI<XMLLiteral<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Member for XMLLiteral<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Member for resource::IRI<XMLLiteral<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::SeeAlso for XMLLiteral<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::SeeAlso for resource::IRI<XMLLiteral<G>> where G: graph::Graph {}
+impl<'g, G> ontology::properties::rdf::Type<'g> for XMLLiteral<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Type<'g> for resource::IRI<XMLLiteral<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Value<'g> for XMLLiteral<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Value<'g> for resource::IRI<XMLLiteral<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Comment<'g> for XMLLiteral<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Comment<'g> for resource::IRI<XMLLiteral<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::IsDefinedBy<'g> for XMLLiteral<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::IsDefinedBy<'g> for resource::IRI<XMLLiteral<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Label<'g> for XMLLiteral<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Label<'g> for resource::IRI<XMLLiteral<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Member<'g> for XMLLiteral<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Member<'g> for resource::IRI<XMLLiteral<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::SeeAlso<'g> for XMLLiteral<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::SeeAlso<'g> for resource::IRI<XMLLiteral<'g,G>> where G: graph::Graph<'g> {}
 
 class!(
 /// **rdf:langString**
 /// The datatype of language-tagged string values
 :"http://www.w3.org/1999/02/22-rdf-syntax-ns#langString", LangString,
 10);
-impl<G> ontology::properties::rdf::Type for LangString<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Type for resource::IRI<LangString<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Value for LangString<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdf::Value for resource::IRI<LangString<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Comment for LangString<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Comment for resource::IRI<LangString<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::IsDefinedBy for LangString<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::IsDefinedBy for resource::IRI<LangString<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Label for LangString<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Label for resource::IRI<LangString<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Member for LangString<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::Member for resource::IRI<LangString<G>> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::SeeAlso for LangString<G> where G: graph::Graph {}
-impl<G> ontology::properties::rdfs::SeeAlso for resource::IRI<LangString<G>> where G: graph::Graph {}
+impl<'g, G> ontology::properties::rdf::Type<'g> for LangString<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Type<'g> for resource::IRI<LangString<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Value<'g> for LangString<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdf::Value<'g> for resource::IRI<LangString<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Comment<'g> for LangString<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Comment<'g> for resource::IRI<LangString<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::IsDefinedBy<'g> for LangString<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::IsDefinedBy<'g> for resource::IRI<LangString<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Label<'g> for LangString<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Label<'g> for resource::IRI<LangString<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Member<'g> for LangString<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::Member<'g> for resource::IRI<LangString<'g,G>> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::SeeAlso<'g> for LangString<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> ontology::properties::rdfs::SeeAlso<'g> for resource::IRI<LangString<'g,G>> where G: graph::Graph<'g> {}
