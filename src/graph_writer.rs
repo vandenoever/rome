@@ -361,8 +361,8 @@ pub enum ObjectPtr<SPO, OPS>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>
 {
-    IRI(Rc<GraphData<SPO, OPS>>, u32),
     BlankNode(Rc<GraphData<SPO, OPS>>, u32),
+    IRI(Rc<GraphData<SPO, OPS>>, u32),
     Literal(Rc<GraphData<SPO, OPS>>, u32),
 }
 impl<SPO, OPS> PartialEq for ObjectPtr<SPO, OPS>
@@ -382,6 +382,32 @@ impl<SPO, OPS> Eq for ObjectPtr<SPO, OPS>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>
 {
+}
+impl<SPO, OPS> PartialOrd for ObjectPtr<SPO, OPS>
+    where SPO: CompactTriple<u32>,
+          OPS: CompactTriple<u32>
+{
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl<SPO, OPS> Ord for ObjectPtr<SPO, OPS>
+    where SPO: CompactTriple<u32>,
+          OPS: CompactTriple<u32>
+{
+    fn cmp(&self, other: &Self) -> cmp::Ordering {
+        match (self, other) {
+            (&ObjectPtr::BlankNode(_, a), &ObjectPtr::BlankNode(_, ref b)) => a.cmp(b),
+            (&ObjectPtr::BlankNode(_, _), &ObjectPtr::IRI(_, _)) => cmp::Ordering::Less,
+            (&ObjectPtr::BlankNode(_, _), &ObjectPtr::Literal(_, _)) => cmp::Ordering::Less,
+            (&ObjectPtr::IRI(_, _), &ObjectPtr::BlankNode(_, _)) => cmp::Ordering::Greater,
+            (&ObjectPtr::IRI(_, a), &ObjectPtr::IRI(_, ref b)) => a.cmp(b),
+            (&ObjectPtr::IRI(_, _), &ObjectPtr::Literal(_, _)) => cmp::Ordering::Less,
+            (&ObjectPtr::Literal(_, _), &ObjectPtr::BlankNode(_, _)) => cmp::Ordering::Greater,
+            (&ObjectPtr::Literal(_, _), &ObjectPtr::IRI(_, _)) => cmp::Ordering::Greater,
+            (&ObjectPtr::Literal(_, a), &ObjectPtr::Literal(_, ref b)) => a.cmp(b),
+        }
+    }
 }
 impl<SPO, OPS> graph::SubjectPtr for ObjectPtr<SPO, OPS>
     where SPO: CompactTriple<u32>,

@@ -19,6 +19,7 @@ mod grammar_helper;
 mod grammar_structs;
 mod string_collector;
 mod compact_triple;
+pub mod iter;
 pub mod triple64;
 pub mod triple128;
 #[macro_use]

@@ -107,7 +107,7 @@ pub enum IteratorObject {
     Literal(IteratorLiteral),
 }
 
-#[derive (PartialEq,Eq,Clone)]
+#[derive (PartialOrd,Ord,PartialEq,Eq,Clone)]
 pub struct Dummy;
 impl graph::PredicatePtr for Dummy {
     fn iri(&self) -> &str {

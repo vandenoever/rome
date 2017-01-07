@@ -21,6 +21,7 @@ use rdfio::ontology::classes::rdfs::Class;
 use rdfio::ontology::properties::rdfs::{Comment, Domain, Range, SubClassOf};
 use rdfio::ontology;
 use rdfio::ontology_adapter;
+use rdfio::iter::TransitiveIterator;
 
 type MyGraph = graph_writer::Graph<Triple128SPO, Triple128OPS>;
 type OA = ontology_adapter::OntologyAdapter<MyGraph>;
@@ -152,7 +153,7 @@ const RDFS_SUB_CLASS_OF: &'static str = "http://www.w3.org/2000/01/rdf-schema#su
 const RDFS_CLASS: &'static str = "http://www.w3.org/2000/01/rdf-schema#Class";
 const RDF_TYPE: &'static str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 
-fn infer(graph: &MyGraph) -> rdfio::Result<MyGraph> {
+fn infer(graph: MyGraph) -> rdfio::Result<MyGraph> {
     // for every triple with rdfs:subClassOf infer that the subject and the
     // object are rdfs:Class instances
     let mut writer = graph_writer::GraphWriter::with_capacity(65000);
@@ -168,8 +169,22 @@ fn infer(graph: &MyGraph) -> rdfio::Result<MyGraph> {
             _ => {}
         }
     }
+
     for triple in graph.iter() {
         writer.add_triple(&triple);
+    }
+
+    // make subClassOf entailment concrete
+    let g = Rc::new(graph);
+    let oa = Rc::new(ontology::adapter(&g));
+    for class in Class::iter(&oa) {
+        let i = TransitiveIterator::new(class.sub_class_of(),
+                                        |class: &Class<MyGraph>| class.sub_class_of());
+        for parent in i {
+            writer.add(class.this().iri().unwrap(),
+                       RDFS_SUB_CLASS_OF,
+                       parent.this().iri().unwrap());
+        }
     }
     Ok(writer.collect().sort_blank_nodes())
 }
@@ -215,7 +230,7 @@ fn load_files(inputs: &Vec<String>) -> rdfio::Result<(Namespaces, Rc<MyGraph>)> 
         }
     }
     let graph = writer.collect();
-    let graph = infer(&graph)?;
+    let graph = infer(graph)?;
     Ok((prefixes, Rc::new(graph)))
 }
 

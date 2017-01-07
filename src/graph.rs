@@ -76,7 +76,7 @@ pub trait PredicatePtr: Eq + Clone {
 pub trait SubjectPtr: Eq + Clone {
     fn iri(&self) -> Option<&str>;
 }
-pub trait ObjectPtr: SubjectPtr {
+pub trait ObjectPtr: SubjectPtr + Ord {
     fn literal(&self) -> Option<&str>;
 }
 
