@@ -41,7 +41,7 @@ pub struct Graph<SPO, OPS>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>
 {
-    d: Rc<GraphData<SPO, OPS>>,
+    d: GraphData<SPO, OPS>,
 }
 
 fn translate<T>(t: &mut T, translation: &Vec<StringId>, datatrans: &Vec<StringId>)
@@ -242,7 +242,7 @@ fn create_ops<SPO, OPS>(spo: &[SPO]) -> Vec<OPS>
     ops
 }
 
-impl<'g, SPO:'g, OPS:'g> graph::GraphCreator<'g> for GraphWriter<SPO, OPS>
+impl<'g, SPO: 'g, OPS: 'g> graph::GraphCreator<'g> for GraphWriter<SPO, OPS>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>
 {
@@ -267,14 +267,14 @@ impl<'g, SPO:'g, OPS:'g> graph::GraphCreator<'g> for GraphWriter<SPO, OPS>
         spo.shrink_to_fit();
         let ops = create_ops(&spo);
         Graph {
-            d: Rc::new(GraphData {
+            d: GraphData {
                 graph_id: rand::random::<usize>(),
                 strings: string_collection,
                 datatype_or_lang: datatype_lang_collection,
                 spo: spo,
                 ops: ops,
                 highest_blank_node: self.highest_blank_node,
-            }),
+            },
         }
     }
     fn create_blank_node(&mut self) -> graph::BlankNode {
@@ -420,7 +420,7 @@ impl<SPO, OPS> graph::SubjectPtr for ObjectPtr<SPO, OPS>
         }
     }
 }
-impl<'g, SPO:'g, OPS:'g> graph::ObjectPtr<'g> for ObjectPtr<SPO, OPS>
+impl<'g, SPO: 'g, OPS: 'g> graph::ObjectPtr<'g> for ObjectPtr<SPO, OPS>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>
 {
@@ -431,7 +431,7 @@ impl<'g, SPO:'g, OPS:'g> graph::ObjectPtr<'g> for ObjectPtr<SPO, OPS>
         }
     }
 }
-impl<'g, SPO:'g, OPS:'g> graph::IntoObject<'g> for ObjectPtr<SPO, OPS>
+impl<'g, SPO: 'g, OPS: 'g> graph::IntoObject<'g> for ObjectPtr<SPO, OPS>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>
 {
@@ -444,12 +444,12 @@ impl<'g, SPO:'g, OPS:'g> graph::IntoObject<'g> for ObjectPtr<SPO, OPS>
     }
 }
 
-pub struct Triple<SPO, OPS, T>
+pub struct Triple<'g, SPO, OPS, T>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>,
           T: CompactTriple<u32>
 {
-    graph: Rc<GraphData<SPO, OPS>>,
+    graph: &'g GraphData<SPO, OPS>,
     triple: T,
 }
 
@@ -474,7 +474,7 @@ impl<SPO, OPS, T> Eq for Triple<SPO, OPS, T>
 {
 }
 
-impl<'g, SPO:'g, OPS:'g, T> graph::Triple<'g> for Triple<SPO, OPS, T>
+impl<'g, SPO: 'g, OPS: 'g, T> graph::Triple<'g> for Triple<SPO, OPS, T>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>,
           T: CompactTriple<u32>
@@ -604,18 +604,18 @@ impl<SPO, OPS, T, F> Iterator for GraphIterator<SPO, OPS, T, F>
     }
 }
 
-pub struct TripleRangeIterator<SPO, OPS, T, F>
+pub struct TripleRangeIterator<'g, SPO: 'g, OPS: 'g, T, F>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>,
           T: CompactTriple<u32>
 {
-    graph: Rc<GraphData<SPO, OPS>>,
+    graph: &'g GraphData<SPO, OPS>,
     pos: usize,
     end: T,
     phantom: PhantomData<F>,
 }
 
-impl<SPO, OPS, T, F> Iterator for TripleRangeIterator<SPO, OPS, T, F>
+impl<'g, SPO, OPS, T, F> Iterator for TripleRangeIterator<'g, SPO, OPS, T, F>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>,
           T: CompactTriple<u32>,
@@ -628,7 +628,7 @@ impl<SPO, OPS, T, F> Iterator for TripleRangeIterator<SPO, OPS, T, F>
             self.pos += 1;
             if triple < self.end {
                 Some(Triple {
-                    graph: self.graph.clone(),
+                    graph: &self.graph,
                     triple: triple,
                 })
             } else {
@@ -686,7 +686,7 @@ fn object_literal_predicate<OPS>(object: u32, predicate: u32) -> OPS
     OPS::triple(true, 0, predicate, TripleObjectType::Literal, object, 0)
 }
 
-type S<SPO, OPS> = TripleRangeIterator<SPO, OPS, SPO, SPOIndex<SPO, OPS>>;
+type S<'g, SPO, OPS> = TripleRangeIterator<'g, SPO, OPS, SPO, SPOIndex<SPO, OPS>>;
 
 impl<SPO, OPS> Graph<SPO, OPS>
     where SPO: CompactTriple<u32>,
@@ -969,7 +969,7 @@ struct BlankNodeInfo {
     times_an_object_with_blank_subject: u32,
 }
 
-impl<'g, SPO:'g, OPS:'g> graph::Graph<'g> for Graph<SPO, OPS>
+impl<'g, SPO: 'g, OPS: 'g> graph::Graph<'g> for Graph<SPO, OPS>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>
 {
@@ -978,9 +978,9 @@ impl<'g, SPO:'g, OPS:'g> graph::Graph<'g> for Graph<SPO, OPS>
     type ObjectPtr = ObjectPtr<SPO, OPS>;
     type SPOTriple = Triple<SPO, OPS, SPO>;
     type SPOIter = GraphIterator<SPO, OPS, SPO, SPOIndex<SPO, OPS>>;
-    type SPORangeIter = TripleRangeIterator<SPO, OPS, SPO, SPOIndex<SPO, OPS>>;
+    type SPORangeIter = TripleRangeIterator<'g, SPO, OPS, SPO, SPOIndex<SPO, OPS>>;
     type OPSTriple = Triple<SPO, OPS, OPS>;
-    type OPSRangeIter = TripleRangeIterator<SPO, OPS, OPS, OPSIndex<SPO, OPS>>;
+    type OPSRangeIter = TripleRangeIterator<'g, SPO, OPS, OPS, OPSIndex<SPO, OPS>>;
     fn iter(&self) -> Self::SPOIter {
         GraphIterator {
             graph: self.d.clone(),
