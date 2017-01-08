@@ -109,13 +109,13 @@ pub enum IteratorObject {
 
 #[derive (PartialOrd,Ord,PartialEq,Eq,Clone)]
 pub struct Dummy;
-impl graph::PredicatePtr for Dummy {
+impl<'t> graph::PredicatePtr<'t> for Dummy {
     fn iri(&self) -> &str {
         ""
     }
 }
-impl graph::SubjectPtr for Dummy {
-    fn iri(&self) -> Option<&str> {
+impl<'t> graph::SubjectPtr<'t> for Dummy {
+    fn iri(&self) -> Option<&'t str> {
         None
     }
 }

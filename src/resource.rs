@@ -1,6 +1,5 @@
 use graph;
 use graph::Triple;
-use std::rc::Rc;
 use ontology_adapter;
 use std;
 use resource;
@@ -10,36 +9,43 @@ pub trait ResourceBase<'g>: Eq + std::marker::Sized + Clone + Ord {
     type Graph: graph::Graph<'g>;
     type SubjectIter: Iterator<Item = Self> + iter::SortedIterator;
     fn new(this: <Self::Graph as graph::Graph<'g>>::ObjectPtr,
-           graph: &Rc<ontology_adapter::OntologyAdapter<'g, Self::Graph>>)
+           graph: &'g ontology_adapter::OntologyAdapter<'g, Self::Graph>)
            -> Self;
-    fn iter(graph: &Rc<ontology_adapter::OntologyAdapter<'g, Self::Graph>>) -> Self::SubjectIter;
-    fn this(&self) -> &<Self::Graph as graph::Graph<'g>>::ObjectPtr;
-    fn graph(&self) -> &ontology_adapter::OntologyAdapter<'g, Self::Graph>;
+    fn iter(graph: &'g ontology_adapter::OntologyAdapter<'g, Self::Graph>) -> Self::SubjectIter;
+    fn this(&self) -> <Self::Graph as graph::Graph<'g>>::ObjectPtr;
+    fn graph(&self) -> &'g ontology_adapter::OntologyAdapter<'g, Self::Graph>;
     fn predicate<R>(&self,
                     predicate: Option<<Self::Graph as graph::Graph<'g>>::PredicatePtr>)
                     -> ObjectIter<'g,R>
         where R: ResourceBase<'g, Graph = Self::Graph>;
-    fn iri(self) -> Option<IRI<Self>> {
-        self.graph().object_to_predicate(self.this().clone()).map(|_| IRI { resource: self })
+    fn iri(&self) -> Option<IRI<'g, Self>> {
+        self.graph().object_to_predicate(self.this().clone()).map(|_| {
+            IRI {
+                resource: self.clone(),
+                phantom: std::marker::PhantomData,
+            }
+        })
     }
 }
 
 // a wrapper around 'ResourceBase' that guarantees that the resource
 // is an iri and not a blank node or a literal
-pub struct IRI<R> {
-    resource: R,
-}
-
-impl<'g, R> IRI<R>
+pub struct IRI<'g, R: 'g>
     where R: ResourceBase<'g>
 {
-    pub fn iri(&'g self) -> &'g str {
+    resource: R,
+    phantom: std::marker::PhantomData<&'g R>,
+}
+
+impl<'g, R> IRI<'g, R>
+    where R: ResourceBase<'g>
+{
+    pub fn iri_(&self) -> &'g str {
         use graph::SubjectPtr;
         self.resource.this().iri().unwrap()
     }
 }
-
-impl<'g, R: ?Sized> std::ops::Deref for IRI<R>
+impl<'g, R: ?Sized> std::ops::Deref for IRI<'g, R>
     where R: ResourceBase<'g>
 {
     type Target = R;
@@ -50,31 +56,34 @@ impl<'g, R: ?Sized> std::ops::Deref for IRI<R>
     }
 }
 
-impl<'g, R> Clone for IRI<R>
+impl<'g, R> Clone for IRI<'g, R>
     where R: ResourceBase<'g>
 {
     fn clone(&self) -> Self {
-        IRI { resource: self.resource.clone() }
+        IRI {
+            resource: self.resource.clone(),
+            phantom: std::marker::PhantomData,
+        }
     }
 }
 
-impl<'g, R> PartialEq for IRI<R>
+impl<'g, R> PartialEq for IRI<'g, R>
     where R: ResourceBase<'g>
 {
-    fn eq(&self, rhs: &IRI<R>) -> bool {
+    fn eq(&self, rhs: &IRI<'g, R>) -> bool {
         self.resource.eq(&rhs.resource)
     }
 }
-impl<'g, R> Eq for IRI<R> where R: ResourceBase<'g> {}
+impl<'g, R> Eq for IRI<'g, R> where R: ResourceBase<'g> {}
 
-impl<'g, R> PartialOrd for IRI<R>
+impl<'g, R> PartialOrd for IRI<'g, R>
     where R: ResourceBase<'g>
 {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         self.resource.partial_cmp(&other.resource)
     }
 }
-impl<'g, R> Ord for IRI<R>
+impl<'g, R> Ord for IRI<'g, R>
     where R: ResourceBase<'g>
 {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
@@ -82,23 +91,26 @@ impl<'g, R> Ord for IRI<R>
     }
 }
 
-impl<'g, R> ResourceBase<'g> for IRI<R>
+impl<'g, R: 'g> ResourceBase<'g> for IRI<'g, R>
     where R: ResourceBase<'g>
 {
     type Graph = R::Graph;
     type SubjectIter = IRISubjectIter<'g, R>;
     fn new(this: <Self::Graph as graph::Graph<'g>>::ObjectPtr,
-           graph: &Rc<ontology_adapter::OntologyAdapter<'g, Self::Graph>>)
+           graph: &'g ontology_adapter::OntologyAdapter<'g, Self::Graph>)
            -> Self {
-        IRI { resource: R::new(this, graph) }
+        IRI {
+            resource: R::new(this, graph),
+            phantom: std::marker::PhantomData,
+        }
     }
-    fn iter(graph: &Rc<ontology_adapter::OntologyAdapter<'g, Self::Graph>>) -> Self::SubjectIter {
+    fn iter(graph: &'g ontology_adapter::OntologyAdapter<'g, Self::Graph>) -> Self::SubjectIter {
         IRISubjectIter { iter: R::iter(graph) }
     }
-    fn this(&self) -> &<<R as resource::ResourceBase<'g>>::Graph as graph::Graph<'g>>::ObjectPtr {
+    fn this(&self) -> <<R as resource::ResourceBase<'g>>::Graph as graph::Graph<'g>>::ObjectPtr {
         self.resource.this()
     }
-    fn graph(&self) -> &ontology_adapter::OntologyAdapter<'g, Self::Graph> {
+    fn graph(&self) -> &'g ontology_adapter::OntologyAdapter<'g, Self::Graph> {
         self.resource.graph()
     }
     fn predicate<O>(&self,
@@ -109,10 +121,10 @@ impl<'g, R> ResourceBase<'g> for IRI<R>
     }
 }
 
-pub struct ObjectIter<'g, R>
+pub struct ObjectIter<'g, R: 'g>
     where R: ResourceBase<'g>
 {
-    pub graph: Rc<ontology_adapter::OntologyAdapter<'g, R::Graph>>,
+    pub graph: &'g ontology_adapter::OntologyAdapter<'g, R::Graph>,
     pub iter: <R::Graph as graph::Graph<'g>>::SPORangeIter,
 }
 
@@ -130,10 +142,10 @@ impl<'g, R> Iterator for ObjectIter<'g, R>
 
 impl<'g, R> iter::SortedIterator for ObjectIter<'g, R> where R: ResourceBase<'g> {}
 
-pub struct SubjectIter<'g, R>
+pub struct SubjectIter<'g, R: 'g>
     where R: ResourceBase<'g>
 {
-    pub graph: Rc<ontology_adapter::OntologyAdapter<'g, R::Graph>>,
+    pub graph: &'g ontology_adapter::OntologyAdapter<'g, R::Graph>,
     pub iter: <R::Graph as graph::Graph<'g>>::OPSRangeIter,
 }
 
@@ -161,10 +173,10 @@ pub struct IRISubjectIter<'g, R>
     iter: R::SubjectIter,
 }
 
-impl<'g, R> Iterator for IRISubjectIter<'g, R>
+impl<'g, R: 'g> Iterator for IRISubjectIter<'g, R>
     where R: ResourceBase<'g>
 {
-    type Item = IRI<R>;
+    type Item = IRI<'g, R>;
     fn next(&mut self) -> Option<Self::Item> {
         while let Some(r) = self.iter.next() {
             if let Some(iri) = r.iri() {
@@ -175,7 +187,7 @@ impl<'g, R> Iterator for IRISubjectIter<'g, R>
     }
 }
 
-impl<'g, R> iter::SortedIterator for IRISubjectIter<'g, R> where R: ResourceBase<'g> {}
+impl<'g, R: 'g + ResourceBase<'g>> iter::SortedIterator for IRISubjectIter<'g, R> {}
 
 macro_rules! property{(
     $(#[$meta:meta])*
@@ -186,20 +198,24 @@ macro_rules! property{(
     $pos:expr) => {
 
 $(#[$meta])*
-pub trait $trait_name<'g>: resource::ResourceBase<'g> where
-          Self: std::marker::Sized
+pub trait $trait_name<'g>: resource::ResourceBase<'g>
+    where Self: std::marker::Sized
 {
     #[doc=$iri]
     fn property_iri() -> &'static str {
         $iri
     }
-    fn property_iri_ptr(&self) -> Option<<Self::Graph as graph::Graph<'g>>::PredicatePtr> {
+    fn property_iri_ptr(&self) -> Option<<Self::Graph as graph::Graph<'g>>::PredicatePtr>
+        where <Self as resource::ResourceBase<'g>>::Graph: 'g
+    {
         self.graph().class_iri($pos).map(|i|i.clone())
     }
     $(#[$meta])*
     #[doc=$iri]
     fn $function<G>(&self) -> resource::ObjectIter<'g,$range>
-        where $range: resource::ResourceBase<'g,Graph = Self::Graph>, G:graph::Graph<'g>
+        where $range: resource::ResourceBase<'g,Graph = Self::Graph>,
+              G: graph::Graph<'g>,
+              <Self as resource::ResourceBase<'g>>::Graph: 'g
     {
         resource::ResourceBase::predicate(self, self.property_iri_ptr())
     }
@@ -214,13 +230,13 @@ macro_rules! class{(
     $pos:expr) => {
 
 $(#[$meta])*
-pub struct $name<'g,G>
+pub struct $name<'g,G:'g>
     where G: graph::Graph<'g>
 {
     resource: G::ObjectPtr,
-    graph: std::rc::Rc<ontology_adapter::OntologyAdapter<'g,G>>,
+    graph: &'g ontology_adapter::OntologyAdapter<'g,G>,
 }
-impl<'g,G> $name<'g,G>
+impl<'g, G> $name<'g,G>
     where G: graph::Graph<'g>
 {
     #[doc=$iri]
@@ -231,16 +247,16 @@ impl<'g,G> $name<'g,G>
         self.graph.class_iri($pos).map(|i|i.clone())
     }
 }
-impl<'g,G> PartialEq for $name<'g,G>
+impl<'g, G> PartialEq for $name<'g,G>
     where G: graph::Graph<'g>
 {
     fn eq(&self, rhs: &$name<'g,G>) -> bool {
         self.resource.eq(&rhs.resource)
     }
 }
-impl<'g,G> Eq for $name<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> Eq for $name<'g,G> where G: graph::Graph<'g> {}
 
-impl<'g,G> Clone for $name<'g,G>
+impl<'g, G> Clone for $name<'g,G>
     where G: graph::Graph<'g>
 {
     fn clone(&self) -> Self {
@@ -250,32 +266,32 @@ impl<'g,G> Clone for $name<'g,G>
         }
     }
 }
-impl<'g,G> PartialOrd for $name<'g,G>
+impl<'g, G> PartialOrd for $name<'g,G>
      where G: graph::Graph<'g>
 {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         self.resource.partial_cmp(&other.resource)
     }
 }
-impl<'g,G> Ord for $name<'g,G> where G: graph::Graph<'g> {
+impl<'g, G> Ord for $name<'g,G> where G: graph::Graph<'g> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.resource.cmp(&other.resource)
     }
 }
 
-impl<'g, G> resource::ResourceBase<'g> for $name<'g,G>
+impl<'g, G:'g> resource::ResourceBase<'g> for $name<'g,G>
     where G: graph::Graph<'g>
 {
     type Graph = G;
     type SubjectIter = resource::SubjectIter<'g,Self>;
     fn new(resource: G::ObjectPtr,
-            graph: &std::rc::Rc<ontology_adapter::OntologyAdapter<'g,G>>) -> Self {
+            graph: &'g ontology_adapter::OntologyAdapter<'g,G>) -> Self {
         $name {
             resource: resource,
-            graph: graph.clone(),
+            graph: graph,
         }
     }
-    fn iter(graph: &std::rc::Rc<ontology_adapter::OntologyAdapter<'g,G>>)
+    fn iter(graph: &'g ontology_adapter::OntologyAdapter<'g,G>)
             -> resource::SubjectIter<'g,Self> {
         let a = graph.class_iri(0);
         let c = graph.class_iri($pos);
@@ -284,14 +300,14 @@ impl<'g, G> resource::ResourceBase<'g> for $name<'g,G>
             _ => graph.empty_ops_range()
         };
         resource::SubjectIter {
-            graph: graph.clone(),
+            graph: graph,
             iter: iter,
         }
     }
-    fn this(&self) -> &G::ObjectPtr {
-        &self.resource
+    fn this(&self) -> G::ObjectPtr {
+        self.resource.clone()
     }
-    fn graph(&self) -> &ontology_adapter::OntologyAdapter<'g,G> {
+    fn graph(&self) -> &'g ontology_adapter::OntologyAdapter<'g,G> {
         &self.graph
     }
 
@@ -301,13 +317,13 @@ impl<'g, G> resource::ResourceBase<'g> for $name<'g,G>
     {
         let iter = match predicate {
             None => self.graph.empty_spo_range(),
-            Some(ref predicate) => match self.graph().object_to_subject(self.this().clone()) {
+            Some(ref predicate) => match self.graph.object_to_subject(self.this().clone()) {
                 Some(ref subject) => self.graph.iter_s_p(subject.clone(), predicate.clone()),
                 None => self.graph.empty_spo_range(),
             }
         };
         resource::ObjectIter {
-            graph: self.graph.clone(),
+            graph: self.graph,
             iter: iter,
         }
     }
@@ -318,8 +334,8 @@ macro_rules! sub_class_of{(
     $subclass:ident,
     $class:ident) => {
 
-impl<'g,G> From<$subclass<'g,G>> for $class<G> where G: graph::Graph<'g> {
-    fn from(f: $subclass<'g,G>) -> Self {
+impl<'g, G> From<$subclass<'g, G>> for $class<G> where G: graph::Graph<'g> {
+    fn from(f: $subclass<'g, G>) -> Self {
         $class {
             iri: f.iri,
             graph: f.graph,
@@ -329,7 +345,7 @@ impl<'g,G> From<$subclass<'g,G>> for $class<G> where G: graph::Graph<'g> {
 
 }}
 
-pub fn adapter<'g, G>(graph: &std::rc::Rc<G>) -> ontology_adapter::OntologyAdapter<'g, G>
+pub fn adapter<'g, G: 'g>(graph: &'g G) -> ontology_adapter::OntologyAdapter<'g, G>
     where G: graph::Graph<'g>
 {
     let mut iris = Vec::with_capacity(7);

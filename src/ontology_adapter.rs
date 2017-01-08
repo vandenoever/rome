@@ -1,19 +1,18 @@
 use graph;
-use std;
 
-pub struct OntologyAdapter<'g,G>
+pub struct OntologyAdapter<'g, G: 'g>
     where G: graph::Graph<'g>
 {
-    graph: std::rc::Rc<G>,
+    graph: &'g G,
     iris: Vec<Option<G::PredicatePtr>>,
 }
 
-impl<'g,G> OntologyAdapter<'g,G>
+impl<'g, G> OntologyAdapter<'g, G>
     where G: graph::Graph<'g>
 {
-    pub fn new(graph: &std::rc::Rc<G>, iris: Vec<Option<G::PredicatePtr>>) -> OntologyAdapter<'g,G> {
+    pub fn new(graph: &'g G, iris: Vec<Option<G::PredicatePtr>>) -> OntologyAdapter<'g, G> {
         OntologyAdapter {
-            graph: graph.clone(),
+            graph: graph,
             iris: iris,
         }
     }

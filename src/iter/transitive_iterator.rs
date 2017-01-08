@@ -9,7 +9,7 @@ pub struct TransitiveIterator<I, J, F>
     where I: SortedIterator,
           I::Item: Ord + Clone,
           J: SortedIterator<Item = I::Item>,
-          F: FnMut(&J::Item) -> J
+          F: Fn(&J::Item) -> J
 {
     iter: Peekable<I>,
     iters: BTreeMap<I::Item, Peekable<J>>,
@@ -21,7 +21,7 @@ impl<I, J, F> TransitiveIterator<I, J, F>
           I::Item: Ord + Clone,
           J: SortedIterator<Item = I::Item>,
           J::Item: Ord + Clone,
-          F: FnMut(&J::Item) -> J
+          F: Fn(&J::Item) -> J
 {
     pub fn new(iter: I, f: F) -> TransitiveIterator<I, J, F> {
         TransitiveIterator {
@@ -99,7 +99,7 @@ impl<I, J, F> Iterator for TransitiveIterator<I, J, F>
           I::Item: Ord + Clone,
           J: SortedIterator<Item = I::Item>,
           J::Item: Ord + Clone,
-          F: FnMut(&J::Item) -> J
+          F: Fn(&J::Item) -> J
 {
     type Item = I::Item;
     fn next(&mut self) -> Option<Self::Item> {
@@ -118,6 +118,6 @@ impl<I, J, F> SortedIterator for TransitiveIterator<I, J, F>
           I::Item: Ord + Clone,
           J: SortedIterator<Item = I::Item>,
           J::Item: Ord + Clone,
-          F: FnMut(&J::Item) -> J
+          F: Fn(&J::Item) -> J
 {
 }

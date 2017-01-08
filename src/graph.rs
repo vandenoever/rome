@@ -1,6 +1,6 @@
 pub trait Graph<'g> {
-    type SubjectPtr: SubjectPtr;
-    type PredicatePtr: PredicatePtr;
+    type SubjectPtr: SubjectPtr<'g>;
+    type PredicatePtr: PredicatePtr<'g>;
     type ObjectPtr: ObjectPtr<'g>;
     type SPOTriple: Triple<'g, SubjectPtr = Self::SubjectPtr,
            PredicatePtr = Self::PredicatePtr,
@@ -11,31 +11,31 @@ pub trait Graph<'g> {
            PredicatePtr = Self::PredicatePtr,
            ObjectPtr = Self::ObjectPtr>;
     type OPSRangeIter: Iterator<Item = Self::OPSTriple>;
-    fn iter(&self) -> Self::SPOIter;
+    fn iter(&'g self) -> Self::SPOIter;
 
-    fn subject_ptr<'a, S>(&self, subject: S) -> Option<Self::SubjectPtr> where S: IntoSubject<'a>;
-    fn predicate_ptr<'a>(&self, predicate: &str) -> Option<Self::PredicatePtr>;
-    fn object_ptr<'a, O>(&self, object: O) -> Option<Self::ObjectPtr> where O: IntoObject<'a>;
-    fn object_to_subject(&self, object: Self::ObjectPtr) -> Option<Self::SubjectPtr>;
-    fn object_to_predicate(&self, object: Self::ObjectPtr) -> Option<Self::PredicatePtr>;
-    fn subject_to_object(&self, subject: Self::SubjectPtr) -> Self::ObjectPtr;
-    fn predicate_to_object(&self, predicate: Self::PredicatePtr) -> Self::ObjectPtr;
+    fn subject_ptr<'a, S>(&'g self, subject: S) -> Option<Self::SubjectPtr> where S: IntoSubject<'a>;
+    fn predicate_ptr<'a>(&'g self, predicate: &'a str) -> Option<Self::PredicatePtr>;
+    fn object_ptr<'a, O>(&'g self, object: O) -> Option<Self::ObjectPtr> where O: IntoObject<'a>;
+    fn object_to_subject(&'g self, object: Self::ObjectPtr) -> Option<Self::SubjectPtr>;
+    fn object_to_predicate(&'g self, object: Self::ObjectPtr) -> Option<Self::PredicatePtr>;
+    fn subject_to_object(&'g self, subject: Self::SubjectPtr) -> Self::ObjectPtr;
+    fn predicate_to_object(&'g self, predicate: Self::PredicatePtr) -> Self::ObjectPtr;
 
-    fn iter_s_p(&self,
+    fn iter_s_p(&'g self,
                 subject: Self::SubjectPtr,
                 predicate: Self::PredicatePtr)
                 -> Self::SPORangeIter;
-    fn iter_o_p(&self,
+    fn iter_o_p(&'g self,
                 object: Self::ObjectPtr,
                 predicate: Self::PredicatePtr)
                 -> Self::OPSRangeIter;
 
     /// iterator over all triples with the same subject and predicate
-    fn iter_subject_predicate(&self, subject: &Subject, predicate: &str) -> Self::SPORangeIter;
+    fn iter_subject_predicate(&'g self, subject: &Subject, predicate: &str) -> Self::SPORangeIter;
     /// iterator that returns no results
-    fn empty_spo_range(&self) -> Self::SPORangeIter;
+    fn empty_spo_range(&'g self) -> Self::SPORangeIter;
     /// iterator that returns no results
-    fn empty_ops_range(&self) -> Self::OPSRangeIter;
+    fn empty_ops_range(&'g self) -> Self::OPSRangeIter;
 
     /// return the number of triples in the graph
     fn len(&self) -> usize;
@@ -45,7 +45,7 @@ pub trait GraphCreator<'g> {
     type Graph: Graph<'g>;
     fn create_blank_node(&mut self) -> BlankNode;
     fn add_triple<'t,T>(&mut self, triple: &T) where T: Triple<'t>;
-    fn add<'b, S, O>(&mut self, subject: S, predicate: &str, object: O)
+    fn add<'a:'b,'b, S, O>(&'a mut self, subject: S, predicate: &str, object: O)
         where S: IntoSubject<'b>,
               O: IntoObject<'b>;
     fn collect(&mut self) -> Self::Graph;
@@ -54,8 +54,8 @@ pub trait GraphCreator<'g> {
 pub type BlankNode = (usize, usize);
 
 pub trait Triple<'g>: Eq {
-    type SubjectPtr: SubjectPtr;
-    type PredicatePtr: PredicatePtr;
+    type SubjectPtr: SubjectPtr<'g>;
+    type PredicatePtr: PredicatePtr<'g>;
     type ObjectPtr: ObjectPtr<'g>;
     fn subject(&self) -> Subject;
     fn subject_ptr(&self) -> Self::SubjectPtr;
@@ -70,13 +70,13 @@ pub trait Triple<'g>: Eq {
     }
 }
 
-pub trait PredicatePtr: Eq + Clone {
-    fn iri(&self) -> &str;
+pub trait PredicatePtr<'a>: Eq + Clone {
+    fn iri(&'a self) -> &'a str;
 }
-pub trait SubjectPtr: Eq + Clone {
-    fn iri(&self) -> Option<&str>;
+pub trait SubjectPtr<'g>: Eq + Clone {
+    fn iri(&self) -> Option<&'g str>;
 }
-pub trait ObjectPtr<'g>: SubjectPtr + Ord + IntoObject<'g> {
+pub trait ObjectPtr<'g>: SubjectPtr<'g> + Ord + IntoObject<'g> {
     fn literal(&self) -> Option<&str>;
 }
 

@@ -7,7 +7,6 @@ use std::fs;
 use std::io;
 use std::io::{Read, Write};
 use std::path::PathBuf;
-use std::rc::Rc;
 use std::collections::BTreeMap;
 use std::collections::HashSet;
 use rdfio::graph_writer;
@@ -15,7 +14,7 @@ use rdfio::graph::{Object, Graph, GraphCreator, Triple, SubjectPtr, ObjectPtr};
 use rdfio::triple_stream::*;
 use rdfio::triple128::*;
 use rdfio::namespaces::Namespaces;
-use rdfio::resource::{ResourceBase, IRI};
+use rdfio::resource::{ResourceBase, IRI, ObjectIter};
 use rdfio::ontology::classes::rdf::Property;
 use rdfio::ontology::classes::rdfs::Class;
 use rdfio::ontology::properties::rdfs::{Comment, Domain, Range, SubClassOf};
@@ -24,7 +23,7 @@ use rdfio::ontology_adapter;
 use rdfio::iter::TransitiveIterator;
 
 type MyGraph = graph_writer::Graph<Triple128SPO, Triple128OPS>;
-type OA = ontology_adapter::OntologyAdapter<MyGraph>;
+type OA<'g> = ontology_adapter::OntologyAdapter<'g, MyGraph>;
 type Writers = BTreeMap<Vec<u8>, Vec<u8>>;
 
 macro_rules! println_stderr(
@@ -40,12 +39,10 @@ struct Output {
     internal: bool,
 }
 
-struct OntoData<G>
-    where G: Graph
-{
+struct OntoData<'g> {
     o: Output,
-    classes: Vec<IRI<Class<G>>>,
-    properties: Vec<IRI<Property<G>>>,
+    classes: Vec<IRI<'g, Class<'g, MyGraph>>>,
+    properties: Vec<IRI<'g, Property<'g, MyGraph>>>,
     prefixes: Namespaces,
 }
 
@@ -90,15 +87,15 @@ fn comment_escape(str: &str) -> String {
     str.replace("\n", "")
 }
 
-fn write_impl_property<G, W>(class: &Class<G>,
-                             property: &Property<G>,
-                             mod_name: &str,
-                             prefixes: &Namespaces,
-                             done: &mut HashSet<String>,
-                             writer: &mut W)
-                             -> rdfio::Result<()>
+fn write_impl_property<'g, G, W>(class: &IRI<'g, Class<'g, G>>,
+                                 property: &IRI<'g, Property<'g, G>>,
+                                 mod_name: &str,
+                                 prefixes: &Namespaces,
+                                 done: &mut HashSet<String>,
+                                 writer: &mut W)
+                                 -> rdfio::Result<()>
     where W: Write,
-          G: Graph
+          G: Graph<'g>
 {
     if let Some(iri) = property.this().iri() {
         if done.contains(iri) {
@@ -108,13 +105,13 @@ fn write_impl_property<G, W>(class: &Class<G>,
             if let Some(domain) = class.this().iri() {
                 if let Some((_, domain)) = prefixes.find_prefix(domain) {
                     writer.write_all(
-                        format!("impl<G> {}::properties::{}::{} for {}<G> where G: graph::Graph {{}}\n",
+                        format!("impl<'g, G: 'g> {}::properties::{}::{}<'g> for {}<'g, G> where G: graph::Graph<'g> {{}}\n",
                             mod_name,
                             String::from_utf8_lossy(prop_prefix),
                             camel_case(prop),
                             camel_case(domain)).as_bytes())?;
                     writer.write_all(
-                        format!("impl<G> {}::properties::{}::{} for resource::IRI<{}<G>> where G: graph::Graph {{}}\n",
+                        format!("impl<'g, G: 'g> {}::properties::{}::{}<'g> for resource::IRI<'g, {}<'g, G>> where G: graph::Graph<'g> {{}}\n",
                             mod_name,
                             String::from_utf8_lossy(prop_prefix),
                             camel_case(prop),
@@ -127,14 +124,13 @@ fn write_impl_property<G, W>(class: &Class<G>,
     Ok(())
 }
 
-fn write_impl_properties<G, W>(class: &Class<G>,
-                               parent: &Class<G>,
-                               d: &OntoData<G>,
-                               done: &mut HashSet<String>,
-                               writer: &mut W)
-                               -> rdfio::Result<()>
-    where W: Write,
-          G: Graph
+fn write_impl_properties<'g, W>(class: &IRI<'g, Class<'g, MyGraph>>,
+                                parent: &Class<'g, MyGraph>,
+                                d: &OntoData<'g>,
+                                done: &mut HashSet<String>,
+                                writer: &mut W)
+                                -> rdfio::Result<()>
+    where W: Write
 {
     for property in d.properties.iter() {
         for domain in property.domain() {
@@ -153,7 +149,11 @@ const RDFS_SUB_CLASS_OF: &'static str = "http://www.w3.org/2000/01/rdf-schema#su
 const RDFS_CLASS: &'static str = "http://www.w3.org/2000/01/rdf-schema#Class";
 const RDF_TYPE: &'static str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 
-fn infer(graph: MyGraph) -> rdfio::Result<MyGraph> {
+fn closure<'g>(class: &Class<'g, MyGraph>) -> ObjectIter<'g, Class<'g, MyGraph>> {
+    class.sub_class_of()
+}
+
+fn infer(graph: &MyGraph) -> rdfio::Result<MyGraph> {
     // for every triple with rdfs:subClassOf infer that the subject and the
     // object are rdfs:Class instances
     let mut writer = graph_writer::GraphWriter::with_capacity(65000);
@@ -173,19 +173,22 @@ fn infer(graph: MyGraph) -> rdfio::Result<MyGraph> {
     for triple in graph.iter() {
         writer.add_triple(&triple);
     }
+    {
+        // make subClassOf entailment concrete
+        let oa: ontology_adapter::OntologyAdapter<MyGraph> = ontology::adapter(graph);
+        for class in Class::iter(&oa) {
+            // let i = TransitiveIterator::new(class.sub_class_of(),
+            //                                |class: &Class<MyGraph>| class.sub_class_of());
+            let i = TransitiveIterator::new(class.sub_class_of(), closure);
+            for parent in i {
+                writer.add(class.this().iri().unwrap(),
+                           RDFS_SUB_CLASS_OF,
+                           parent.this().iri().unwrap());
 
-    // make subClassOf entailment concrete
-    let g = Rc::new(graph);
-    let oa = Rc::new(ontology::adapter(&g));
-    for class in Class::iter(&oa) {
-        let i = TransitiveIterator::new(class.sub_class_of(),
-                                        |class: &Class<MyGraph>| class.sub_class_of());
-        for parent in i {
-            writer.add(class.this().iri().unwrap(),
-                       RDFS_SUB_CLASS_OF,
-                       parent.this().iri().unwrap());
+            }
         }
     }
+
     Ok(writer.collect().sort_blank_nodes())
 }
 
@@ -214,7 +217,7 @@ fn write_mod(o: &Output, iris: &Vec<String>) -> rdfio::Result<()> {
     Ok(())
 }
 
-fn load_files(inputs: &Vec<String>) -> rdfio::Result<(Namespaces, Rc<MyGraph>)> {
+fn load_files(inputs: &Vec<String>) -> rdfio::Result<(Namespaces, MyGraph)> {
     let mut writer = graph_writer::GraphWriter::with_capacity(65000);
     let mut prefixes = Namespaces::new();
     for input in inputs {
@@ -230,13 +233,14 @@ fn load_files(inputs: &Vec<String>) -> rdfio::Result<(Namespaces, Rc<MyGraph>)> 
         }
     }
     let graph = writer.collect();
-    let graph = infer(graph)?;
-    Ok((prefixes, Rc::new(graph)))
+    let graph = infer(&graph)?;
+    Ok((prefixes, graph))
 }
 
-fn write_comment<W, C>(r: &C, writer: &mut W) -> rdfio::Result<()>
+fn write_comment<'g, W, C>(r: &C, writer: &mut W) -> rdfio::Result<()>
     where W: Write,
-          C: Comment
+          C: 'g + Comment<'g>,
+          <C as rdfio::resource::ResourceBase<'g>>::Graph: 'g
 {
     for comment in r.comment() {
         if let Some(l) = comment.this().literal() {
@@ -247,16 +251,14 @@ fn write_comment<W, C>(r: &C, writer: &mut W) -> rdfio::Result<()>
     Ok(())
 }
 
-fn generate_classes<G>(d: &OntoData<G>, iris: &mut Vec<String>) -> rdfio::Result<()>
-    where G: Graph
-{
+fn generate_classes(d: &OntoData, iris: &mut Vec<String>) -> rdfio::Result<()> {
     let mut outputs = BTreeMap::new();
     for ns in d.prefixes.iter() {
         outputs.insert(Vec::from(ns.prefix()), Vec::new());
     }
     for class in d.classes.iter() {
-        let iri = class.iri();
-        if let Some((prefix, name)) = d.prefixes.find_prefix(iri) {
+        let iri = class.iri_();
+        if let Some((prefix, name)) = d.prefixes.find_prefix(&iri) {
             if let Some(mut writer) = outputs.get_mut(prefix) {
                 writer.write_all(b"\nclass!(\n/// **")?;
                 writer.write_all(prefix)?;
@@ -268,23 +270,20 @@ fn generate_classes<G>(d: &OntoData<G>, iris: &mut Vec<String>) -> rdfio::Result
                             camel_case(name), iris.len())
                         .as_bytes())?;
                 let mut done = HashSet::new();
-                write_impl_properties(&class, &class, d, &mut done, &mut writer)?;
+                write_impl_properties(class, class, d, &mut done, &mut writer)?;
                 iris.push(String::from(iri));
             }
         }
     }
     write_files(&d.o, &outputs, "classes", true)
 }
-
-fn generate_properties<G>(d: &OntoData<G>, iris: &mut Vec<String>) -> rdfio::Result<()>
-    where G: Graph
-{
+fn generate_properties(d: &OntoData, iris: &mut Vec<String>) -> rdfio::Result<()> {
     let mut outputs = BTreeMap::new();
     for ns in d.prefixes.iter() {
         outputs.insert(Vec::from(ns.prefix()), Vec::new());
     }
     for property in d.properties.iter() {
-        let iri = property.iri();
+        let iri = property.iri_();
         if let Some((prop_prefix, prop)) = d.prefixes.find_prefix(iri) {
             for range in property.range() {
                 if let Some((prefix, range)) =
@@ -297,11 +296,11 @@ fn generate_properties<G>(d: &OntoData<G>, iris: &mut Vec<String>) -> rdfio::Res
                         writer.write_all(b"**")?;
                         write_comment(property, writer)?;
                         writer.write_all(
-                                    format!("\n:\"{}\", {}, {},\n{}::classes::{}::{}<G>,\n{});\n",
-                                        iri, camel_case(prop),
-                                        snake_case(prop), d.o.mod_name,
-                                        String::from_utf8_lossy(prefix),
-                                        camel_case(range), iris.len()).as_bytes())?;
+ format!("\n:\"{}\", {}, {},\n{}::classes::{}::{}<G>,\n{});\n",
+ iri, camel_case(prop),
+ snake_case(prop), d.o.mod_name,
+ String::from_utf8_lossy(prefix),
+ camel_case(range), iris.len()).as_bytes())?;
                     }
                 }
             }
@@ -361,8 +360,8 @@ fn generate(output_dir: PathBuf,
             inputs: &Vec<String>)
             -> rdfio::Result<()> {
     let (prefixes, graph) = load_files(inputs)?;
-    let oa = Rc::new(ontology::adapter(&graph));
-
+    let oa = ontology::adapter(&graph);
+    let mut iris = Vec::new();
     let data = OntoData {
         o: Output {
             mod_name: mod_name,
@@ -374,7 +373,6 @@ fn generate(output_dir: PathBuf,
         prefixes: prefixes,
     };
 
-    let mut iris = Vec::new();
     // rdf:type is always needed
     iris.push(String::from(RDF_TYPE));
     generate_classes(&data, &mut iris)?;

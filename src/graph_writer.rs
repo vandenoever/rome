@@ -1,5 +1,4 @@
 use std::mem;
-use std::rc::Rc;
 use grammar;
 use graph;
 use string_collector::*;
@@ -281,7 +280,7 @@ impl<'g, SPO: 'g, OPS: 'g> graph::GraphCreator<'g> for GraphWriter<SPO, OPS>
         self.highest_blank_node += 1;
         (self.highest_blank_node as usize, 0)
     }
-    fn add<'b, S, O>(&mut self, subject: S, predicate: &str, object: O)
+    fn add<'a:'b,'b, S, O>(&'a mut self, subject: S, predicate: &str, object: O)
         where S: graph::IntoSubject<'b>,
               O: graph::IntoObject<'b>
     {
@@ -290,14 +289,14 @@ impl<'g, SPO: 'g, OPS: 'g> graph::GraphCreator<'g> for GraphWriter<SPO, OPS>
 }
 
 #[derive (Clone)]
-pub enum SubjectPtr<SPO, OPS>
+pub enum SubjectPtr<'g, SPO: 'g, OPS: 'g>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>
 {
-    IRI(Rc<GraphData<SPO, OPS>>, u32),
-    BlankNode(Rc<GraphData<SPO, OPS>>, u32),
+    IRI(&'g GraphData<SPO, OPS>, u32),
+    BlankNode(&'g GraphData<SPO, OPS>, u32),
 }
-impl<SPO, OPS> PartialEq for SubjectPtr<SPO, OPS>
+impl<'g, SPO, OPS> PartialEq for SubjectPtr<'g, SPO, OPS>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>
 {
@@ -309,16 +308,16 @@ impl<SPO, OPS> PartialEq for SubjectPtr<SPO, OPS>
         }
     }
 }
-impl<SPO, OPS> Eq for SubjectPtr<SPO, OPS>
+impl<'g, SPO, OPS> Eq for SubjectPtr<'g, SPO, OPS>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>
 {
 }
-impl<SPO, OPS> graph::SubjectPtr for SubjectPtr<SPO, OPS>
+impl<'g, SPO, OPS> graph::SubjectPtr<'g> for SubjectPtr<'g, SPO, OPS>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>
 {
-    fn iri(&self) -> Option<&str> {
+    fn iri(&self) -> Option<&'g str> {
         match self {
             &SubjectPtr::IRI(ref graph, iri) => Some(graph.strings.get(StringId { id: iri })),
             _ => None,
@@ -329,11 +328,11 @@ impl<SPO, OPS> graph::SubjectPtr for SubjectPtr<SPO, OPS>
 
 
 #[derive (Clone)]
-pub struct PredicatePtr<SPO, OPS>(Rc<GraphData<SPO, OPS>>, u32)
+pub struct PredicatePtr<'g, SPO: 'g, OPS: 'g>(&'g GraphData<SPO, OPS>, u32)
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>;
 
-impl<SPO, OPS> PartialEq for PredicatePtr<SPO, OPS>
+impl<'g, SPO, OPS> PartialEq for PredicatePtr<'g, SPO, OPS>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>
 {
@@ -341,12 +340,12 @@ impl<SPO, OPS> PartialEq for PredicatePtr<SPO, OPS>
         self.1 == other.1
     }
 }
-impl<SPO, OPS> Eq for PredicatePtr<SPO, OPS>
+impl<'g, SPO, OPS> Eq for PredicatePtr<'g, SPO, OPS>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>
 {
 }
-impl<SPO, OPS> graph::PredicatePtr for PredicatePtr<SPO, OPS>
+impl<'g, SPO, OPS> graph::PredicatePtr<'g> for PredicatePtr<'g, SPO, OPS>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>
 {
@@ -357,15 +356,15 @@ impl<SPO, OPS> graph::PredicatePtr for PredicatePtr<SPO, OPS>
 
 
 #[derive (Clone)]
-pub enum ObjectPtr<SPO, OPS>
+pub enum ObjectPtr<'g, SPO: 'g, OPS: 'g>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>
 {
-    BlankNode(Rc<GraphData<SPO, OPS>>, u32),
-    IRI(Rc<GraphData<SPO, OPS>>, u32),
-    Literal(Rc<GraphData<SPO, OPS>>, u32),
+    BlankNode(&'g GraphData<SPO, OPS>, u32),
+    IRI(&'g GraphData<SPO, OPS>, u32),
+    Literal(&'g GraphData<SPO, OPS>, u32),
 }
-impl<SPO, OPS> PartialEq for ObjectPtr<SPO, OPS>
+impl<'g, SPO, OPS> PartialEq for ObjectPtr<'g, SPO, OPS>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>
 {
@@ -378,12 +377,12 @@ impl<SPO, OPS> PartialEq for ObjectPtr<SPO, OPS>
         }
     }
 }
-impl<SPO, OPS> Eq for ObjectPtr<SPO, OPS>
+impl<'g, SPO, OPS> Eq for ObjectPtr<'g, SPO, OPS>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>
 {
 }
-impl<SPO, OPS> PartialOrd for ObjectPtr<SPO, OPS>
+impl<'g, SPO, OPS> PartialOrd for ObjectPtr<'g, SPO, OPS>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>
 {
@@ -391,7 +390,7 @@ impl<SPO, OPS> PartialOrd for ObjectPtr<SPO, OPS>
         Some(self.cmp(other))
     }
 }
-impl<SPO, OPS> Ord for ObjectPtr<SPO, OPS>
+impl<'g, SPO, OPS> Ord for ObjectPtr<'g, SPO, OPS>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>
 {
@@ -409,18 +408,18 @@ impl<SPO, OPS> Ord for ObjectPtr<SPO, OPS>
         }
     }
 }
-impl<SPO, OPS> graph::SubjectPtr for ObjectPtr<SPO, OPS>
+impl<'g, SPO, OPS> graph::SubjectPtr<'g> for ObjectPtr<'g, SPO, OPS>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>
 {
-    fn iri(&self) -> Option<&str> {
+    fn iri(&self) -> Option<&'g str> {
         match self {
             &ObjectPtr::IRI(ref graph, iri) => Some(graph.strings.get(StringId { id: iri })),
             _ => None,
         }
     }
 }
-impl<'g, SPO: 'g, OPS: 'g> graph::ObjectPtr<'g> for ObjectPtr<SPO, OPS>
+impl<'g, SPO: 'g, OPS: 'g> graph::ObjectPtr<'g> for ObjectPtr<'g, SPO, OPS>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>
 {
@@ -431,20 +430,20 @@ impl<'g, SPO: 'g, OPS: 'g> graph::ObjectPtr<'g> for ObjectPtr<SPO, OPS>
         }
     }
 }
-impl<'g, SPO: 'g, OPS: 'g> graph::IntoObject<'g> for ObjectPtr<SPO, OPS>
+impl<'g, SPO: 'g, OPS: 'g> graph::IntoObject<'g> for ObjectPtr<'g, SPO, OPS>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>
 {
     fn object(self) -> graph::Object<'g> {
         match self {
-            ObjectPtr::IRI(graph, a) => graph::Object::IRI(""),
-            ObjectPtr::BlankNode(_, a) => graph::Object::IRI(""),
-            ObjectPtr::Literal(_, a) => graph::Object::IRI(""),
+            ObjectPtr::IRI(_, _) => graph::Object::IRI(""),
+            ObjectPtr::BlankNode(_, _) => graph::Object::IRI(""),
+            ObjectPtr::Literal(_, _) => graph::Object::IRI(""),
         }
     }
 }
 
-pub struct Triple<'g, SPO, OPS, T>
+pub struct Triple<'g, SPO: 'g, OPS: 'g, T>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>,
           T: CompactTriple<u32>
@@ -453,7 +452,7 @@ pub struct Triple<'g, SPO, OPS, T>
     triple: T,
 }
 
-impl<SPO, OPS, T> PartialEq for Triple<SPO, OPS, T>
+impl<'g, SPO, OPS, T> PartialEq for Triple<'g, SPO, OPS, T>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>,
           T: CompactTriple<u32>
@@ -467,21 +466,21 @@ impl<SPO, OPS, T> PartialEq for Triple<SPO, OPS, T>
         self.object().eq(&other.object())
     }
 }
-impl<SPO, OPS, T> Eq for Triple<SPO, OPS, T>
+impl<'g, SPO, OPS, T> Eq for Triple<'g, SPO, OPS, T>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>,
           T: CompactTriple<u32>
 {
 }
 
-impl<'g, SPO: 'g, OPS: 'g, T> graph::Triple<'g> for Triple<SPO, OPS, T>
+impl<'g, SPO: 'g, OPS: 'g, T> graph::Triple<'g> for Triple<'g, SPO, OPS, T>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>,
           T: CompactTriple<u32>
 {
-    type SubjectPtr = SubjectPtr<SPO, OPS>;
-    type PredicatePtr = PredicatePtr<SPO, OPS>;
-    type ObjectPtr = ObjectPtr<SPO, OPS>;
+    type SubjectPtr = SubjectPtr<'g, SPO, OPS>;
+    type PredicatePtr = PredicatePtr<'g, SPO, OPS>;
+    type ObjectPtr = ObjectPtr<'g, SPO, OPS>;
     fn subject(&self) -> graph::Subject {
         if self.triple.subject_is_iri() {
             graph::Subject::IRI(self.graph.strings.get(StringId { id: self.triple.subject() }))
@@ -517,18 +516,18 @@ impl<'g, SPO: 'g, OPS: 'g, T> graph::Triple<'g> for Triple<SPO, OPS, T>
     }
     fn subject_ptr(&self) -> Self::SubjectPtr {
         if self.triple.subject_is_iri() {
-            SubjectPtr::IRI(self.graph.clone(), self.triple.subject())
+            SubjectPtr::IRI(self.graph, self.triple.subject())
         } else {
-            SubjectPtr::BlankNode(self.graph.clone(), self.triple.subject())
+            SubjectPtr::BlankNode(self.graph, self.triple.subject())
         }
     }
     fn object_ptr(&self) -> Self::ObjectPtr {
         if self.triple.object_is_iri() {
-            ObjectPtr::IRI(self.graph.clone(), self.triple.object())
+            ObjectPtr::IRI(self.graph, self.triple.object())
         } else if !self.triple.object_is_blank_node() {
-            ObjectPtr::Literal(self.graph.clone(), self.triple.object())
+            ObjectPtr::Literal(self.graph, self.triple.object())
         } else {
-            ObjectPtr::BlankNode(self.graph.clone(), self.triple.object())
+            ObjectPtr::BlankNode(self.graph, self.triple.object())
         }
     }
 }
@@ -573,23 +572,23 @@ impl<SPO, OPS> Index<SPO, OPS, OPS> for OPSIndex<SPO, OPS>
     }
 }
 
-pub struct GraphIterator<SPO, OPS, T, F>
+pub struct GraphIterator<'g, SPO: 'g, OPS: 'g, T, F>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>,
           T: CompactTriple<u32>
 {
-    graph: Rc<GraphData<SPO, OPS>>,
+    graph: &'g GraphData<SPO, OPS>,
     pos: usize,
     phantom: PhantomData<(T, F)>,
 }
 
-impl<SPO, OPS, T, F> Iterator for GraphIterator<SPO, OPS, T, F>
+impl<'g, SPO, OPS, T, F> Iterator for GraphIterator<'g, SPO, OPS, T, F>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>,
           T: CompactTriple<u32>,
           F: Index<SPO, OPS, T>
 {
-    type Item = Triple<SPO, OPS, T>;
+    type Item = Triple<'g, SPO, OPS, T>;
     fn next(&mut self) -> Option<Self::Item> {
         if self.pos < F::index(&self.graph).len() {
             let triple = F::index(&self.graph)[self.pos];
@@ -621,7 +620,7 @@ impl<'g, SPO, OPS, T, F> Iterator for TripleRangeIterator<'g, SPO, OPS, T, F>
           T: CompactTriple<u32>,
           F: Index<SPO, OPS, T>
 {
-    type Item = Triple<SPO, OPS, T>;
+    type Item = Triple<'g, SPO, OPS, T>;
     fn next(&mut self) -> Option<Self::Item> {
         if self.pos < F::index(&self.graph).len() {
             let triple = F::index(&self.graph)[self.pos];
@@ -701,7 +700,7 @@ impl<SPO, OPS> Graph<SPO, OPS>
             Err(pos) => pos,
         };
         TripleRangeIterator {
-            graph: self.d.clone(),
+            graph: &self.d,
             pos: pos,
             end: end,
             phantom: PhantomData,
@@ -713,7 +712,7 @@ impl<SPO, OPS> Graph<SPO, OPS>
     {
         let end = T::triple(true, 0, 0, TripleObjectType::BlankNode, 0, 0);
         TripleRangeIterator {
-            graph: self.d.clone(),
+            graph: &self.d,
             pos: self.d.spo.len(),
             end: end,
             phantom: PhantomData,
@@ -930,14 +929,14 @@ impl<SPO, OPS> Graph<SPO, OPS>
         ops.sort();
 
         Graph {
-            d: Rc::new(GraphData {
+            d: GraphData {
                 graph_id: self.d.graph_id,
                 strings: self.d.strings.clone(),
                 datatype_or_lang: self.d.datatype_or_lang.clone(),
                 spo: spo,
                 ops: ops,
                 highest_blank_node: self.d.highest_blank_node,
-            }),
+            },
         }
     }
 }
@@ -973,46 +972,46 @@ impl<'g, SPO: 'g, OPS: 'g> graph::Graph<'g> for Graph<SPO, OPS>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>
 {
-    type SubjectPtr = SubjectPtr<SPO, OPS>;
-    type PredicatePtr = PredicatePtr<SPO, OPS>;
-    type ObjectPtr = ObjectPtr<SPO, OPS>;
-    type SPOTriple = Triple<SPO, OPS, SPO>;
-    type SPOIter = GraphIterator<SPO, OPS, SPO, SPOIndex<SPO, OPS>>;
+    type SubjectPtr = SubjectPtr<'g, SPO, OPS>;
+    type PredicatePtr = PredicatePtr<'g, SPO, OPS>;
+    type ObjectPtr = ObjectPtr<'g, SPO, OPS>;
+    type SPOTriple = Triple<'g, SPO, OPS, SPO>;
+    type SPOIter = GraphIterator<'g, SPO, OPS, SPO, SPOIndex<SPO, OPS>>;
     type SPORangeIter = TripleRangeIterator<'g, SPO, OPS, SPO, SPOIndex<SPO, OPS>>;
-    type OPSTriple = Triple<SPO, OPS, OPS>;
+    type OPSTriple = Triple<'g, SPO, OPS, OPS>;
     type OPSRangeIter = TripleRangeIterator<'g, SPO, OPS, OPS, OPSIndex<SPO, OPS>>;
-    fn iter(&self) -> Self::SPOIter {
+    fn iter(&'g self) -> Self::SPOIter {
         GraphIterator {
-            graph: self.d.clone(),
+            graph: &self.d,
             pos: 0,
             phantom: PhantomData,
         }
     }
-    fn subject_ptr<'a, S>(&self, subject: S) -> Option<Self::SubjectPtr>
+    fn subject_ptr<'a, S>(&'g self, subject: S) -> Option<Self::SubjectPtr>
         where S: graph::IntoSubject<'a>
     {
         match subject.subject() {
             graph::Subject::IRI(iri) => {
-                self.d.strings.find(iri).map(|s| SubjectPtr::IRI(self.d.clone(), s.id))
+                self.d.strings.find(iri).map(|s| SubjectPtr::IRI(&self.d, s.id))
             }
             graph::Subject::BlankNode(b) if b.1 == self.d.graph_id => {
-                Some(SubjectPtr::BlankNode(self.d.clone(), b.0 as u32))
+                Some(SubjectPtr::BlankNode(&self.d, b.0 as u32))
             }
             _ => None,
         }
     }
-    fn predicate_ptr<'a>(&self, predicate: &str) -> Option<Self::PredicatePtr> {
-        self.d.strings.find(predicate).map(|s| PredicatePtr(self.d.clone(), s.id))
+    fn predicate_ptr<'a>(&'g self, predicate: &str) -> Option<Self::PredicatePtr> {
+        self.d.strings.find(predicate).map(|s| PredicatePtr(&self.d, s.id))
     }
-    fn object_ptr<'a, O>(&self, object: O) -> Option<Self::ObjectPtr>
+    fn object_ptr<'a, O>(&'g self, object: O) -> Option<Self::ObjectPtr>
         where O: graph::IntoObject<'a>
     {
         match object.object() {
             graph::Object::IRI(iri) => {
-                self.d.strings.find(iri).map(|s| ObjectPtr::IRI(self.d.clone(), s.id))
+                self.d.strings.find(iri).map(|s| ObjectPtr::IRI(&self.d, s.id))
             }
             graph::Object::BlankNode(b) if b.1 == self.d.graph_id => {
-                Some(ObjectPtr::BlankNode(self.d.clone(), b.0 as u32))
+                Some(ObjectPtr::BlankNode(&self.d, b.0 as u32))
             }
             _ => None,
         }
@@ -1039,7 +1038,7 @@ impl<'g, SPO: 'g, OPS: 'g> graph::Graph<'g> for Graph<SPO, OPS>
     fn predicate_to_object(&self, predicate: Self::PredicatePtr) -> Self::ObjectPtr {
         ObjectPtr::IRI(predicate.0, predicate.1)
     }
-    fn iter_s_p(&self,
+    fn iter_s_p(&'g self,
                 subject: Self::SubjectPtr,
                 predicate: Self::PredicatePtr)
                 -> Self::SPORangeIter {
@@ -1049,7 +1048,7 @@ impl<'g, SPO: 'g, OPS: 'g> graph::Graph<'g> for Graph<SPO, OPS>
         };
         self.iter_subject_predicate__(spo)
     }
-    fn iter_o_p(&self,
+    fn iter_o_p(&'g self,
                 object: Self::ObjectPtr,
                 predicate: Self::PredicatePtr)
                 -> Self::OPSRangeIter {
@@ -1060,16 +1059,16 @@ impl<'g, SPO: 'g, OPS: 'g> graph::Graph<'g> for Graph<SPO, OPS>
         };
         self.iter_object_predicate(ops)
     }
-    fn iter_subject_predicate(&self,
+    fn iter_subject_predicate(&'g self,
                               subject: &graph::Subject,
                               predicate: &str)
                               -> Self::SPORangeIter {
         self.iter_subject_predicate_(subject, predicate)
     }
-    fn empty_spo_range(&self) -> Self::SPORangeIter {
+    fn empty_spo_range(&'g self) -> Self::SPORangeIter {
         self.empty_range_iter()
     }
-    fn empty_ops_range(&self) -> Self::OPSRangeIter {
+    fn empty_ops_range(&'g self) -> Self::OPSRangeIter {
         self.empty_range_iter()
     }
     fn len(&self) -> usize {

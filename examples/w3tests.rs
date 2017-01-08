@@ -113,8 +113,8 @@ struct TestResult {
     info: String,
 }
 
-fn write_assertion<'a, W>(assertion: &'a Assertion, output: &mut W) -> rdfio::Result<()>
-    where W: GraphCreator
+fn write_assertion<'a, 'g, W>(assertion: &'a Assertion, output: &mut W) -> rdfio::Result<()>
+    where W: GraphCreator<'g>
 {
     let assertion_blank_node = output.create_blank_node();
     output.add(assertion_blank_node, RDF_TYPE, EARL_ASSERTION);
@@ -162,12 +162,12 @@ fn load_graph(data: &str, base: &str) -> rdfio::Result<MyGraph> {
     Ok(writer.collect().sort_blank_nodes())
 }
 
-fn read<T, F, R>(mut last: Option<T>,
-                 i: &mut Iterator<Item = T>,
-                 predicate: &str,
-                 convert: F)
-                 -> Result<(R, Option<T>), String>
-    where T: graph::Triple,
+fn read<'g, T, F, R>(mut last: Option<T>,
+                     i: &mut Iterator<Item = T>,
+                     predicate: &str,
+                     convert: F)
+                     -> Result<(R, Option<T>), String>
+    where T: graph::Triple<'g>,
           F: FnOnce(&graph::Object) -> Result<R, String>
 {
     last = last.or_else(|| i.next());
@@ -271,8 +271,8 @@ fn eval_result(r: &Assertion) {
     }
 }
 
-fn subject_to_string<T>(triple: &T) -> Rc<String>
-    where T: graph::Triple
+fn subject_to_string<'g, T>(triple: &T) -> Rc<String>
+    where T: graph::Triple<'g>
 {
     match triple.subject() {
         graph::Subject::IRI(iri) => Rc::new(String::from(iri)),

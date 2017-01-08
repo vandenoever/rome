@@ -1,9 +1,8 @@
 pub mod classes;
 pub mod properties;
-use std;
 use graph;
 use ontology_adapter;
-pub fn adapter<'g, G>(graph: &std::rc::Rc<G>) -> ontology_adapter::OntologyAdapter<'g,G>
+pub fn adapter<'g, G>(graph: &'g G) -> ontology_adapter::OntologyAdapter<'g, G>
     where G: graph::Graph<'g>
 {
     let mut iris = Vec::with_capacity(33);
