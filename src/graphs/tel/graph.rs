@@ -6,15 +6,17 @@ use super::string_collector::*;
 use super::triple::*;
 use super::iter::*;
 
+#[derive (Debug)]
 pub struct GraphData<SPO, OPS>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>
 {
-    pub graph_id: usize,
+    pub graph_id: u32,
     pub strings: StringCollection,
     pub datatype_or_lang: StringCollection,
     pub spo: Vec<SPO>,
     pub ops: Vec<OPS>,
+    pub lang_string_datatype_id: u32,
     pub highest_blank_node: u32,
 }
 
@@ -148,24 +150,19 @@ impl<SPO, OPS> Graph<SPO, OPS>
         self.range_iter(triple, end)
     }
     /// look up the iri or create a triple from the blank node
-    fn create_subject_triple(&self, subject: &graph::Subject) -> Option<SPO> {
-        match *subject {
-            graph::Subject::IRI(iri) => {
-                match self.d.strings.find(iri) {
-                    None => None,
-                    Some(id) => Some(subject_iri(id.id)),
-                }
+    fn create_subject_triple<'g>(&self, subject: &BlankNodeOrIRI<'g, SPO, OPS>) -> Option<SPO> {
+        match subject {
+            &graph::BlankNodeOrIRI::BlankNode(ref bn, _) if bn.graph_id == self.d.graph_id => {
+                Some(subject_blank_node(bn.node))
             }
-            graph::Subject::BlankNode((n, graph)) if graph == self.d.graph_id => {
-                Some(subject_blank_node(n as u32))
-            }
+            &graph::BlankNodeOrIRI::IRI(ref iri) => Some(subject_iri(iri.iri)),
             _ => None,
         }
     }
     /// iterator over all triples with the same subject
-    pub fn iter_subject(&self,
-                        subject: &graph::Subject)
-                        -> TripleRangeIterator<SPO, OPS, SPO, SPOIndex<SPO, OPS>> {
+    pub fn iter_subject<'g>(&self,
+                            subject: &BlankNodeOrIRI<'g, SPO, OPS>)
+                            -> TripleRangeIterator<SPO, OPS, SPO, SPOIndex<SPO, OPS>> {
         match self.create_subject_triple(subject) {
             Some(triple) => self.iter_subject_(triple),
             None => self.empty_range_iter(),
@@ -236,10 +233,11 @@ impl<SPO, OPS> Graph<SPO, OPS>
         self.range_iter(triple, end)
     }
     /// iterator over all triples with the same subject and predicate
-    pub fn iter_subject_predicate_(&self,
-                                   subject: &graph::Subject,
-                                   predicate: &str)
-                                   -> TripleRangeIterator<SPO, OPS, SPO, SPOIndex<SPO, OPS>> {
+    pub fn iter_subject_predicate_<'g>
+        (&self,
+         subject: &BlankNodeOrIRI<'g, SPO, OPS>,
+         predicate: &str)
+         -> TripleRangeIterator<SPO, OPS, SPO, SPOIndex<SPO, OPS>> {
         match self.create_subject_triple(subject) {
             Some(mut triple) => {
                 match self.d.strings.find(predicate) {
@@ -360,6 +358,7 @@ impl<SPO, OPS> Graph<SPO, OPS>
                 spo: spo,
                 ops: ops,
                 highest_blank_node: self.d.highest_blank_node,
+                lang_string_datatype_id: self.d.lang_string_datatype_id,
             },
         }
     }
@@ -409,9 +408,9 @@ impl<'g, SPO: 'g, OPS: 'g> graph::Graph<'g> for Graph<SPO, OPS>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>
 {
-    type SubjectPtr = SubjectPtr<'g, SPO, OPS>;
-    type PredicatePtr = PredicatePtr<'g, SPO, OPS>;
-    type ObjectPtr = ObjectPtr<'g, SPO, OPS>;
+    type BlankNodePtr = BlankNodePtr<'g, SPO, OPS>;
+    type IRIPtr = IRIPtr<'g, SPO, OPS>;
+    type LiteralPtr = LiteralPtr<'g, SPO, OPS>;
     type SPOTriple = Triple<'g, SPO, OPS, SPO>;
     type SPOIter = GraphIterator<'g, SPO, OPS, SPO, SPOIndex<SPO, OPS>>;
     type SPORangeIter = TripleRangeIterator<'g, SPO, OPS, SPO, SPOIndex<SPO, OPS>>;
@@ -424,83 +423,42 @@ impl<'g, SPO: 'g, OPS: 'g> graph::Graph<'g> for Graph<SPO, OPS>
             phantom: PhantomData,
         }
     }
-    fn subject_ptr<'a, S>(&'g self, subject: S) -> Option<Self::SubjectPtr>
-        where S: graph::IntoSubject<'a>
-    {
-        match subject.subject() {
-            graph::Subject::IRI(iri) => {
-                self.d.strings.find(iri).map(|s| SubjectPtr::IRI(&self.d, s.id))
+    fn find_iri<'a>(&'g self, iri: &str) -> Option<Self::IRIPtr> {
+        self.d.strings.find(iri).map(|s| {
+            IRIPtr {
+                graph: &self.d,
+                iri: s.id,
             }
-            graph::Subject::BlankNode(b) if b.1 == self.d.graph_id => {
-                Some(SubjectPtr::BlankNode(&self.d, b.0 as u32))
-            }
-            _ => None,
-        }
-    }
-    fn predicate_ptr<'a>(&'g self, predicate: &str) -> Option<Self::PredicatePtr> {
-        self.d.strings.find(predicate).map(|s| PredicatePtr(&self.d, s.id))
-    }
-    fn object_ptr<'a, O>(&'g self, object: O) -> Option<Self::ObjectPtr>
-        where O: graph::IntoObject<'a>
-    {
-        match object.object() {
-            graph::Object::IRI(iri) => {
-                self.d.strings.find(iri).map(|s| ObjectPtr::IRI(&self.d, s.id))
-            }
-            graph::Object::BlankNode(b) if b.1 == self.d.graph_id => {
-                Some(ObjectPtr::BlankNode(&self.d, b.0 as u32))
-            }
-            _ => None,
-        }
-    }
-    fn object_to_subject(&self, object: Self::ObjectPtr) -> Option<Self::SubjectPtr> {
-        match object {
-            ObjectPtr::IRI(graph, iri) => Some(SubjectPtr::IRI(graph, iri)),
-            ObjectPtr::BlankNode(graph, bn) => Some(SubjectPtr::BlankNode(graph, bn)),
-            _ => None,
-        }
-    }
-    fn object_to_predicate(&self, object: Self::ObjectPtr) -> Option<Self::PredicatePtr> {
-        match object {
-            ObjectPtr::IRI(graph, iri) => Some(PredicatePtr(graph, iri)),
-            _ => None,
-        }
-    }
-    fn subject_to_object(&self, subject: Self::SubjectPtr) -> Self::ObjectPtr {
-        match subject {
-            SubjectPtr::IRI(graph, iri) => ObjectPtr::IRI(graph, iri),
-            SubjectPtr::BlankNode(graph, bn) => ObjectPtr::BlankNode(graph, bn),
-        }
-    }
-    fn predicate_to_object(&self, predicate: Self::PredicatePtr) -> Self::ObjectPtr {
-        ObjectPtr::IRI(predicate.0, predicate.1)
+        })
     }
     fn iter_s_p(&'g self,
-                subject: Self::SubjectPtr,
-                predicate: Self::PredicatePtr)
+                subject: BlankNodeOrIRI<'g, SPO, OPS>,
+                predicate: IRIPtr<'g, SPO, OPS>)
                 -> Self::SPORangeIter {
         let spo = match subject {
-            SubjectPtr::IRI(_, iri) => subject_iri_predicate(iri, predicate.1),
-            SubjectPtr::BlankNode(_, bn) => subject_blank_node_predicate(bn, predicate.1),
+            graph::BlankNodeOrIRI::BlankNode(bn, _) => {
+                subject_blank_node_predicate(bn.node, predicate.iri)
+            }
+            graph::BlankNodeOrIRI::IRI(iri) => subject_iri_predicate(iri.iri, predicate.iri),
         };
         self.iter_subject_predicate__(spo)
     }
     fn iter_o_p(&'g self,
-                object: Self::ObjectPtr,
-                predicate: Self::PredicatePtr)
+                object: Resource<'g, SPO, OPS>,
+                predicate: IRIPtr<'g, SPO, OPS>)
                 -> Self::OPSRangeIter {
         let ops = match object {
-            ObjectPtr::IRI(_, iri) => object_iri_predicate(iri, predicate.1),
-            ObjectPtr::BlankNode(_, bn) => object_blank_node_predicate(bn, predicate.1),
-            ObjectPtr::Literal(_, l) => object_literal_predicate(l, predicate.1),
+            graph::Resource::BlankNode(bn,_) => object_blank_node_predicate(bn.node, predicate.iri),
+            graph::Resource::IRI(iri) => object_iri_predicate(iri.iri, predicate.iri),
+            graph::Resource::Literal(l) => object_literal_predicate(l.lexical, predicate.iri),
         };
         self.iter_object_predicate(ops)
     }
     fn iter_subject_predicate(&'g self,
-                              subject: &graph::Subject,
+                              subject: BlankNodeOrIRI<'g, SPO, OPS>,
                               predicate: &str)
                               -> Self::SPORangeIter {
-        self.iter_subject_predicate_(subject, predicate)
+        self.iter_subject_predicate_(&subject, predicate)
     }
     fn empty_spo_range(&'g self) -> Self::SPORangeIter {
         self.empty_range_iter()

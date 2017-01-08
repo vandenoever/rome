@@ -1,31 +1,37 @@
-use graph;
+use graph::*;
 
 pub struct OntologyAdapter<'g, G: 'g>
-    where G: graph::Graph<'g>
+    where G: Graph<'g>
 {
     graph: &'g G,
-    iris: Vec<Option<G::PredicatePtr>>,
+    iris: Vec<Option<G::IRIPtr>>,
 }
 
 impl<'g, G> OntologyAdapter<'g, G>
-    where G: graph::Graph<'g>
+    where G: Graph<'g>
 {
-    pub fn new(graph: &'g G, iris: Vec<Option<G::PredicatePtr>>) -> OntologyAdapter<'g, G> {
+    pub fn new(graph: &'g G, iris: Vec<Option<G::IRIPtr>>) -> OntologyAdapter<'g, G> {
         OntologyAdapter {
             graph: graph,
             iris: iris,
         }
     }
-    pub fn class_iri(&self, i: usize) -> Option<&G::PredicatePtr> {
+    pub fn class_iri(&self, i: usize) -> Option<&G::IRIPtr> {
         match self.iris.get(i) {
             Some(&Some(ref p)) => Some(p),
             _ => None,
         }
     }
-    pub fn iter_s_p(&self, subject: G::SubjectPtr, predicate: G::PredicatePtr) -> G::SPORangeIter {
+    pub fn iter_s_p(&self,
+                    subject: BlankNodeOrIRI<'g, G::BlankNodePtr, G::IRIPtr>,
+                    predicate: G::IRIPtr)
+                    -> G::SPORangeIter {
         self.graph.iter_s_p(subject, predicate)
     }
-    pub fn iter_o_p(&self, object: G::ObjectPtr, predicate: G::PredicatePtr) -> G::OPSRangeIter {
+    pub fn iter_o_p(&self,
+                    object: Resource<'g, G::BlankNodePtr, G::IRIPtr, G::LiteralPtr>,
+                    predicate: G::IRIPtr)
+                    -> G::OPSRangeIter {
         self.graph.iter_o_p(object, predicate)
     }
     pub fn empty_spo_range(&self) -> G::SPORangeIter {
@@ -33,7 +39,7 @@ impl<'g, G> OntologyAdapter<'g, G>
     }
     pub fn empty_ops_range(&self) -> G::OPSRangeIter {
         self.graph.empty_ops_range()
-    }
+    }/*
     pub fn object_to_subject(&self, object: G::ObjectPtr) -> Option<G::SubjectPtr> {
         self.graph.object_to_subject(object)
     }
@@ -45,5 +51,5 @@ impl<'g, G> OntologyAdapter<'g, G>
     }
     pub fn predicate_to_object(&self, predicate: G::PredicatePtr) -> G::ObjectPtr {
         self.graph.predicate_to_object(predicate)
-    }
+    }*/
 }

@@ -10,7 +10,7 @@ use std::io;
 use std::io::{Read, Write};
 use std::path::Path;
 use rdfio::io::{TurtleParser, write_turtle};
-use rdfio::graph::{Object, Graph, GraphCreator, Triple};
+use rdfio::graph::{IRIPtr, Resource, Graph, GraphCreator, Triple};
 use rdfio::graphs::tel;
 use rdfio::namespaces::Namespaces;
 
@@ -60,14 +60,14 @@ fn infer(graph: &MyGraph) -> rdfio::Result<MyGraph> {
     // for every triple with rdfs:subClassOf infer that the subject and the
     // object are rdfs:Class instances
     let mut writer = tel::GraphCreator::with_capacity(65000);
-    for triple in graph.iter().filter(|triple| triple.predicate() == RDFS_SUB_CLASS_OF) {
-        writer.add(triple.subject(), RDF_TYPE, RDFS_CLASS);
+    for triple in graph.iter().filter(|triple| triple.predicate().as_str() == RDFS_SUB_CLASS_OF) {
+        writer.add_iri_iri(triple.subject().as_iri().unwrap().clone(), RDF_TYPE, RDFS_CLASS);
         match triple.object() {
-            Object::IRI(iri) => {
-                writer.add(iri, RDF_TYPE, RDFS_CLASS);
+            Resource::BlankNode(b, _) => {
+                writer.add_blank_iri(b, RDF_TYPE, RDFS_CLASS);
             }
-            Object::BlankNode(b) => {
-                writer.add(b, RDF_TYPE, RDFS_CLASS);
+            Resource::IRI(iri) => {
+                writer.add_iri_iri(iri, RDF_TYPE, RDFS_CLASS);
             }
             _ => {}
         }

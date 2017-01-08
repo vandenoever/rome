@@ -11,7 +11,7 @@ use std::collections::BTreeMap;
 use std::collections::HashSet;
 use rdfio::graphs::tel;
 use rdfio::io::TurtleParser;
-use rdfio::graph::{Object, Graph, GraphCreator, Triple, SubjectPtr, ObjectPtr};
+use rdfio::graph::{Graph, GraphCreator, Triple, IRIPtr, LiteralPtr, Resource};
 use rdfio::namespaces::Namespaces;
 use rdfio::resource::{ResourceBase, IRI, ObjectIter};
 use rdfio::ontology::classes::rdf::Property;
@@ -96,28 +96,25 @@ fn write_impl_property<'g, G, W>(class: &IRI<'g, Class<'g, G>>,
     where W: Write,
           G: Graph<'g>
 {
-    if let Some(iri) = property.this().iri() {
-        if done.contains(iri) {
-            return Ok(());
-        }
-        if let Some((prop_prefix, prop)) = prefixes.find_prefix(iri) {
-            if let Some(domain) = class.this().iri() {
-                if let Some((_, domain)) = prefixes.find_prefix(domain) {
-                    writer.write_all(
-                        format!("impl<'g, G: 'g> {}::properties::{}::{}<'g> for {}<'g, G> where G: graph::Graph<'g> {{}}\n",
-                            mod_name,
-                            String::from_utf8_lossy(prop_prefix),
-                            camel_case(prop),
-                            camel_case(domain)).as_bytes())?;
-                    writer.write_all(
-                        format!("impl<'g, G: 'g> {}::properties::{}::{}<'g> for resource::IRI<'g, {}<'g, G>> where G: graph::Graph<'g> {{}}\n",
-                            mod_name,
-                            String::from_utf8_lossy(prop_prefix),
-                            camel_case(prop),
-                            camel_case(domain)).as_bytes())?;
-                    done.insert(String::from(iri));
-                }
-            }
+    let iri = property.as_str();
+    if done.contains(iri) {
+        return Ok(());
+    }
+    if let Some((prop_prefix, prop)) = prefixes.find_prefix(iri) {
+        if let Some((_, domain)) = prefixes.find_prefix(class.as_str()) {
+            writer.write_all(
+                    format!("impl<'g, G: 'g> {}::properties::{}::{}<'g> for {}<'g, G> where G: graph::Graph<'g> {{}}\n",
+                        mod_name,
+                        String::from_utf8_lossy(prop_prefix),
+                        camel_case(prop),
+                        camel_case(domain)).as_bytes())?;
+            writer.write_all(
+                    format!("impl<'g, G: 'g> {}::properties::{}::{}<'g> for resource::IRI<'g, {}<'g, G>> where G: graph::Graph<'g> {{}}\n",
+                        mod_name,
+                        String::from_utf8_lossy(prop_prefix),
+                        camel_case(prop),
+                        camel_case(domain)).as_bytes())?;
+            done.insert(String::from(iri));
         }
     }
     Ok(())
@@ -156,14 +153,17 @@ fn infer(graph: &MyGraph) -> rdfio::Result<MyGraph> {
     // for every triple with rdfs:subClassOf infer that the subject and the
     // object are rdfs:Class instances
     let mut writer = tel::GraphCreator::with_capacity(65000);
-    for triple in graph.iter().filter(|triple| triple.predicate() == RDFS_SUB_CLASS_OF) {
-        writer.add(triple.subject(), RDF_TYPE, RDFS_CLASS);
+    for triple in graph.iter().filter(|triple| triple.predicate().as_str() == RDFS_SUB_CLASS_OF) {
+        // blank nodes will panic
+        writer.add_iri_iri(triple.subject().as_iri().unwrap().clone(),
+                           RDF_TYPE,
+                           RDFS_CLASS);
         match triple.object() {
-            Object::IRI(iri) => {
-                writer.add(iri, RDF_TYPE, RDFS_CLASS);
+            Resource::BlankNode(b, _) => {
+                writer.add_blank_iri(b, RDF_TYPE, RDFS_CLASS);
             }
-            Object::BlankNode(b) => {
-                writer.add(b, RDF_TYPE, RDFS_CLASS);
+            Resource::IRI(iri) => {
+                writer.add_iri_iri(iri, RDF_TYPE, RDFS_CLASS);
             }
             _ => {}
         }
@@ -180,10 +180,9 @@ fn infer(graph: &MyGraph) -> rdfio::Result<MyGraph> {
             //                                |class: &Class<MyGraph>| class.sub_class_of());
             let i = TransitiveIterator::new(class.sub_class_of(), closure);
             for parent in i {
-                writer.add(class.this().iri().unwrap(),
-                           RDFS_SUB_CLASS_OF,
-                           parent.this().iri().unwrap());
-
+                writer.add_iri_iri(class.this().as_iri().unwrap().clone(),
+                                   RDFS_SUB_CLASS_OF,
+                                   parent.this().as_iri().unwrap().clone());
             }
         }
     }
@@ -196,7 +195,6 @@ fn write_mod(o: &Output, iris: &Vec<String>) -> rdfio::Result<()> {
     let mut mod_rs = fs::File::create(path)?;
     mod_rs.write_all(b"pub mod classes;\n")?;
     mod_rs.write_all(b"pub mod properties;\n")?;
-    mod_rs.write_all(b"use std;\n")?;
     if o.internal {
         mod_rs.write_all(b"use graph;\n")?;
         mod_rs.write_all(b"use ontology_adapter;\n")?;
@@ -204,13 +202,13 @@ fn write_mod(o: &Output, iris: &Vec<String>) -> rdfio::Result<()> {
         mod_rs.write_all(b"use rdfio::graph;\n")?;
         mod_rs.write_all(b"use rdfio::ontology_adapter;\n")?;
     }
-    mod_rs.write_all(b"pub fn adapter<G>(graph: &std::rc::Rc<G>) -> ontology_adapter::OntologyAdapter<G>
-    where G: graph::Graph
+    mod_rs.write_all(b"pub fn adapter<'g, G>(graph: &'g G) -> ontology_adapter::OntologyAdapter<'g, G>
+    where G: graph::Graph<'g>
 {
     let mut iris = Vec::with_capacity(")?;
     mod_rs.write_all(format!("{});\n", iris.len()).as_bytes())?;
     for iri in iris {
-        mod_rs.write_all(format!("    iris.push(graph.predicate_ptr(\"{}\"));\n", iri).as_bytes())?;
+        mod_rs.write_all(format!("    iris.push(graph.find_iri(\"{}\"));\n", iri).as_bytes())?;
     }
     mod_rs.write_all(b"    ontology_adapter::OntologyAdapter::new(graph, iris)\n}\n")?;
     Ok(())
@@ -242,9 +240,9 @@ fn write_comment<'g, W, C>(r: &C, writer: &mut W) -> rdfio::Result<()>
           <C as rdfio::resource::ResourceBase<'g>>::Graph: 'g
 {
     for comment in r.comment() {
-        if let Some(l) = comment.this().literal() {
+        if let Some(l) = comment.this().as_literal() {
             writer.write_all(b"\n/// ")?;
-            writer.write_all(comment_escape(l).as_bytes())?;
+            writer.write_all(comment_escape(l.as_str()).as_bytes())?;
         }
     }
     Ok(())
@@ -256,8 +254,8 @@ fn generate_classes(d: &OntoData, iris: &mut Vec<String>) -> rdfio::Result<()> {
         outputs.insert(Vec::from(ns.prefix()), Vec::new());
     }
     for class in d.classes.iter() {
-        let iri = class.iri_();
-        if let Some((prefix, name)) = d.prefixes.find_prefix(&iri) {
+        let iri = class.as_str();
+        if let Some((prefix, name)) = d.prefixes.find_prefix(iri) {
             if let Some(mut writer) = outputs.get_mut(prefix) {
                 writer.write_all(b"\nclass!(\n/// **")?;
                 writer.write_all(prefix)?;
@@ -282,11 +280,11 @@ fn generate_properties(d: &OntoData, iris: &mut Vec<String>) -> rdfio::Result<()
         outputs.insert(Vec::from(ns.prefix()), Vec::new());
     }
     for property in d.properties.iter() {
-        let iri = property.iri_();
+        let iri = property.as_str();
         if let Some((prop_prefix, prop)) = d.prefixes.find_prefix(iri) {
             for range in property.range() {
                 if let Some((prefix, range)) =
-                    range.this().iri().and_then(|i| d.prefixes.find_prefix(i)) {
+                    range.this().as_iri().and_then(|i| d.prefixes.find_prefix(i.as_str())) {
                     if let Some(mut writer) = outputs.get_mut(prop_prefix) {
                         writer.write_all(b"\nproperty!(\n/// **")?;
                         writer.write_all(prop_prefix)?;
@@ -295,7 +293,7 @@ fn generate_properties(d: &OntoData, iris: &mut Vec<String>) -> rdfio::Result<()
                         writer.write_all(b"**")?;
                         write_comment(property, writer)?;
                         writer.write_all(
- format!("\n:\"{}\", {}, {},\n{}::classes::{}::{}<G>,\n{});\n",
+ format!("\n:\"{}\", {}, {},\n{}::classes::{}::{}<'g, G>,\n{});\n",
  iri, camel_case(prop),
  snake_case(prop), d.o.mod_name,
  String::from_utf8_lossy(prefix),

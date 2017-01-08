@@ -1,41 +1,222 @@
+use std::fmt::Debug;
+use std::marker::PhantomData;
 use iter::sorted_iterator::SortedIterator;
+use constants;
+
+pub trait BlankNodePtr<'g>: Ord + Copy + Debug {
+    // todo: make graph_id into a trait so ensure that it is unique at runtime
+    fn graph_id(&self) -> u32;
+    fn node_id(&self) -> u32;
+    fn to_blank_node_or_iri<I>(&self) -> BlankNodeOrIRI<'g, Self, I>
+        where I: IRIPtr<'g>
+    {
+        BlankNodeOrIRI::BlankNode(self.clone(), PhantomData)
+    }
+    fn to_resource<I, L>(&self) -> Resource<'g, Self, I, L>
+        where I: IRIPtr<'g>,
+              L: LiteralPtr<'g>
+    {
+        Resource::BlankNode(self.clone(), PhantomData)
+    }
+}
+pub trait IRIPtr<'g>: Ord + Clone + Debug {
+    fn as_str(&self) -> &str;
+    fn to_blank_node_or_iri<B>(&self) -> BlankNodeOrIRI<'g, B, Self>
+        where B: BlankNodePtr<'g>
+    {
+        BlankNodeOrIRI::IRI(self.clone())
+    }
+    fn to_resource<B, L>(&self) -> Resource<'g, B, Self, L>
+        where B: BlankNodePtr<'g>,
+              L: LiteralPtr<'g>
+    {
+        Resource::IRI(self.clone())
+    }
+}
+pub trait LiteralPtr<'g>: Ord + Clone + Debug {
+    fn as_str(&self) -> &str;
+    fn datatype(&self) -> &str;
+    fn language(&self) -> Option<&str>;
+    fn to_resource<B, I>(&self) -> Resource<'g, B, I, Self>
+        where B: BlankNodePtr<'g>,
+              I: IRIPtr<'g>
+    {
+        Resource::Literal(self.clone())
+    }
+}
+#[derive(PartialEq,Eq,PartialOrd,Ord,Clone,Debug)]
+pub enum BlankNodeOrIRI<'g, B: 'g, I: 'g>
+    where B: BlankNodePtr<'g>,
+          I: IRIPtr<'g>
+{
+    BlankNode(B, PhantomData<&'g u32>),
+    IRI(I),
+}
+impl<'g, B, I> BlankNodeOrIRI<'g, B, I>
+    where B: BlankNodePtr<'g>,
+          I: IRIPtr<'g>
+{
+    pub fn as_iri(&self) -> Option<&I> {
+        match self {
+            &BlankNodeOrIRI::IRI(ref t) => Some(t),
+            _ => None,
+        }
+    }
+    pub fn to_resource<L>(&self) -> Resource<'g, B, I, L>
+        where L: LiteralPtr<'g>
+    {
+        match self {
+            &BlankNodeOrIRI::BlankNode(ref t, _) => Resource::BlankNode(t.clone(), PhantomData),
+            &BlankNodeOrIRI::IRI(ref t) => Resource::IRI(t.clone()),
+        }
+    }
+}
+#[derive(PartialEq,Eq,PartialOrd,Ord,Clone,Debug)]
+pub enum IRIOrLiteral<'g, I: 'g, L: 'g>
+    where I: IRIPtr<'g>,
+          L: LiteralPtr<'g>,
+          L: LiteralPtr<'g>
+{
+    IRI(I, PhantomData<&'g u32>),
+    Literal(L),
+}
+impl<'g, I, L> IRIOrLiteral<'g, I, L>
+    where I: IRIPtr<'g>,
+          L: LiteralPtr<'g>,
+          L: LiteralPtr<'g>
+{
+    pub fn as_iri(&self) -> Option<&I> {
+        match self {
+            &IRIOrLiteral::IRI(ref t, _) => Some(t),
+            _ => None,
+        }
+    }
+    pub fn as_literal(&self) -> Option<&L> {
+        match self {
+            &IRIOrLiteral::Literal(ref t) => Some(t),
+            _ => None,
+        }
+    }
+    pub fn to_resource<B>(&self) -> Resource<'g, B, I, L>
+        where B: BlankNodePtr<'g>
+    {
+        match self {
+            &IRIOrLiteral::IRI(ref t, _) => Resource::IRI(t.clone()),
+            &IRIOrLiteral::Literal(ref t) => Resource::Literal(t.clone()),
+        }
+    }
+}
+#[derive(PartialEq,Eq,PartialOrd,Ord,Clone,Debug)]
+pub enum Resource<'g, B: 'g, I: 'g, L: 'g>
+    where B: BlankNodePtr<'g>,
+          I: IRIPtr<'g>,
+          L: LiteralPtr<'g>
+{
+    BlankNode(B, PhantomData<&'g u32>),
+    IRI(I),
+    Literal(L),
+}
+impl<'g, B, I, L> Resource<'g, B, I, L>
+    where B: BlankNodePtr<'g>,
+          I: IRIPtr<'g>,
+          L: LiteralPtr<'g>
+{
+    pub fn as_iri(&self) -> Option<&I> {
+        match self {
+            &Resource::IRI(ref t) => Some(t),
+            _ => None,
+        }
+    }
+    pub fn as_literal(&self) -> Option<&L> {
+        match self {
+            &Resource::Literal(ref t) => Some(t),
+            _ => None,
+        }
+    }
+    pub fn to_blank_node_or_iri(&self) -> Option<BlankNodeOrIRI<'g, B, I>> {
+        match self {
+            &Resource::BlankNode(ref t, _) => {
+                Some(BlankNodeOrIRI::BlankNode(t.clone(), PhantomData))
+            }
+            &Resource::IRI(ref t) => Some(BlankNodeOrIRI::IRI(t.clone())),
+            _ => None,
+        }
+    }
+}
+
+pub trait Triple<'g, B, I, L>
+    where B: BlankNodePtr<'g>,
+          I: IRIPtr<'g>,
+          L: LiteralPtr<'g>
+{
+    fn subject(&self) -> BlankNodeOrIRI<'g, B, I>;
+    fn predicate(&self) -> I;
+    fn object(&self) -> Resource<'g, B, I, L>;
+}
+
+pub trait IntoIRIPtr<'a> {
+    fn iri<I>(self) -> I where I: IRIPtr<'a>;
+}
+
+pub trait GraphCreator<'g> {
+    type Graph: Graph<'g>;
+    fn create_blank_node(&mut self) -> <Self::Graph as Graph<'g>>::BlankNodePtr;
+    fn add_triple<'h, T, B: 'h, I: 'h, L: 'h>(&mut self, triple: &T)
+        where T: Triple<'h, B, I, L>,
+              B: BlankNodePtr<'h>,
+              I: IRIPtr<'h>,
+              L: LiteralPtr<'h>;
+    fn add_blank_blank<'p, P>(&mut self, subject: <Self::Graph as Graph<'g>>::BlankNodePtr,
+            predicate: P,
+            object: <Self::Graph as Graph<'g>>::BlankNodePtr)
+        where P: IRIPtr<'p>;
+    fn add_blank_iri<'p, 'o, P, O>(&mut self, subject: <Self::Graph as Graph<'g>>::BlankNodePtr, predicate: P, object: O)
+        where P: IRIPtr<'p>,
+              O: IRIPtr<'o>;
+    fn add_blank_literal<'p, 'o, P, O>(&mut self, subject: <Self::Graph as Graph<'g>>::BlankNodePtr, predicate: P, object: O)
+        where P: IRIPtr<'p>,
+              O: LiteralPtr<'o>;
+    fn add_iri_blank<'s, 'p, S, P>(&mut self, subject: S, predicate: P, object: <Self::Graph as Graph<'g>>::BlankNodePtr)
+        where S: IRIPtr<'s>,
+              P: IRIPtr<'p>;
+    fn add_iri_iri<'s, 'p, 'o, S, P, O>(&mut self, subject: S, predicate: P, object: O)
+        where S: IRIPtr<'s>,
+              P: IRIPtr<'p>,
+              O: IRIPtr<'o>;
+    fn add_iri_literal<'s, 'p, 'o, S, P, O>(&mut self, subject: S, predicate: P, object: O)
+        where S: IRIPtr<'s>,
+              P: IRIPtr<'p>,
+              O: LiteralPtr<'o>;
+    fn collect(&mut self) -> Self::Graph;
+}
 
 pub trait Graph<'g> {
-    type SubjectPtr: SubjectPtr<'g>;
-    type PredicatePtr: PredicatePtr<'g>;
-    type ObjectPtr: ObjectPtr<'g>;
-    type SPOTriple: Triple<'g,
-           SubjectPtr = Self::SubjectPtr,
-           PredicatePtr = Self::PredicatePtr,
-           ObjectPtr = Self::ObjectPtr> + Ord;
+    type BlankNodePtr: BlankNodePtr<'g>;
+    type IRIPtr: IRIPtr<'g>;
+    type LiteralPtr: LiteralPtr<'g>;
+    type SPOTriple: Triple<'g, Self::BlankNodePtr, Self::IRIPtr, Self::LiteralPtr> + Ord;
     type SPOIter: SortedIterator<Item = Self::SPOTriple>;
     type SPORangeIter: SortedIterator<Item = Self::SPOTriple>;
-    type OPSTriple: Triple<'g,
-           SubjectPtr = Self::SubjectPtr,
-           PredicatePtr = Self::PredicatePtr,
-           ObjectPtr = Self::ObjectPtr> + Ord;
+    type OPSTriple: Triple<'g, Self::BlankNodePtr, Self::IRIPtr, Self::LiteralPtr> + Ord;
     type OPSRangeIter: SortedIterator<Item = Self::OPSTriple>;
     fn iter(&'g self) -> Self::SPOIter;
 
-    fn subject_ptr<'a, S>(&'g self, subject: S) -> Option<Self::SubjectPtr> where S: IntoSubject<'a>;
-    fn predicate_ptr<'a>(&'g self, predicate: &'a str) -> Option<Self::PredicatePtr>;
-    fn object_ptr<'a, O>(&'g self, object: O) -> Option<Self::ObjectPtr> where O: IntoObject<'a>;
-    fn object_to_subject(&'g self, object: Self::ObjectPtr) -> Option<Self::SubjectPtr>;
-    fn object_to_predicate(&'g self, object: Self::ObjectPtr) -> Option<Self::PredicatePtr>;
-    fn subject_to_object(&'g self, subject: Self::SubjectPtr) -> Self::ObjectPtr;
-    fn predicate_to_object(&'g self, predicate: Self::PredicatePtr) -> Self::ObjectPtr;
+    fn find_iri<'a>(&'g self, iri: &'a str) -> Option<Self::IRIPtr>;
 
     fn iter_s_p(&'g self,
-                subject: Self::SubjectPtr,
-                predicate: Self::PredicatePtr)
+                subject: BlankNodeOrIRI<'g, Self::BlankNodePtr, Self::IRIPtr>,
+                predicate: Self::IRIPtr)
                 -> Self::SPORangeIter;
     fn iter_o_p(&'g self,
-                object: Self::ObjectPtr,
-                predicate: Self::PredicatePtr)
+                object: Resource<'g, Self::BlankNodePtr, Self::IRIPtr, Self::LiteralPtr>,
+                predicate: Self::IRIPtr)
                 -> Self::OPSRangeIter;
 
     /// iterator over all triples with the same subject and predicate
-    fn iter_subject_predicate(&'g self, subject: &Subject, predicate: &str) -> Self::SPORangeIter;
+    fn iter_subject_predicate(&'g self,
+                              subject: BlankNodeOrIRI<'g, Self::BlankNodePtr, Self::IRIPtr>,
+                              predicate: &str)
+                              -> Self::SPORangeIter;
     /// iterator that returns no results
     fn empty_spo_range(&'g self) -> Self::SPORangeIter;
     /// iterator that returns no results
@@ -45,176 +226,35 @@ pub trait Graph<'g> {
     fn len(&self) -> usize;
 }
 
-pub trait GraphCreator<'g> {
-    type Graph: Graph<'g>;
-    fn create_blank_node(&mut self) -> BlankNode;
-    fn add_triple<'t, T>(&mut self, triple: &T) where T: Triple<'t>;
-    fn add<'a: 'b, 'b, S, O>(&'a mut self, subject: S, predicate: &str, object: O)
-        where S: IntoSubject<'b>,
-              O: IntoObject<'b>;
-    fn collect(&mut self) -> Self::Graph;
-}
-
-pub type BlankNode = (usize, usize);
-
-pub trait Triple<'g>: Eq {
-    type SubjectPtr: SubjectPtr<'g>;
-    type PredicatePtr: PredicatePtr<'g>;
-    type ObjectPtr: ObjectPtr<'g>;
-    fn subject(&self) -> Subject;
-    fn subject_ptr(&self) -> Self::SubjectPtr;
-    fn predicate(&self) -> &str;
-    fn predicate_ptr(&self) -> Self::PredicatePtr;
-    fn object(&self) -> Object;
-    fn object_ptr(&self) -> Self::ObjectPtr;
-    fn eq<'a, Rhs>(&self, other: &Rhs) -> bool
-        where Rhs: Triple<'a>
-    {
-        self.subject().eq(&other.subject()) && self.predicate().eq(other.predicate()) &&
-        self.object().eq(&other.object())
+impl<'g> IRIPtr<'g> for &'g str {
+    fn as_str(&self) -> &str {
+        *self
     }
 }
-
-pub trait PredicatePtr<'a>: Eq + Clone {
-    fn iri(&'a self) -> &'a str;
-}
-pub trait SubjectPtr<'g>: Eq + Clone {
-    fn iri(&self) -> Option<&'g str>;
-}
-pub trait ObjectPtr<'g>: SubjectPtr<'g> + Ord + IntoObject<'g> {
-    fn literal(&self) -> Option<&str>;
-}
-
-#[derive(PartialEq,Eq,Hash,Clone,Copy,PartialOrd,Ord,Debug)]
-pub enum Subject<'a> {
-    IRI(&'a str),
-    BlankNode(BlankNode),
-}
-
-#[derive(PartialEq,Eq,Hash,Clone,PartialOrd,Ord,Debug)]
-pub struct Literal<'a> {
-    pub lexical: &'a str,
-    pub datatype: &'a str,
-    pub language: Option<&'a str>,
-}
-
-#[derive(PartialEq,Eq,Hash,Clone,PartialOrd,Ord,Debug)]
-pub enum Object<'a> {
-    IRI(&'a str),
-    BlankNode(BlankNode),
-    Literal(Literal<'a>),
-}
-
-pub trait IntoSubject<'a> {
-    fn subject(self) -> Subject<'a>;
-}
-pub trait IntoObject<'a> {
-    fn object(self) -> Object<'a>;
-}
-
-impl<'a> IntoSubject<'a> for Subject<'a> {
-    fn subject(self) -> Subject<'a> {
-        self
+impl<'g> IRIPtr<'g> for String {
+    fn as_str(&self) -> &str {
+        self.as_str()
     }
 }
-impl<'a> IntoSubject<'a> for &'a str {
-    fn subject(self) -> Subject<'a> {
-        Subject::IRI(self)
+impl<'g> LiteralPtr<'g> for &'g str {
+    fn as_str(&self) -> &str {
+        *self
+    }
+    fn datatype(&self) -> &str {
+        constants::XSD_STRING
+    }
+    fn language(&self) -> Option<&str> {
+        None
     }
 }
-impl<'a> IntoSubject<'a> for BlankNode {
-    fn subject(self) -> Subject<'a> {
-        Subject::BlankNode(self)
+impl<'g> LiteralPtr<'g> for String {
+    fn as_str(&self) -> &str {
+        self.as_str()
     }
-}
-impl<'a> IntoObject<'a> for Object<'a> {
-    fn object(self) -> Object<'a> {
-        self
+    fn datatype(&self) -> &str {
+        constants::XSD_STRING
     }
-}
-impl<'a> IntoObject<'a> for &'a str {
-    fn object(self) -> Object<'a> {
-        Object::IRI(self)
-    }
-}
-impl<'a> IntoObject<'a> for BlankNode {
-    fn object(self) -> Object<'a> {
-        Object::BlankNode(self)
-    }
-}
-impl<'a> IntoObject<'a> for Literal<'a> {
-    fn object(self) -> Object<'a> {
-        Object::Literal(self)
-    }
-}
-impl<'a> IntoObject<'a> for Subject<'a> {
-    fn object(self) -> Object<'a> {
-        Subject::into(self)
-    }
-}
-
-pub struct SubjectClone {
-    iri: String,
-    subject: SubjectCloneEnum,
-}
-
-enum SubjectCloneEnum {
-    IRI,
-    BlankNode(BlankNode),
-}
-
-impl SubjectClone {
-    pub fn new() -> SubjectClone {
-        SubjectClone {
-            iri: String::new(),
-            subject: SubjectCloneEnum::IRI,
-        }
-    }
-    pub fn assign(&mut self, s: &Subject) {
-        self.iri.clear();
-        match s {
-            &Subject::IRI(iri) => {
-                self.iri.push_str(iri);
-                self.subject = SubjectCloneEnum::IRI
-            }
-            &Subject::BlankNode(b) => self.subject = SubjectCloneEnum::BlankNode(b),
-        };
-    }
-}
-
-impl<'a> PartialEq<Subject<'a>> for SubjectClone {
-    fn eq(&self, s: &Subject) -> bool {
-        match (&self.subject, s) {
-            (&SubjectCloneEnum::IRI, &Subject::IRI(iri)) => self.iri == iri,
-            (&SubjectCloneEnum::BlankNode(b1), &Subject::BlankNode(b2)) => b1 == b2,
-            _ => false,
-        }
-    }
-}
-impl<'a> From<Subject<'a>> for SubjectClone {
-    fn from(s: Subject<'a>) -> SubjectClone {
-        match s {
-            Subject::IRI(iri) => {
-                SubjectClone {
-                    iri: String::from(iri),
-                    subject: SubjectCloneEnum::IRI,
-                }
-            }
-            Subject::BlankNode(b) => {
-                SubjectClone {
-                    iri: String::new(),
-                    subject: SubjectCloneEnum::BlankNode(b),
-                }
-            }
-        }
-    }
-}
-
-impl<'a> From<Subject<'a>> for Object<'a> {
-    fn from(s: Subject<'a>) -> Object<'a> {
-        match s {
-            Subject::IRI(iri) => Object::IRI(iri),
-            Subject::BlankNode(b) => Object::BlankNode(b),
-        }
+    fn language(&self) -> Option<&str> {
+        None
     }
 }

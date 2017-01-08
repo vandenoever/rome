@@ -3,9 +3,11 @@ use std::marker::PhantomData;
 use std::mem;
 use rand;
 use graph;
+use constants;
 use super::compact_triple::*;
 use super::string_collector::*;
 use super::graph::*;
+use super::triple::*;
 #[cfg(test)]
 use super::triple64::*;
 
@@ -20,6 +22,7 @@ pub struct GraphWriter<SPO, OPS>
     prev_predicate: Option<(String, StringId)>,
     prev_datatype: Option<(String, StringId)>,
     prev_lang: Option<(String, StringId)>,
+    lang_string_datatype_id: StringId,
     highest_blank_node: u32,
     phantom: PhantomData<OPS>,
 }
@@ -69,14 +72,17 @@ impl<SPO, OPS> GraphWriter<SPO, OPS>
           OPS: CompactTriple<u32>
 {
     pub fn with_capacity(capacity: usize) -> GraphWriter<SPO, OPS> {
+        let mut dlc = StringCollector::with_capacity(capacity);
+        let lang_string_datatype_id = dlc.add_string(constants::RDF_LANG_STRING);
         GraphWriter {
             string_collector: StringCollector::with_capacity(capacity),
-            datatype_lang_collector: StringCollector::with_capacity(capacity),
+            datatype_lang_collector: dlc,
             triples: Vec::new(),
             prev_subject_iri: None,
             prev_predicate: None,
             prev_datatype: None,
             prev_lang: None,
+            lang_string_datatype_id: lang_string_datatype_id,
             highest_blank_node: 0,
             phantom: PhantomData,
         }
@@ -90,15 +96,15 @@ impl<SPO, OPS> GraphWriter<SPO, OPS>
         let t = SPO::triple(true, s.id, p.id, ot, o, d);
         self.triples.push(t);
     }
-    pub fn add_iri_blank(&mut self, subject: &str, predicate: &str, object: u32) {
+    fn add_iri_blank(&mut self, subject: &str, predicate: &str, object: u32) {
         self.highest_blank_node = cmp::max(self.highest_blank_node, object);
         self.add_s_iri(subject, predicate, TripleObjectType::BlankNode, object, 0);
     }
-    pub fn add_iri_iri(&mut self, subject: &str, predicate: &str, object: &str) {
+    fn add_iri_iri(&mut self, subject: &str, predicate: &str, object: &str) {
         let o = self.string_collector.add_string(object);
         self.add_s_iri(subject, predicate, TripleObjectType::IRI, o.id, 0);
     }
-    pub fn add_iri_lit(&mut self, subject: &str, predicate: &str, object: &str, datatype: &str) {
+    fn add_iri_lit(&mut self, subject: &str, predicate: &str, object: &str, datatype: &str) {
         let o = self.string_collector.add_string(object);
         let d = check_prev(datatype,
                            &mut self.prev_datatype,
@@ -106,7 +112,7 @@ impl<SPO, OPS> GraphWriter<SPO, OPS>
             .id;
         self.add_s_iri(subject, predicate, TripleObjectType::Literal, o.id, d);
     }
-    pub fn add_iri_lit_lang(&mut self, subject: &str, predicate: &str, object: &str, lang: &str) {
+    fn add_iri_lit_lang(&mut self, subject: &str, predicate: &str, object: &str, lang: &str) {
         let o = self.string_collector.add_string(object);
         let l = check_prev(lang, &mut self.prev_lang, &mut self.datatype_lang_collector).id;
         self.add_s_iri(subject, predicate, TripleObjectType::LiteralLang, o.id, l);
@@ -117,15 +123,15 @@ impl<SPO, OPS> GraphWriter<SPO, OPS>
         let t = SPO::triple(false, s, p.id, ot, o, d);
         self.triples.push(t);
     }
-    pub fn add_blank_blank(&mut self, subject: u32, predicate: &str, object: u32) {
+    fn add_blank_blank<'a>(&mut self, subject: u32, predicate: &'a str, object: u32) {
         self.highest_blank_node = cmp::max(self.highest_blank_node, object);
         self.add_s_blank(subject, predicate, TripleObjectType::BlankNode, object, 0);
     }
-    pub fn add_blank_iri(&mut self, subject: u32, predicate: &str, object: &str) {
+    fn add_blank_iri(&mut self, subject: u32, predicate: &str, object: &str) {
         let o = self.string_collector.add_string(object);
         self.add_s_blank(subject, predicate, TripleObjectType::IRI, o.id, 0);
     }
-    pub fn add_blank_lit(&mut self, subject: u32, predicate: &str, object: &str, datatype: &str) {
+    fn add_blank_lit(&mut self, subject: u32, predicate: &str, object: &str, datatype: &str) {
         let o = self.string_collector.add_string(object);
         let d = check_prev(datatype,
                            &mut self.prev_datatype,
@@ -133,57 +139,69 @@ impl<SPO, OPS> GraphWriter<SPO, OPS>
             .id;
         self.add_s_blank(subject, predicate, TripleObjectType::Literal, o.id, d);
     }
-    pub fn add_blank_lit_lang(&mut self, subject: u32, predicate: &str, object: &str, lang: &str) {
+    fn add_blank_lit_lang(&mut self, subject: u32, predicate: &str, object: &str, lang: &str) {
         let o = self.string_collector.add_string(object);
         let l = check_prev(lang, &mut self.prev_lang, &mut self.datatype_lang_collector).id;
         self.add_s_blank(subject, predicate, TripleObjectType::LiteralLang, o.id, l);
     }
-    fn add_(&mut self, subject: graph::Subject, predicate: &str, object: graph::Object) {
+    fn add_<'t, B, I, L>(&mut self,
+                         subject: graph::BlankNodeOrIRI<'t, B, I>,
+                         predicate: I,
+                         object: graph::Resource<'t, B, I, L>)
+        where B: graph::BlankNodePtr<'t>,
+              I: graph::IRIPtr<'t>,
+              L: graph::LiteralPtr<'t>
+    {
         match subject {
-            graph::Subject::IRI(subject) => {
+            graph::BlankNodeOrIRI::BlankNode(subject, _) => {
                 match object {
-                    graph::Object::IRI(object) => {
-                        self.add_iri_iri(subject, predicate, object);
+                    graph::Resource::BlankNode(object, _) => {
+                        self.add_blank_blank(subject.node_id(),
+                                             predicate.as_str(),
+                                             object.node_id());
                     }
-                    graph::Object::BlankNode(object) => {
-                        self.add_iri_blank(subject, predicate, object.0 as u32);
+                    graph::Resource::IRI(object) => {
+                        self.add_blank_iri(subject.node_id(), predicate.as_str(), object.as_str());
                     }
-                    graph::Object::Literal(object) => {
-                        match object.language {
+                    graph::Resource::Literal(object) => {
+                        match object.language() {
                             None => {
-                                self.add_iri_lit(subject,
-                                                 predicate,
-                                                 object.lexical,
-                                                 object.datatype);
+                                self.add_blank_lit(subject.node_id(),
+                                                   predicate.as_str(),
+                                                   object.as_str(),
+                                                   object.datatype());
                             }
                             Some(lang) => {
-                                self.add_iri_lit_lang(subject, predicate, object.lexical, lang);
+                                self.add_blank_lit_lang(subject.node_id(),
+                                                        predicate.as_str(),
+                                                        object.as_str(),
+                                                        lang);
                             }
                         }
                     }
                 }
             }
-            graph::Subject::BlankNode(subject) => {
+            graph::BlankNodeOrIRI::IRI(subject) => {
                 match object {
-                    graph::Object::IRI(object) => {
-                        self.add_blank_iri(subject.0 as u32, predicate, object);
+                    graph::Resource::BlankNode(object, _) => {
+                        self.add_iri_blank(subject.as_str(), predicate.as_str(), object.node_id());
                     }
-                    graph::Object::BlankNode(object) => {
-                        self.add_blank_blank(subject.0 as u32, predicate, object.0 as u32);
+                    graph::Resource::IRI(object) => {
+                        self.add_iri_iri(subject.as_str(), predicate.as_str(), object.as_str());
                     }
-                    graph::Object::Literal(object) => {
-                        match object.language {
+                    graph::Resource::Literal(object) => {
+                        match object.language() {
                             None => {
-                                self.add_blank_lit(subject.0 as u32,
-                                                   predicate,
-                                                   object.lexical,
-                                                   object.datatype);
+                                self.add_iri_lit(subject.as_str(),
+                                                 predicate.as_str(),
+                                                 object.as_str(),
+                                                 object.datatype());
                             }
                             Some(lang) => {
-                                self.add_blank_lit_lang(subject.0 as u32,
-                                                        predicate,
-                                                        object.lexical,
-                                                        lang);
+                                self.add_iri_lit_lang(subject.as_str(),
+                                                      predicate.as_str(),
+                                                      object.as_str(),
+                                                      lang);
                             }
                         }
                     }
@@ -215,8 +233,11 @@ impl<'g, SPO: 'g, OPS: 'g> graph::GraphCreator<'g> for GraphWriter<SPO, OPS>
           OPS: CompactTriple<u32>
 {
     type Graph = Graph<SPO, OPS>;
-    fn add_triple<'t, T>(&mut self, triple: &T)
-        where T: graph::Triple<'t>
+    fn add_triple<'h, T, B: 'h, I: 'h, L: 'h>(&mut self, triple: &T)
+        where T: graph::Triple<'h, B, I, L>,
+              B: graph::BlankNodePtr<'h>,
+              I: graph::IRIPtr<'h>,
+              L: graph::LiteralPtr<'h>
     {
         self.add_(triple.subject(), triple.predicate(), triple.object());
     }
@@ -236,24 +257,102 @@ impl<'g, SPO: 'g, OPS: 'g> graph::GraphCreator<'g> for GraphWriter<SPO, OPS>
         let ops = create_ops(&spo);
         Graph {
             d: GraphData {
-                graph_id: rand::random::<usize>(),
+                graph_id: rand::random::<u32>(),
                 strings: string_collection,
                 datatype_or_lang: datatype_lang_collection,
                 spo: spo,
                 ops: ops,
+                lang_string_datatype_id: datatrans[self.lang_string_datatype_id].id,
                 highest_blank_node: self.highest_blank_node,
             },
         }
     }
-    fn create_blank_node(&mut self) -> graph::BlankNode {
+    fn create_blank_node(&mut self) -> <Self::Graph as ::graph::Graph<'g>>::BlankNodePtr {
         self.highest_blank_node += 1;
-        (self.highest_blank_node as usize, 0)
+        BlankNodePtr {
+            graph_id: 0,
+            node: self.highest_blank_node,
+            phantom: PhantomData,
+        }
     }
-    fn add<'a: 'b, 'b, S, O>(&'a mut self, subject: S, predicate: &str, object: O)
-        where S: graph::IntoSubject<'b>,
-              O: graph::IntoObject<'b>
+    fn add_blank_blank<'p, P>(&mut self,
+                              subject: BlankNodePtr<SPO, OPS>,
+                              predicate: P,
+                              object: BlankNodePtr<SPO, OPS>)
+        where P: graph::IRIPtr<'p>
     {
-        self.add_(subject.subject(), predicate, object.object());
+        GraphWriter::add_blank_blank(self, subject.node, predicate.as_str(), object.node);
+    }
+    fn add_blank_iri<'p, 'o, P, O>(&mut self,
+                                   subject: BlankNodePtr<SPO, OPS>,
+                                   predicate: P,
+                                   object: O)
+        where P: graph::IRIPtr<'p>,
+              O: graph::IRIPtr<'o>
+    {
+        GraphWriter::add_blank_iri(self, subject.node, predicate.as_str(), object.as_str());
+    }
+    fn add_blank_literal<'p, 'o, P, O>(&mut self,
+                                       subject: BlankNodePtr<SPO, OPS>,
+                                       predicate: P,
+                                       object: O)
+        where P: graph::IRIPtr<'p>,
+              O: graph::LiteralPtr<'o>
+    {
+        match object.language() {
+            Some(lang) => {
+                GraphWriter::add_blank_lit_lang(self,
+                                                subject.node,
+                                                predicate.as_str(),
+                                                object.as_str(),
+                                                lang)
+            }
+            None => {
+                GraphWriter::add_blank_lit(self,
+                                           subject.node,
+                                           predicate.as_str(),
+                                           object.as_str(),
+                                           object.datatype())
+            }
+        }
+    }
+    fn add_iri_blank<'s, 'p, S, P>(&mut self,
+                                   subject: S,
+                                   predicate: P,
+                                   object: BlankNodePtr<SPO, OPS>)
+        where S: graph::IRIPtr<'s>,
+              P: graph::IRIPtr<'p>
+    {
+        GraphWriter::add_iri_blank(self, subject.as_str(), predicate.as_str(), object.node);
+    }
+    fn add_iri_iri<'s, 'p, 'o, S, P, O>(&mut self, subject: S, predicate: P, object: O)
+        where S: graph::IRIPtr<'s>,
+              P: graph::IRIPtr<'p>,
+              O: graph::IRIPtr<'o>
+    {
+        GraphWriter::add_iri_iri(self, subject.as_str(), predicate.as_str(), object.as_str());
+    }
+    fn add_iri_literal<'s, 'p, 'o, S, P, O>(&mut self, subject: S, predicate: P, object: O)
+        where S: graph::IRIPtr<'s>,
+              P: graph::IRIPtr<'p>,
+              O: graph::LiteralPtr<'o>
+    {
+        match object.language() {
+            Some(lang) => {
+                GraphWriter::add_iri_lit_lang(self,
+                                              subject.as_str(),
+                                              predicate.as_str(),
+                                              object.as_str(),
+                                              lang)
+            }
+            None => {
+                GraphWriter::add_iri_lit(self,
+                                         subject.as_str(),
+                                         predicate.as_str(),
+                                         object.as_str(),
+                                         object.datatype())
+            }
+        }
     }
 }
 
@@ -268,10 +367,22 @@ fn collect_empty() {
 fn keep_blank_subject() {
     let mut writer: GraphWriter<Triple64SPO, Triple64OPS> = GraphWriter::with_capacity(0);
     writer.add_blank_blank(1, "", 2);
-    use graph::{GraphCreator, Graph, Triple};
+    use graph::{GraphCreator, Graph, Triple, IRIPtr};
     let graph = writer.collect();
     let triple = graph.iter().next().unwrap();
-    assert_eq!(triple.subject(), graph::Subject::BlankNode((1, 0)));
-    assert_eq!(triple.predicate(), "");
-    assert_eq!(triple.object(), graph::Object::BlankNode((2, 0)));
+    assert_eq!(triple.subject(),
+               graph::BlankNodeOrIRI::BlankNode(BlankNodePtr {
+                                                    graph_id: 0,
+                                                    node: 1,
+                                                    phantom: PhantomData,
+                                                },
+                                                PhantomData));
+    assert_eq!(triple.predicate().as_str(), "");
+    assert_eq!(triple.object(),
+               graph::Resource::BlankNode(BlankNodePtr {
+                                              graph_id: 0,
+                                              node: 2,
+                                              phantom: PhantomData,
+                                          },
+                                          PhantomData));
 }

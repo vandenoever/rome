@@ -1,9 +1,189 @@
 use std::cmp;
+use std::marker::PhantomData;
+use std::fmt;
 use graph;
-use constants;
 use super::compact_triple::*;
 use super::graph::*;
 use super::string_collector::*;
+
+#[derive (Clone,Copy,Eq,PartialOrd,Ord)]
+pub struct BlankNodePtr<'g, SPO: 'g, OPS: 'g>
+    where SPO: CompactTriple<u32>,
+          OPS: CompactTriple<u32>
+{
+    pub graph_id: u32,
+    pub node: u32,
+    pub phantom: PhantomData<&'g (SPO, OPS)>,
+}
+impl<'g, SPO, OPS> PartialEq for BlankNodePtr<'g, SPO, OPS>
+    where SPO: CompactTriple<u32>,
+          OPS: CompactTriple<u32>
+{
+    fn eq(&self, other: &Self) -> bool {
+        // TODO: figure if we want PartialEq and Eq for nodes at all
+        // (probably only PartialEq)
+        self.node == other.node
+    }
+}
+impl<'g, SPO, OPS> graph::BlankNodePtr<'g> for BlankNodePtr<'g, SPO, OPS>
+    where SPO: CompactTriple<u32>,
+          OPS: CompactTriple<u32>
+{
+    fn graph_id(&self) -> u32 {
+        self.graph_id
+    }
+    fn node_id(&self) -> u32 {
+        self.node
+    }
+}
+impl<'g, SPO, OPS> fmt::Debug for BlankNodePtr<'g, SPO, OPS>
+    where SPO: CompactTriple<u32>,
+          OPS: CompactTriple<u32>
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "_:{}", self.node)
+    }
+}
+#[derive (Clone)]
+pub struct IRIPtr<'g, SPO: 'g, OPS: 'g>
+    where SPO: CompactTriple<u32>,
+          OPS: CompactTriple<u32>
+{
+    pub graph: &'g GraphData<SPO, OPS>,
+    pub iri: u32,
+}
+impl<'g, SPO, OPS> PartialEq for IRIPtr<'g, SPO, OPS>
+    where SPO: CompactTriple<u32>,
+          OPS: CompactTriple<u32>
+{
+    fn eq(&self, other: &Self) -> bool {
+        if self.graph.graph_id == other.graph.graph_id {
+            self.iri == other.iri
+        } else {
+            use graph::IRIPtr;
+            self.as_str() == other.as_str()
+        }
+    }
+}
+impl<'g, SPO, OPS> Eq for IRIPtr<'g, SPO, OPS>
+    where SPO: CompactTriple<u32>,
+          OPS: CompactTriple<u32>
+{
+}
+impl<'g, SPO, OPS> PartialOrd for IRIPtr<'g, SPO, OPS>
+    where SPO: CompactTriple<u32>,
+          OPS: CompactTriple<u32>
+{
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl<'g, SPO, OPS> Ord for IRIPtr<'g, SPO, OPS>
+    where SPO: CompactTriple<u32>,
+          OPS: CompactTriple<u32>
+{
+    fn cmp(&self, other: &Self) -> cmp::Ordering {
+        self.iri.cmp(&other.iri)
+    }
+}
+impl<'g, SPO, OPS> graph::IRIPtr<'g> for IRIPtr<'g, SPO, OPS>
+    where SPO: CompactTriple<u32>,
+          OPS: CompactTriple<u32>
+{
+    fn as_str(&self) -> &str {
+        self.graph.strings.get(StringId { id: self.iri })
+    }
+}
+impl<'g, SPO, OPS> fmt::Debug for IRIPtr<'g, SPO, OPS>
+    where SPO: CompactTriple<u32>,
+          OPS: CompactTriple<u32>
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use graph::IRIPtr;
+        write!(f, "<{}>", self.as_str())
+    }
+}
+#[derive (Clone)]
+pub struct LiteralPtr<'g, SPO: 'g, OPS: 'g>
+    where SPO: CompactTriple<u32>,
+          OPS: CompactTriple<u32>
+{
+    pub graph: &'g GraphData<SPO, OPS>,
+    pub lexical: u32,
+    pub datatype: u32,
+    pub language: Option<u32>,
+}
+impl<'g, SPO, OPS> PartialEq for LiteralPtr<'g, SPO, OPS>
+    where SPO: CompactTriple<u32>,
+          OPS: CompactTriple<u32>
+{
+    fn eq(&self, other: &Self) -> bool {
+        if self.graph.graph_id == other.graph.graph_id {
+            self.lexical == other.lexical && self.datatype == other.datatype &&
+            self.language == other.language
+        } else {
+            use graph::LiteralPtr;
+            self.as_str() == other.as_str() && self.datatype() == other.datatype() &&
+            self.language() == other.language()
+        }
+    }
+}
+impl<'g, SPO, OPS> Eq for LiteralPtr<'g, SPO, OPS>
+    where SPO: CompactTriple<u32>,
+          OPS: CompactTriple<u32>
+{
+}
+impl<'g, SPO, OPS> PartialOrd for LiteralPtr<'g, SPO, OPS>
+    where SPO: CompactTriple<u32>,
+          OPS: CompactTriple<u32>
+{
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl<'g, SPO, OPS> Ord for LiteralPtr<'g, SPO, OPS>
+    where SPO: CompactTriple<u32>,
+          OPS: CompactTriple<u32>
+{
+    fn cmp(&self, other: &Self) -> cmp::Ordering {
+        self.lexical.cmp(&other.lexical)
+    }
+}
+impl<'g, SPO, OPS> graph::LiteralPtr<'g> for LiteralPtr<'g, SPO, OPS>
+    where SPO: CompactTriple<u32>,
+          OPS: CompactTriple<u32>
+{
+    fn as_str(&self) -> &str {
+        self.graph.strings.get(StringId { id: self.lexical })
+    }
+    fn datatype(&self) -> &str {
+        self.graph.datatype_or_lang.get(StringId { id: self.datatype })
+    }
+    fn language(&self) -> Option<&str> {
+        self.language.map(|l| self.graph.datatype_or_lang.get(StringId { id: l }))
+    }
+}
+impl<'g, SPO, OPS> fmt::Debug for LiteralPtr<'g, SPO, OPS>
+    where SPO: CompactTriple<u32>,
+          OPS: CompactTriple<u32>
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use graph::LiteralPtr;
+        match self.language() {
+            None => write!(f, "\"{}\"^^<{}>", self.as_str(), self.datatype()),
+            Some(lang) => write!(f, "\"{}\"@{}", self.as_str(), lang),
+        }
+    }
+}
+
+pub type BlankNodeOrIRI<'t, SPO, OPS> = graph::BlankNodeOrIRI<'t,
+                                                              BlankNodePtr<'t, SPO, OPS>,
+                                                              IRIPtr<'t, SPO, OPS>>;
+pub type Resource<'t, SPO, OPS> = graph::Resource<'t,
+                                                  BlankNodePtr<'t, SPO, OPS>,
+                                                  IRIPtr<'t, SPO, OPS>,
+                                                  LiteralPtr<'t, SPO, OPS>>;
+
 
 pub struct Triple<'g, SPO: 'g, OPS: 'g, T>
     where SPO: CompactTriple<u32>,
@@ -13,7 +193,6 @@ pub struct Triple<'g, SPO: 'g, OPS: 'g, T>
     pub graph: &'g GraphData<SPO, OPS>,
     pub triple: T,
 }
-
 impl<'g, SPO, OPS, T> PartialEq for Triple<'g, SPO, OPS, T>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>,
@@ -24,7 +203,7 @@ impl<'g, SPO, OPS, T> PartialEq for Triple<'g, SPO, OPS, T>
         // the numeric value of the triple, when Rc::ptr_eq becomes stable,
         // we can use that.
         use graph::Triple;
-        self.subject().eq(&other.subject()) && self.predicate().eq(other.predicate()) &&
+        self.subject().eq(&other.subject()) && self.predicate().eq(&other.predicate()) &&
         self.object().eq(&other.object())
     }
 }
@@ -53,218 +232,49 @@ impl<'g, SPO, OPS, T> Ord for Triple<'g, SPO, OPS, T>
     }
 }
 
-impl<'g, SPO: 'g, OPS: 'g, T> graph::Triple<'g> for Triple<'g, SPO, OPS, T>
+impl<'g, SPO: 'g, OPS: 'g, T> graph::Triple<'g,
+                                              BlankNodePtr<'g, SPO, OPS>,
+                                              IRIPtr<'g, SPO, OPS>,
+                                              LiteralPtr<'g, SPO, OPS>> for Triple<'g, SPO, OPS, T>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>,
           T: CompactTriple<u32>
 {
-    type SubjectPtr = SubjectPtr<'g, SPO, OPS>;
-    type PredicatePtr = PredicatePtr<'g, SPO, OPS>;
-    type ObjectPtr = ObjectPtr<'g, SPO, OPS>;
-    fn subject(&self) -> graph::Subject {
+    fn subject(&self) -> BlankNodeOrIRI<'g,SPO,OPS> {
         if self.triple.subject_is_iri() {
-            graph::Subject::IRI(self.graph.strings.get(StringId { id: self.triple.subject() }))
+            graph::BlankNodeOrIRI::IRI(IRIPtr{graph:self.graph, iri: self.triple.subject() })
         } else {
-            graph::Subject::BlankNode((self.triple.subject() as usize, 0))
+            graph::BlankNodeOrIRI::BlankNode(BlankNodePtr{
+                    graph_id:self.graph.graph_id,
+                    node: self.triple.subject(),phantom:PhantomData },
+                PhantomData)
         }
     }
-    fn predicate(&self) -> &str {
-        self.graph.strings.get(StringId { id: self.triple.predicate() })
+    fn predicate(&self) -> IRIPtr<'g,SPO,OPS> {
+        IRIPtr{graph:self.graph, iri: self.triple.predicate() }
     }
-    fn object(&self) -> graph::Object {
+    fn object(&self) -> Resource<'g,SPO,OPS> {
         if self.triple.object_is_iri() {
-            graph::Object::IRI(self.graph.strings.get(StringId { id: self.triple.object() }))
+            graph::Resource::IRI(IRIPtr{graph:self.graph, iri: self.triple.object() })
         } else if self.triple.object_is_blank_node() {
-            graph::Object::BlankNode((self.triple.object() as usize, 0))
+            graph::Resource::BlankNode(BlankNodePtr{
+                    graph_id: self.graph.graph_id,
+                    node: self.triple.object(),phantom:PhantomData
+                },PhantomData)
         } else if self.triple.has_language() {
-            graph::Object::Literal(graph::Literal {
-                lexical: self.graph.strings.get(StringId { id: self.triple.object() }),
-                datatype: constants::RDF_LANG_STRING,
-                language: Some(self.graph
-                    .datatype_or_lang
-                    .get(StringId { id: self.triple.datatype_or_lang() })),
+            graph::Resource::Literal(LiteralPtr {
+                graph: self.graph,
+                lexical: self.triple.object(),
+                datatype: self.graph.lang_string_datatype_id,
+                language: Some(self.triple.datatype_or_lang()),
             })
         } else {
-            graph::Object::Literal(graph::Literal {
-                lexical: self.graph.strings.get(StringId { id: self.triple.object() }),
-                datatype: self.graph
-                    .datatype_or_lang
-                    .get(StringId { id: self.triple.datatype_or_lang() }),
+            graph::Resource::Literal(LiteralPtr {
+                graph: self.graph,
+                lexical: self.triple.object(),
+                datatype: self.triple.datatype_or_lang(),
                 language: None,
             })
-        }
-    }
-    fn subject_ptr(&self) -> Self::SubjectPtr {
-        if self.triple.subject_is_iri() {
-            SubjectPtr::IRI(self.graph, self.triple.subject())
-        } else {
-            SubjectPtr::BlankNode(self.graph, self.triple.subject())
-        }
-    }
-    fn predicate_ptr(&self) -> Self::PredicatePtr {
-        PredicatePtr(self.graph, self.triple.predicate())
-    }
-    fn object_ptr(&self) -> Self::ObjectPtr {
-        if self.triple.object_is_iri() {
-            ObjectPtr::IRI(self.graph, self.triple.object())
-        } else if !self.triple.object_is_blank_node() {
-            ObjectPtr::Literal(self.graph, self.triple.object())
-        } else {
-            ObjectPtr::BlankNode(self.graph, self.triple.object())
-        }
-    }
-}
-
-
-#[derive (Clone)]
-pub enum SubjectPtr<'g, SPO: 'g, OPS: 'g>
-    where SPO: CompactTriple<u32>,
-          OPS: CompactTriple<u32>
-{
-    IRI(&'g GraphData<SPO, OPS>, u32),
-    BlankNode(&'g GraphData<SPO, OPS>, u32),
-}
-impl<'g, SPO, OPS> PartialEq for SubjectPtr<'g, SPO, OPS>
-    where SPO: CompactTriple<u32>,
-          OPS: CompactTriple<u32>
-{
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (&SubjectPtr::IRI(_, a), &SubjectPtr::IRI(_, b)) => a == b,
-            (&SubjectPtr::BlankNode(_, a), &SubjectPtr::BlankNode(_, b)) => a == b,
-            _ => false,
-        }
-    }
-}
-impl<'g, SPO, OPS> Eq for SubjectPtr<'g, SPO, OPS>
-    where SPO: CompactTriple<u32>,
-          OPS: CompactTriple<u32>
-{
-}
-impl<'g, SPO, OPS> graph::SubjectPtr<'g> for SubjectPtr<'g, SPO, OPS>
-    where SPO: CompactTriple<u32>,
-          OPS: CompactTriple<u32>
-{
-    fn iri(&self) -> Option<&'g str> {
-        match self {
-            &SubjectPtr::IRI(ref graph, iri) => Some(graph.strings.get(StringId { id: iri })),
-            _ => None,
-        }
-    }
-}
-
-#[derive (Clone)]
-pub struct PredicatePtr<'g, SPO: 'g, OPS: 'g>(pub &'g GraphData<SPO, OPS>, pub u32)
-    where SPO: CompactTriple<u32>,
-          OPS: CompactTriple<u32>;
-
-impl<'g, SPO, OPS> PartialEq for PredicatePtr<'g, SPO, OPS>
-    where SPO: CompactTriple<u32>,
-          OPS: CompactTriple<u32>
-{
-    fn eq(&self, other: &Self) -> bool {
-        self.1 == other.1
-    }
-}
-impl<'g, SPO, OPS> Eq for PredicatePtr<'g, SPO, OPS>
-    where SPO: CompactTriple<u32>,
-          OPS: CompactTriple<u32>
-{
-}
-impl<'g, SPO, OPS> graph::PredicatePtr<'g> for PredicatePtr<'g, SPO, OPS>
-    where SPO: CompactTriple<u32>,
-          OPS: CompactTriple<u32>
-{
-    fn iri(&self) -> &str {
-        self.0.strings.get(StringId { id: self.1 })
-    }
-}
-
-
-#[derive (Clone)]
-pub enum ObjectPtr<'g, SPO: 'g, OPS: 'g>
-    where SPO: CompactTriple<u32>,
-          OPS: CompactTriple<u32>
-{
-    BlankNode(&'g GraphData<SPO, OPS>, u32),
-    IRI(&'g GraphData<SPO, OPS>, u32),
-    Literal(&'g GraphData<SPO, OPS>, u32),
-}
-impl<'g, SPO, OPS> PartialEq for ObjectPtr<'g, SPO, OPS>
-    where SPO: CompactTriple<u32>,
-          OPS: CompactTriple<u32>
-{
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (&ObjectPtr::IRI(_, a), &ObjectPtr::IRI(_, b)) => a == b,
-            (&ObjectPtr::BlankNode(_, a), &ObjectPtr::BlankNode(_, b)) => a == b,
-            (&ObjectPtr::Literal(_, a), &ObjectPtr::Literal(_, b)) => a == b,
-            _ => false,
-        }
-    }
-}
-impl<'g, SPO, OPS> Eq for ObjectPtr<'g, SPO, OPS>
-    where SPO: CompactTriple<u32>,
-          OPS: CompactTriple<u32>
-{
-}
-impl<'g, SPO, OPS> PartialOrd for ObjectPtr<'g, SPO, OPS>
-    where SPO: CompactTriple<u32>,
-          OPS: CompactTriple<u32>
-{
-    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-impl<'g, SPO, OPS> Ord for ObjectPtr<'g, SPO, OPS>
-    where SPO: CompactTriple<u32>,
-          OPS: CompactTriple<u32>
-{
-    fn cmp(&self, other: &Self) -> cmp::Ordering {
-        match (self, other) {
-            (&ObjectPtr::BlankNode(_, a), &ObjectPtr::BlankNode(_, ref b)) => a.cmp(b),
-            (&ObjectPtr::BlankNode(_, _), &ObjectPtr::IRI(_, _)) => cmp::Ordering::Less,
-            (&ObjectPtr::BlankNode(_, _), &ObjectPtr::Literal(_, _)) => cmp::Ordering::Less,
-            (&ObjectPtr::IRI(_, _), &ObjectPtr::BlankNode(_, _)) => cmp::Ordering::Greater,
-            (&ObjectPtr::IRI(_, a), &ObjectPtr::IRI(_, ref b)) => a.cmp(b),
-            (&ObjectPtr::IRI(_, _), &ObjectPtr::Literal(_, _)) => cmp::Ordering::Less,
-            (&ObjectPtr::Literal(_, _), &ObjectPtr::BlankNode(_, _)) => cmp::Ordering::Greater,
-            (&ObjectPtr::Literal(_, _), &ObjectPtr::IRI(_, _)) => cmp::Ordering::Greater,
-            (&ObjectPtr::Literal(_, a), &ObjectPtr::Literal(_, ref b)) => a.cmp(b),
-        }
-    }
-}
-impl<'g, SPO, OPS> graph::SubjectPtr<'g> for ObjectPtr<'g, SPO, OPS>
-    where SPO: CompactTriple<u32>,
-          OPS: CompactTriple<u32>
-{
-    fn iri(&self) -> Option<&'g str> {
-        match self {
-            &ObjectPtr::IRI(ref graph, iri) => Some(graph.strings.get(StringId { id: iri })),
-            _ => None,
-        }
-    }
-}
-impl<'g, SPO: 'g, OPS: 'g> graph::ObjectPtr<'g> for ObjectPtr<'g, SPO, OPS>
-    where SPO: CompactTriple<u32>,
-          OPS: CompactTriple<u32>
-{
-    fn literal(&self) -> Option<&str> {
-        match self {
-            &ObjectPtr::Literal(ref graph, l) => Some(graph.strings.get(StringId { id: l })),
-            _ => None,
-        }
-    }
-}
-impl<'g, SPO: 'g, OPS: 'g> graph::IntoObject<'g> for ObjectPtr<'g, SPO, OPS>
-    where SPO: CompactTriple<u32>,
-          OPS: CompactTriple<u32>
-{
-    fn object(self) -> graph::Object<'g> {
-        match self {
-            ObjectPtr::IRI(_, _) => graph::Object::IRI(""),
-            ObjectPtr::BlankNode(_, _) => graph::Object::IRI(""),
-            ObjectPtr::Literal(_, _) => graph::Object::IRI(""),
         }
     }
 }

@@ -7,12 +7,20 @@ use std::io::{Read, Write};
 use std::path::Path;
 use std::rc::Rc;
 use rdfio::graph;
-use rdfio::graph::{Graph, GraphCreator, Triple};
+use rdfio::graph::*;
 use rdfio::graphs::tel;
 use rdfio::io::{TurtleParser, write_turtle};
 use rdfio::namespaces::Namespaces;
 
 type MyGraph = tel::Graph64;
+type MyIter<'g> = <MyGraph as Graph<'g>>::SPORangeIter;
+// type MyTriple<'g> = MyIter<'g>::Item;
+type BlankNodeOrIRI<'g> =
+    graph::BlankNodeOrIRI<'g, <MyGraph as Graph<'g>>::BlankNodePtr, <MyGraph as Graph<'g>>::IRIPtr>;
+type MyResource<'g> = graph::Resource<'g,
+                                      <MyGraph as Graph<'g>>::BlankNodePtr,
+                                      <MyGraph as Graph<'g>>::IRIPtr,
+                                      <MyGraph as Graph<'g>>::LiteralPtr>;
 
 macro_rules! println_stderr(
     ($($arg:tt)*) => { {
@@ -110,31 +118,51 @@ struct TestResult {
     date: String,
     info: String,
 }
+#[derive(Debug,Clone,Ord,PartialOrd,Eq,PartialEq)]
+struct Literal {
+    value: String,
+    datatype: String,
+    language: Option<String>,
+}
+impl<'g> LiteralPtr<'g> for Literal {
+    fn as_str(&self) -> &str {
+        &self.value
+    }
+    fn datatype(&self) -> &str {
+        &self.datatype
+    }
+    fn language(&self) -> Option<&str> {
+        match &self.language {
+            &Some(ref l) => Some(l.as_str()),
+            &None => None,
+        }
+    }
+}
 
 fn write_assertion<'a, 'g, W>(assertion: &'a Assertion, output: &mut W) -> rdfio::Result<()>
     where W: GraphCreator<'g>
 {
     let assertion_blank_node = output.create_blank_node();
-    output.add(assertion_blank_node, RDF_TYPE, EARL_ASSERTION);
+    output.add_blank_iri(assertion_blank_node, RDF_TYPE, EARL_ASSERTION);
     let date = format!("{}", assertion.date.rfc3339());
-    output.add(assertion_blank_node,
-               DC_DATE,
-               graph::Literal {
-                   lexical: date.as_str(),
-                   datatype: XSD_DATE_TIME,
-                   language: None,
-               });
+    output.add_blank_literal(assertion_blank_node,
+                             DC_DATE,
+                             Literal {
+                                 value: date,
+                                 datatype: String::from(XSD_DATE_TIME),
+                                 language: None,
+                             });
     let result_blank_node = output.create_blank_node();
-    output.add(result_blank_node, RDF_TYPE, EARL_TEST_RESULT);
-    output.add(assertion_blank_node, EARL_RESULT, result_blank_node);
-    output.add(assertion_blank_node, EARL_RESULT, result_blank_node);
+    output.add_blank_iri(result_blank_node, RDF_TYPE, EARL_TEST_RESULT);
+    output.add_blank_blank(assertion_blank_node, EARL_RESULT, result_blank_node);
+    output.add_blank_blank(assertion_blank_node, EARL_RESULT, result_blank_node);
     let outcome = match assertion.result.outcome {
         Outcome::Passed => EARL_PASSED,
         Outcome::Failed => EARL_FAILED,
         Outcome::CannotTell => EARL_CANT_TELL,
     };
-    output.add(result_blank_node, EARL_OUTCOME, outcome);
-    output.add(assertion_blank_node, EARL_TEST, assertion.test.as_str());
+    output.add_blank_iri(result_blank_node, EARL_OUTCOME, outcome);
+    output.add_blank_iri(assertion_blank_node, EARL_TEST, assertion.test.as_str());
     Ok(())
 }
 
@@ -160,50 +188,63 @@ fn load_graph(data: &str, base: &str) -> rdfio::Result<MyGraph> {
     Ok(writer.collect().sort_blank_nodes())
 }
 
-fn read<'g, T, F, R>(mut last: Option<T>,
-                     i: &mut Iterator<Item = T>,
-                     predicate: &str,
-                     convert: F)
-                     -> Result<(R, Option<T>), String>
-    where T: graph::Triple<'g>,
-          F: FnOnce(&graph::Object) -> Result<R, String>
+fn read<'g, T, B: 'g, I: 'g, L: 'g, F, R>(mut last: Option<T>,
+                                          i: &mut Iterator<Item = T>,
+                                          predicate: &str,
+                                          convert: F)
+                                          -> Result<(R, Option<T>), String>
+    where T: graph::Triple<'g, B, I, L>,
+          B: BlankNodePtr<'g>,
+          I: IRIPtr<'g>,
+          L: LiteralPtr<'g>,
+          F: Fn(Resource<'g, B, I, L>) -> Result<R, String>
 {
     last = last.or_else(|| i.next());
     while let Some(triple) = last {
-        if triple.predicate() == predicate {
-            return Ok((try!(convert(&triple.object())), None));
+        if triple.predicate().as_str() == predicate {
+            return Ok((try!(convert(triple.object())), None));
         }
         last = i.next();
     }
     Err(format!("Cannot find {}.", predicate))
 }
 
-fn to_string(object: &graph::Object) -> Result<String, String> {
-    match *object {
-        graph::Object::IRI(iri) => Ok(String::from(iri)),
-        graph::Object::Literal(ref l) => Ok(String::from(l.lexical)),
+fn to_string<'g, B, I, L>(object: Resource<'g, B, I, L>) -> Result<String, String>
+    where B: BlankNodePtr<'g>,
+          I: IRIPtr<'g>,
+          L: LiteralPtr<'g>
+{
+    match object {
+        graph::Resource::IRI(iri) => Ok(String::from(iri.as_str())),
+        graph::Resource::Literal(l) => Ok(String::from(l.as_str())),
         _ => Err(String::from("object is not an iri or literal")),
     }
 }
 
-fn to_approval(object: &graph::Object) -> Result<Approval, String> {
-    match *object {
-        graph::Object::IRI(iri) if iri == RDFT_APPROVED => Ok(Approval::Approved),
-        graph::Object::IRI(iri) if iri == RDFT_PROPOSED => Ok(Approval::Proposed),
-        graph::Object::IRI(iri) if iri == RDFT_REJECTED => Ok(Approval::Rejected),
+fn to_approval<'g, B, I, L>(object: Resource<'g, B, I, L>) -> Result<Approval, String>
+    where B: BlankNodePtr<'g>,
+          I: IRIPtr<'g>,
+          L: LiteralPtr<'g>
+{
+    match &object {
+        &graph::Resource::IRI(ref iri) if iri.as_str() == RDFT_APPROVED => Ok(Approval::Approved),
+        &graph::Resource::IRI(ref iri) if iri.as_str() == RDFT_PROPOSED => Ok(Approval::Proposed),
+        &graph::Resource::IRI(ref iri) if iri.as_str() == RDFT_REJECTED => Ok(Approval::Rejected),
         _ => Err(String::from("object is not the right value for approval")),
     }
 }
 
-fn load_test_turtle_eval(graph: &MyGraph, subject: &Rc<String>) -> Result<TestTurtleEval, String> {
-    let mut i = graph.iter_subject(&graph::Subject::IRI(subject.as_str()));
+fn load_test_turtle_eval(graph: &MyGraph,
+                         subject: BlankNodeOrIRI)
+                         -> Result<TestTurtleEval, String> {
+    let mut i = graph.iter_subject(&subject);
     let (comment, prev) = try!(read(None, &mut i, RDFS_COMMENT, to_string));
     let (action, prev) = try!(read(prev, &mut i, MF_ACTION, to_string));
     let (name, prev) = try!(read(prev, &mut i, MF_NAME, to_string));
     let (result, prev) = try!(read(prev, &mut i, MF_RESULT, to_string));
     let (approval, _) = try!(read(prev, &mut i, RDFT_APPROVAL, to_approval));
     Ok(TestTurtleEval {
-        id: subject.clone(),
+        id: subject_to_string(&subject),
         name: name,
         comment: comment,
         approval: approval,
@@ -212,15 +253,15 @@ fn load_test_turtle_eval(graph: &MyGraph, subject: &Rc<String>) -> Result<TestTu
     })
 }
 fn load_positive_syntax(graph: &MyGraph,
-                        subject: &Rc<String>)
+                        subject: BlankNodeOrIRI)
                         -> Result<TestTurtlePositiveSyntax, String> {
-    let mut i = graph.iter_subject(&graph::Subject::IRI(subject.as_str()));
+    let mut i = graph.iter_subject(&subject);
     let (comment, prev) = try!(read(None, &mut i, RDFS_COMMENT, to_string));
     let (action, prev) = try!(read(prev, &mut i, MF_ACTION, to_string));
     let (name, prev) = try!(read(prev, &mut i, MF_NAME, to_string));
     let (approval, _) = try!(read(prev, &mut i, RDFT_APPROVAL, to_approval));
     Ok(TestTurtlePositiveSyntax {
-        id: subject.clone(),
+        id: subject_to_string(&subject),
         name: name,
         comment: comment,
         approval: approval,
@@ -228,15 +269,15 @@ fn load_positive_syntax(graph: &MyGraph,
     })
 }
 fn load_negative_syntax(graph: &MyGraph,
-                        subject: &Rc<String>)
+                        subject: BlankNodeOrIRI)
                         -> Result<TestTurtleNegativeSyntax, String> {
-    let mut i = graph.iter_subject(&graph::Subject::IRI(subject.as_str()));
+    let mut i = graph.iter_subject(&subject);
     let (comment, prev) = try!(read(None, &mut i, RDFS_COMMENT, to_string));
     let (action, prev) = try!(read(prev, &mut i, MF_ACTION, to_string));
     let (name, prev) = try!(read(prev, &mut i, MF_NAME, to_string));
     let (approval, _) = try!(read(prev, &mut i, RDFT_APPROVAL, to_approval));
     Ok(TestTurtleNegativeSyntax {
-        id: subject.clone(),
+        id: subject_to_string(&subject),
         name: name,
         comment: comment,
         approval: approval,
@@ -244,15 +285,15 @@ fn load_negative_syntax(graph: &MyGraph,
     })
 }
 fn load_negative_eval(graph: &MyGraph,
-                      subject: &Rc<String>)
+                      subject: BlankNodeOrIRI)
                       -> Result<TestTurtleNegativeEval, String> {
-    let mut i = graph.iter_subject(&graph::Subject::IRI(subject.as_str()));
+    let mut i = graph.iter_subject(&subject);
     let (comment, prev) = try!(read(None, &mut i, RDFS_COMMENT, to_string));
     let (action, prev) = try!(read(prev, &mut i, MF_ACTION, to_string));
     let (name, prev) = try!(read(prev, &mut i, MF_NAME, to_string));
     let (approval, _) = try!(read(prev, &mut i, RDFT_APPROVAL, to_approval));
     Ok(TestTurtleNegativeEval {
-        id: subject.clone(),
+        id: subject_to_string(&subject),
         name: name,
         comment: comment,
         approval: approval,
@@ -269,23 +310,20 @@ fn eval_result(r: &Assertion) {
     }
 }
 
-fn subject_to_string<'g, T>(triple: &T) -> Rc<String>
-    where T: graph::Triple<'g>
-{
-    match triple.subject() {
-        graph::Subject::IRI(iri) => Rc::new(String::from(iri)),
+fn subject_to_string(subject: &BlankNodeOrIRI) -> Rc<String> {
+    match subject {
+        &graph::BlankNodeOrIRI::IRI(ref iri) => Rc::new(String::from(iri.as_str())),
         _ => {
             panic!("a blank node as subject is not expected");
         }
     }
 }
 
-fn run_tests<'a>(graph: &'a MyGraph, base: &str, base_dir: &str) -> rdfio::Result<Vec<Assertion>> {
+fn run_tests(graph: &MyGraph, base: &str, base_dir: &str) -> rdfio::Result<Vec<Assertion>> {
     let mut assertions = Vec::new();
     for t in
         graph.iter_object_iri_predicate("http://www.w3.org/ns/rdftest#TestTurtleEval", RDF_TYPE) {
-        let s = subject_to_string(&t);
-        let test = try!(load_test_turtle_eval(&graph, &s));
+        let test = try!(load_test_turtle_eval(&graph, t.subject()));
         let r = try!(run_eval(&test, base, base_dir));
         eval_result(&r);
         assertions.push(r);
@@ -293,8 +331,7 @@ fn run_tests<'a>(graph: &'a MyGraph, base: &str, base_dir: &str) -> rdfio::Resul
     for t in
         graph.iter_object_iri_predicate("http://www.w3.org/ns/rdftest#TestTurtlePositiveSyntax",
                                         RDF_TYPE) {
-        let s = subject_to_string(&t);
-        let test = try!(load_positive_syntax(&graph, &s));
+        let test = try!(load_positive_syntax(&graph, t.subject()));
         let r = try!(run_eval_positive_syntax(&test, base, base_dir));
         eval_result(&r);
         assertions.push(r);
@@ -302,16 +339,14 @@ fn run_tests<'a>(graph: &'a MyGraph, base: &str, base_dir: &str) -> rdfio::Resul
     for t in
         graph.iter_object_iri_predicate("http://www.w3.org/ns/rdftest#TestTurtleNegativeSyntax",
                                         RDF_TYPE) {
-        let s = subject_to_string(&t);
-        let test = try!(load_negative_syntax(&graph, &s));
+        let test = try!(load_negative_syntax(&graph, t.subject()));
         let r = try!(run_eval_negative_syntax(&test, base, base_dir));
         eval_result(&r);
         assertions.push(r);
     }
     for t in graph.iter_object_iri_predicate("http://www.w3.org/ns/rdftest#TestTurtleNegativeEval",
                                    RDF_TYPE) {
-        let s = subject_to_string(&t);
-        let test = try!(load_negative_eval(&graph, &s));
+        let test = try!(load_negative_eval(&graph, t.subject()));
         let r = try!(run_eval_negative_eval(&test, base, base_dir));
         eval_result(&r);
         assertions.push(r);

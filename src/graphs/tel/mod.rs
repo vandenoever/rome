@@ -9,6 +9,7 @@ mod triple;
 
 use self::triple64::*;
 use self::triple128::*;
+// pub use self::graph::Graph;
 
 pub type Graph64 = graph::Graph<Triple64SPO, Triple64OPS>;
 pub type Graph128 = graph::Graph<Triple128SPO, Triple128OPS>;

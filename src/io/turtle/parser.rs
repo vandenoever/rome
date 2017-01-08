@@ -1,6 +1,7 @@
 use super::grammar_structs::*;
 use super::grammar::{statement, tws};
 use super::grammar_helper::*;
+use std::marker::PhantomData;
 use std::collections::HashMap;
 use nom::IResult;
 use graph;
@@ -80,94 +81,71 @@ struct BlankNodes<'a> {
     next_blank: usize,
 }
 
-#[derive (PartialEq,Eq,Clone,Debug)]
-pub struct IteratorTriple {
-    pub subject: IteratorSubject,
-    pub predicate: Rc<String>,
-    pub object: IteratorObject,
+#[derive(Clone,Copy,PartialEq,Eq,PartialOrd,Ord,Debug)]
+pub struct BlankNodePtr<'g> {
+    graph_id: u32,
+    node_id: u32,
+    phantom: PhantomData<&'g u32>,
 }
-
-#[derive (PartialEq,Eq,Clone,Debug)]
-pub enum IteratorSubject {
-    IRI(Rc<String>),
-    BlankNode(graph::BlankNode),
+impl<'g> graph::BlankNodePtr<'g> for BlankNodePtr<'g> {
+    fn graph_id(&self) -> u32 {
+        self.graph_id
+    }
+    fn node_id(&self) -> u32 {
+        self.node_id
+    }
 }
-
-#[derive (PartialEq,Eq,Clone,Debug)]
-pub struct IteratorLiteral {
+#[derive(Clone,PartialEq,Eq,PartialOrd,Ord,Debug)]
+pub struct IRIPtr<'g> {
+    iri: Rc<String>,
+    phantom: PhantomData<&'g u32>,
+}
+impl<'g> graph::IRIPtr<'g> for IRIPtr<'g> {
+    fn as_str(&self) -> &str {
+        self.iri.as_str()
+    }
+}
+#[derive(Clone,PartialEq,Eq,PartialOrd,Ord,Debug)]
+pub struct LiteralPtr<'g> {
     pub lexical: Rc<String>,
     pub datatype: Rc<String>,
     pub language: Option<Rc<String>>,
+    phantom: PhantomData<&'g u32>,
 }
-
-#[derive (PartialEq,Eq,Clone,Debug)]
-pub enum IteratorObject {
-    IRI(Rc<String>),
-    BlankNode(graph::BlankNode),
-    Literal(IteratorLiteral),
-}
-
-#[derive (PartialOrd,Ord,PartialEq,Eq,Clone)]
-pub struct Dummy;
-impl<'t> graph::PredicatePtr<'t> for Dummy {
-    fn iri(&self) -> &str {
-        ""
+impl<'g> graph::LiteralPtr<'g> for LiteralPtr<'g> {
+    fn as_str(&self) -> &str {
+        self.lexical.as_str()
     }
-}
-impl<'t> graph::SubjectPtr<'t> for Dummy {
-    fn iri(&self) -> Option<&'t str> {
-        None
+    fn datatype(&self) -> &str {
+        self.datatype.as_str()
     }
-}
-impl<'t> graph::ObjectPtr<'t> for Dummy {
-    fn literal(&self) -> Option<&str> {
-        None
-    }
-}
-impl<'a> graph::IntoObject<'a> for Dummy {
-    fn object(self) -> graph::Object<'a> {
-        graph::Object::IRI("")
-    }
-}
-
-impl<'t> graph::Triple<'t> for IteratorTriple {
-    type SubjectPtr = Dummy;
-    type PredicatePtr = Dummy;
-    type ObjectPtr = Dummy;
-
-    fn subject(&self) -> graph::Subject {
-        match self.subject {
-            IteratorSubject::IRI(ref iri) => graph::Subject::IRI(iri.as_str()),
-            IteratorSubject::BlankNode(n) => graph::Subject::BlankNode(n),
+    fn language(&self) -> Option<&str> {
+        match &self.language {
+            &Some(ref l) => Some(l.as_str()),
+            &None => None,
         }
     }
-    fn predicate(&self) -> &str {
-        self.predicate.as_str()
+}
+type BlankNodeOrIRI<'t> = graph::BlankNodeOrIRI<'t, BlankNodePtr<'t>, IRIPtr<'t>>;
+type Resource<'t> = graph::Resource<'t, BlankNodePtr<'t>, IRIPtr<'t>, LiteralPtr<'t>>;
+
+#[derive(PartialEq,Eq)]
+pub struct IteratorTriple<'t> {
+    pub subject: BlankNodeOrIRI<'t>,
+    pub predicate: IRIPtr<'t>,
+    pub object: Resource<'t>,
+}
+impl<'t> graph::Triple<'t, BlankNodePtr<'t>, IRIPtr<'t>, LiteralPtr<'t>> for IteratorTriple<'t> {
+    fn subject(&self) -> BlankNodeOrIRI<'t> {
+        self.subject.clone()
     }
-    fn object(&self) -> graph::Object {
-        match self.object {
-            IteratorObject::IRI(ref iri) => graph::Object::IRI(iri.as_str()),
-            IteratorObject::BlankNode(n) => graph::Object::BlankNode(n),
-            IteratorObject::Literal(ref l) => {
-                graph::Object::Literal(graph::Literal {
-                    lexical: l.lexical.as_str(),
-                    datatype: l.datatype.as_str(),
-                    language: l.language.as_ref().map(|l| l.as_str()),
-                })
-            }
-        }
+    fn predicate(&self) -> IRIPtr<'t> {
+        self.predicate.clone()
     }
-    fn subject_ptr(&self) -> Self::SubjectPtr {
-        Dummy {}
-    }
-    fn predicate_ptr(&self) -> Self::PredicatePtr {
-        Dummy {}
-    }
-    fn object_ptr(&self) -> Self::ObjectPtr {
-        Dummy {}
+    fn object(&self) -> Resource<'t> {
+        self.object.clone()
     }
 }
-
 struct Strings {
     subject: Rc<String>,
     predicate: Rc<String>,
@@ -268,19 +246,29 @@ impl<'a> TripleIterator<'a> {
     }
 }
 
-fn resolve_triple(triple: Triple,
-                  prefixes: &Namespaces,
-                  base: &str,
-                  buffer: &mut String,
-                  strings: &mut Strings)
-                  -> Result<IteratorTriple> {
+fn resolve_triple<'g>(triple: Triple,
+                      prefixes: &Namespaces,
+                      base: &str,
+                      buffer: &mut String,
+                      strings: &mut Strings)
+                      -> Result<IteratorTriple<'g>> {
     Ok(IteratorTriple {
         subject: match triple.subject {
             SingleSubject::IRI(iri) => {
                 try!(resolve_iri(iri, prefixes, base, buffer, &mut strings.subject));
-                IteratorSubject::IRI(strings.subject.clone())
+                graph::BlankNodeOrIRI::IRI(IRIPtr {
+                    iri: strings.subject.clone(),
+                    phantom: PhantomData,
+                })
             }
-            SingleSubject::BlankNode(n) => IteratorSubject::BlankNode((n, 0)),
+            SingleSubject::BlankNode(n) => {
+                graph::BlankNodeOrIRI::BlankNode(BlankNodePtr {
+                                                     node_id: n as u32,
+                                                     graph_id: 0,
+                                                     phantom: PhantomData,
+                                                 },
+                                                 PhantomData)
+            }
         },
         predicate: {
             try!(resolve_iri(triple.predicate,
@@ -288,16 +276,29 @@ fn resolve_triple(triple: Triple,
                              base,
                              buffer,
                              &mut strings.predicate));
-            strings.predicate.clone()
+            IRIPtr {
+                iri: strings.predicate.clone(),
+                phantom: PhantomData,
+            }
         },
         object: match triple.object {
             SingleObject::IRI(iri) => {
                 try!(resolve_iri(iri, prefixes, base, buffer, &mut strings.object));
-                IteratorObject::IRI(strings.object.clone())
+                graph::Resource::IRI(IRIPtr {
+                    iri: strings.object.clone(),
+                    phantom: PhantomData,
+                })
             }
-            SingleObject::BlankNode(n) => IteratorObject::BlankNode((n, 0)),
+            SingleObject::BlankNode(n) => {
+                graph::Resource::BlankNode(BlankNodePtr {
+                                               node_id: n as u32,
+                                               graph_id: 0,
+                                               phantom: PhantomData,
+                                           },
+                                           PhantomData)
+            }
             SingleObject::Literal(l) => {
-                IteratorObject::Literal(IteratorLiteral {
+                graph::Resource::Literal(LiteralPtr {
                     lexical: {
                         try!(unescape_literal(l.lexical, &mut strings.object));
                         strings.object.clone()
@@ -323,6 +324,7 @@ fn resolve_triple(triple: Triple,
                         }
                         None => None,
                     },
+                    phantom: PhantomData,
                 })
             }
         },
@@ -378,7 +380,7 @@ impl<'a> BlankNodes<'a> {
 }
 
 impl<'a> Iterator for TripleIterator<'a> {
-    type Item = Result<IteratorTriple>;
+    type Item = Result<IteratorTriple<'a>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.done {

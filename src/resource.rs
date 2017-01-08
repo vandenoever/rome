@@ -5,26 +5,45 @@ use std;
 use resource;
 use iter;
 
-pub trait ResourceBase<'g>: Eq + std::marker::Sized + Clone + Ord {
+macro_rules!
+rb{($p:ident) =>
+    (<<Self as resource::ResourceBase<'g>>::Graph as graph::Graph<'g>>::$p)
+}
+macro_rules!
+resource{() =>
+    (graph::Resource<'g, rb!(BlankNodePtr), rb!(IRIPtr), rb!(LiteralPtr)>)
+}
+macro_rules!
+adapter{() =>
+    (ontology_adapter::OntologyAdapter<'g, Self::Graph>)
+}
+macro_rules!
+g{($p:ident) =>
+    (<G as graph::Graph<'g>>::$p)
+}
+macro_rules!
+g_resource{() =>
+    (graph::Resource<'g, g!(BlankNodePtr), g!(IRIPtr), g!(LiteralPtr)>)
+}
+
+
+pub trait ResourceBase<'g>: Clone + Ord {
     type Graph: graph::Graph<'g>;
     type SubjectIter: Iterator<Item = Self> + iter::SortedIterator;
-    fn new(this: <Self::Graph as graph::Graph<'g>>::ObjectPtr,
-           graph: &'g ontology_adapter::OntologyAdapter<'g, Self::Graph>)
-           -> Self;
+    fn new(this: resource!(), graph: &'g adapter!()) -> Self;
     fn iter(graph: &'g ontology_adapter::OntologyAdapter<'g, Self::Graph>) -> Self::SubjectIter;
-    fn this(&self) -> <Self::Graph as graph::Graph<'g>>::ObjectPtr;
+    fn this(&self) -> &resource!();
     fn graph(&self) -> &'g ontology_adapter::OntologyAdapter<'g, Self::Graph>;
-    fn predicate<R>(&self,
-                    predicate: Option<<Self::Graph as graph::Graph<'g>>::PredicatePtr>)
-                    -> ObjectIter<'g,R>
+    fn predicate<R>(&self, predicate: Option<rb!(IRIPtr)>) -> ObjectIter<'g, R>
         where R: ResourceBase<'g, Graph = Self::Graph>;
     fn iri(&self) -> Option<IRI<'g, Self>> {
-        self.graph().object_to_predicate(self.this().clone()).map(|_| {
-            IRI {
+        match self.this() {
+            &graph::Resource::IRI(_) => Some(IRI {
                 resource: self.clone(),
                 phantom: std::marker::PhantomData,
-            }
-        })
+            }),
+            _ => None
+        }
     }
 }
 
@@ -40,9 +59,18 @@ pub struct IRI<'g, R: 'g>
 impl<'g, R> IRI<'g, R>
     where R: ResourceBase<'g>
 {
-    pub fn iri_(&self) -> &'g str {
-        use graph::SubjectPtr;
-        self.resource.this().iri().unwrap()
+    pub fn this(&self) -> &rb!(IRIPtr) {
+        match self.resource.this().as_iri() {
+            Some(iri) => iri,
+            _ => unreachable!()
+        }
+    }
+    pub fn as_str(&self) -> &str {
+        use graph::IRIPtr;
+        match self.resource.this() {
+            &graph::Resource::IRI(ref iri) => iri.as_str(),
+            _ => unreachable!()
+        }
     }
 }
 impl<'g, R: ?Sized> std::ops::Deref for IRI<'g, R>
@@ -96,7 +124,7 @@ impl<'g, R: 'g> ResourceBase<'g> for IRI<'g, R>
 {
     type Graph = R::Graph;
     type SubjectIter = IRISubjectIter<'g, R>;
-    fn new(this: <Self::Graph as graph::Graph<'g>>::ObjectPtr,
+    fn new(this: resource!(),
            graph: &'g ontology_adapter::OntologyAdapter<'g, Self::Graph>)
            -> Self {
         IRI {
@@ -107,14 +135,13 @@ impl<'g, R: 'g> ResourceBase<'g> for IRI<'g, R>
     fn iter(graph: &'g ontology_adapter::OntologyAdapter<'g, Self::Graph>) -> Self::SubjectIter {
         IRISubjectIter { iter: R::iter(graph) }
     }
-    fn this(&self) -> <<R as resource::ResourceBase<'g>>::Graph as graph::Graph<'g>>::ObjectPtr {
+    fn this(&self) -> &resource!() {
         self.resource.this()
     }
     fn graph(&self) -> &'g ontology_adapter::OntologyAdapter<'g, Self::Graph> {
         self.resource.graph()
     }
-    fn predicate<O>(&self,
-                    predicate: Option<<Self::Graph as graph::Graph<'g>>::PredicatePtr>)
+    fn predicate<O>(&self, predicate: Option<rb!(IRIPtr)>)
                     -> ObjectIter<'g,O>
         where O: ResourceBase<'g,Graph = Self::Graph>{
         self.resource.predicate(predicate)
@@ -134,7 +161,7 @@ impl<'g, R> Iterator for ObjectIter<'g, R>
     type Item = R;
     fn next(&mut self) -> Option<Self::Item> {
         match self.iter.next() {
-            Some(triple) => Some(R::new(triple.object_ptr(), &self.graph)),
+            Some(triple) => Some(R::new(triple.object(), &self.graph)),
             None => None,
         }
     }
@@ -156,8 +183,8 @@ impl<'g, R> Iterator for SubjectIter<'g, R>
     fn next(&mut self) -> Option<Self::Item> {
         match self.iter.next() {
             Some(triple) => {
-                let s = triple.subject_ptr();
-                let o = self.graph.subject_to_object(s);
+                let s = triple.subject();
+                let o = s.to_resource();
                 Some(R::new(o, &self.graph))
             }
             None => None,
@@ -205,7 +232,7 @@ pub trait $trait_name<'g>: resource::ResourceBase<'g>
     fn property_iri() -> &'static str {
         $iri
     }
-    fn property_iri_ptr(&self) -> Option<<Self::Graph as graph::Graph<'g>>::PredicatePtr>
+    fn property_iri_ptr(&self) -> Option<<Self::Graph as graph::Graph<'g>>::IRIPtr>
         where <Self as resource::ResourceBase<'g>>::Graph: 'g
     {
         self.graph().class_iri($pos).map(|i|i.clone())
@@ -233,7 +260,7 @@ $(#[$meta])*
 pub struct $name<'g,G:'g>
     where G: graph::Graph<'g>
 {
-    resource: G::ObjectPtr,
+    resource: g_resource!(),
     graph: &'g ontology_adapter::OntologyAdapter<'g,G>,
 }
 impl<'g, G> $name<'g,G>
@@ -243,7 +270,7 @@ impl<'g, G> $name<'g,G>
     pub fn class_iri() -> &'static str {
         $iri
     }
-    pub fn class_iri_ptr(&self) -> Option<G::PredicatePtr> {
+    pub fn class_iri_ptr(&self) -> Option<G::IRIPtr> {
         self.graph.class_iri($pos).map(|i|i.clone())
     }
 }
@@ -278,13 +305,12 @@ impl<'g, G> Ord for $name<'g,G> where G: graph::Graph<'g> {
         self.resource.cmp(&other.resource)
     }
 }
-
 impl<'g, G:'g> resource::ResourceBase<'g> for $name<'g,G>
     where G: graph::Graph<'g>
 {
     type Graph = G;
     type SubjectIter = resource::SubjectIter<'g,Self>;
-    fn new(resource: G::ObjectPtr,
+    fn new(resource: resource!(),
             graph: &'g ontology_adapter::OntologyAdapter<'g,G>) -> Self {
         $name {
             resource: resource,
@@ -293,10 +319,11 @@ impl<'g, G:'g> resource::ResourceBase<'g> for $name<'g,G>
     }
     fn iter(graph: &'g ontology_adapter::OntologyAdapter<'g,G>)
             -> resource::SubjectIter<'g,Self> {
+        use graph::IRIPtr;
         let a = graph.class_iri(0);
         let c = graph.class_iri($pos);
         let iter = match (a, c) {
-            (Some(a),Some(c)) => graph.iter_o_p(graph.predicate_to_object(c.clone()), a.clone()),
+            (Some(a),Some(c)) => graph.iter_o_p(c.to_resource(), a.clone()),
             _ => graph.empty_ops_range()
         };
         resource::SubjectIter {
@@ -304,21 +331,21 @@ impl<'g, G:'g> resource::ResourceBase<'g> for $name<'g,G>
             iter: iter,
         }
     }
-    fn this(&self) -> G::ObjectPtr {
-        self.resource.clone()
+    fn this(&self) -> &resource!() {
+        &self.resource
     }
     fn graph(&self) -> &'g ontology_adapter::OntologyAdapter<'g,G> {
         &self.graph
     }
 
-    fn predicate<R>(&self, predicate: Option<G::PredicatePtr>)
+    fn predicate<R>(&self, predicate: Option<G::IRIPtr>)
             -> resource::ObjectIter<'g,R>
         where R: resource::ResourceBase<'g,Graph = G>
     {
         let iter = match predicate {
             None => self.graph.empty_spo_range(),
-            Some(ref predicate) => match self.graph.object_to_subject(self.this().clone()) {
-                Some(ref subject) => self.graph.iter_s_p(subject.clone(), predicate.clone()),
+            Some(ref predicate) => match self.this().to_blank_node_or_iri() {
+                Some(subject) => self.graph.iter_s_p(subject, predicate.clone()),
                 None => self.graph.empty_spo_range(),
             }
         };
@@ -345,34 +372,73 @@ impl<'g, G> From<$subclass<'g, G>> for $class<G> where G: graph::Graph<'g> {
 
 }}
 
-pub fn adapter<'g, G: 'g>(graph: &'g G) -> ontology_adapter::OntologyAdapter<'g, G>
-    where G: graph::Graph<'g>
-{
-    let mut iris = Vec::with_capacity(7);
-    iris.push(graph.predicate_ptr("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"));
-    iris.push(graph.predicate_ptr("http://www.w3.org/2000/01/rdf-schema#Class"));
-    iris.push(graph.predicate_ptr("http://www.w3.org/1999/02/22-rdf-syntax-ns#Property"));
-    iris.push(graph.predicate_ptr("http://www.w3.org/2000/01/rdf-schema#Literal"));
-    iris.push(graph.predicate_ptr("http://www.w3.org/2000/01/rdf-schema#comment"));
-    iris.push(graph.predicate_ptr("http://www.w3.org/2000/01/rdf-schema#domain"));
-    iris.push(graph.predicate_ptr("http://www.w3.org/2000/01/rdf-schema#range"));
-    iris.push(graph.predicate_ptr("http://www.w3.org/2000/01/rdf-schema#subClassOf"));
-    ontology_adapter::OntologyAdapter::new(graph, iris)
+#[cfg(test)]
+mod tests {
+    use std;
+    use graph;
+    use resource;
+    use ontology_adapter;
+    use resource::{ResourceBase,IRI};
+    use graph::GraphCreator;
+    use graphs::tel;
+    use constants;
+
+    const RDF_PROPERTY: &'static str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#Property";
+    const RDFS_CLASS: &'static str = "http://www.w3.org/2000/01/rdf-schema#Class";
+    const RDFS_LITERAL: &'static str = "http://www.w3.org/2000/01/rdf-schema#Literal";
+    const RDFS_COMMENT: &'static str = "http://www.w3.org/2000/01/rdf-schema#comment";
+    const RDFS_DOMAIN: &'static str = "http://www.w3.org/2000/01/rdf-schema#domain";
+    const RDFS_RANGE: &'static str = "http://www.w3.org/2000/01/rdf-schema#range";
+    const RDFS_SUB_CLASS_OF: &'static str = "http://www.w3.org/2000/01/rdf-schema#subClassOF";
+
+    pub fn adapter<'g, G: 'g>(graph: &'g G) -> ontology_adapter::OntologyAdapter<'g, G>
+        where G: graph::Graph<'g>
+    {
+        let mut iris = Vec::with_capacity(7);
+        iris.push(graph.find_iri(constants::RDF_TYPE));
+        iris.push(graph.find_iri(RDFS_CLASS));
+        iris.push(graph.find_iri(RDF_PROPERTY));
+        iris.push(graph.find_iri(RDFS_LITERAL));
+        iris.push(graph.find_iri(RDFS_COMMENT));
+        iris.push(graph.find_iri(RDFS_DOMAIN));
+        iris.push(graph.find_iri(RDFS_RANGE));
+        iris.push(graph.find_iri(RDFS_SUB_CLASS_OF));
+        ontology_adapter::OntologyAdapter::new(graph, iris)
+    }
+
+    class!(:"http://www.w3.org/2000/01/rdf-schema#Class", Class, 1);
+    class!(:"http://www.w3.org/1999/02/22-rdf-syntax-ns#Property", Property, 2);
+    class!(:"http://www.w3.org/2000/01/rdf-schema#Literal", Literal, 3);
+    property!(:"http://www.w3.org/2000/01/rdf-schema#comment", Comment, comment, Literal<'g,G>, 4);
+    property!(:"http://www.w3.org/2000/01/rdf-schema#domain", Domain, domain, Class<'g,G>, 5);
+    property!(:"http://www.w3.org/2000/01/rdf-schema#range", Range, range, Class<'g,G>, 6);
+    property!(:"http://www.w3.org/2000/01/rdf-schema#subClassOf", SubClassOf, sub_class_of, Class<'g,G>, 7);
+
+    impl<'g,G> SubClassOf<'g> for Class<'g,G> where G: graph::Graph<'g> {}
+    impl<'g,G> Comment<'g> for Class<'g,G> where G: graph::Graph<'g> {}
+    impl<'g,G> Domain<'g> for Property<'g,G> where G: graph::Graph<'g> {}
+    impl<'g,G> Range<'g> for Property<'g,G> where G: graph::Graph<'g> {}
+    impl<'g,G> Comment<'g> for Property<'g,G> where G: graph::Graph<'g> {}
+
+    #[test]
+    fn instantiate_ontology_classes() {
+        let mut creator = tel::GraphCreator::with_capacity(1000);
+        let graph: tel::Graph64 = creator.collect();
+        let ontology = adapter(&graph);
+        for class in IRI::<Class<_>>::iter(&ontology) {
+            class.class_iri_ptr();
+        }
+        for property in IRI::<Property<_>>::iter(&ontology) {
+            property.class_iri_ptr();
+        }
+        for literal in IRI::<Literal<_>>::iter(&ontology) {
+            literal.class_iri_ptr();
+        }
+    }
+    #[test]
+    fn test_class_iri() {
+        assert_eq!(Class::<tel::Graph64>::class_iri(), RDFS_CLASS);
+        assert_eq!(Property::<tel::Graph64>::class_iri(), RDF_PROPERTY);
+        assert_eq!(Literal::<tel::Graph64>::class_iri(), RDFS_LITERAL);
+    }
 }
-// class!(:"http://www.w3.org/2000/01/rdf-schema#Class", Class, 1);
-// class!(:"http://www.w3.org/1999/02/22-rdf-syntax-ns#Property",
-// Property,
-// 2);
-// class!(:"http://www.w3.org/2000/01/rdf-schema#Literal", Literal, 3);
-// property!(:"http://www.w3.org/2000/01/rdf-schema#comment", Comment, comment, Literal<G>, 4);
-// property!(:"http://www.w3.org/2000/01/rdf-schema#domain", Domain, domain, Class<G>, 5);
-// property!(:"http://www.w3.org/2000/01/rdf-schema#range", Range, range, Class<G>, 6);
-// property!(:"http://www.w3.org/2000/01/rdf-schema#subClassOf",
-// SubClassOf, sub_class_of, Class<G>, 7);
-//
-// impl<'g,G> SubClassOf<'g> for Class<'g,G> where G: graph::Graph<'g> {}
-// impl<'g,G> Comment<'g> for Class<'g,G> where G: graph::Graph<'g> {}
-// impl<'g,G> Domain<'g> for Property<'g,G> where G: graph::Graph<'g> {}
-// impl<'g,G> Range<'g> for Property<'g,G> where G: graph::Graph<'g> {}
-// impl<'g,G> Comment<'g> for Property<'g,G> where G: graph::Graph<'g> {}
-//
