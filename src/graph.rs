@@ -64,6 +64,7 @@ pub trait Triple<'g>: Eq {
     fn subject(&self) -> Subject;
     fn subject_ptr(&self) -> Self::SubjectPtr;
     fn predicate(&self) -> &str;
+    fn predicate_ptr(&self) -> Self::PredicatePtr;
     fn object(&self) -> Object;
     fn object_ptr(&self) -> Self::ObjectPtr;
     fn eq<'a, Rhs>(&self, other: &Rhs) -> bool

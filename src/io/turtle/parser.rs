@@ -160,6 +160,9 @@ impl<'t> graph::Triple<'t> for IteratorTriple {
     fn subject_ptr(&self) -> Self::SubjectPtr {
         Dummy {}
     }
+    fn predicate_ptr(&self) -> Self::PredicatePtr {
+        Dummy {}
+    }
     fn object_ptr(&self) -> Self::ObjectPtr {
         Dummy {}
     }

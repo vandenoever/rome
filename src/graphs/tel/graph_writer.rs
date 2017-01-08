@@ -540,6 +540,9 @@ impl<'g, SPO: 'g, OPS: 'g, T> graph::Triple<'g> for Triple<'g, SPO, OPS, T>
             SubjectPtr::BlankNode(self.graph, self.triple.subject())
         }
     }
+    fn predicate_ptr(&self) -> Self::PredicatePtr {
+        PredicatePtr(self.graph, self.triple.predicate())
+    }
     fn object_ptr(&self) -> Self::ObjectPtr {
         if self.triple.object_is_iri() {
             ObjectPtr::IRI(self.graph, self.triple.object())
