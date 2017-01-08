@@ -1,3 +1,5 @@
+use iter::sorted_iterator::SortedIterator;
+
 pub trait Graph<'g> {
     type SubjectPtr: SubjectPtr<'g>;
     type PredicatePtr: PredicatePtr<'g>;
@@ -5,14 +7,14 @@ pub trait Graph<'g> {
     type SPOTriple: Triple<'g,
            SubjectPtr = Self::SubjectPtr,
            PredicatePtr = Self::PredicatePtr,
-           ObjectPtr = Self::ObjectPtr>;
-    type SPOIter: Iterator<Item = Self::SPOTriple>;
-    type SPORangeIter: Iterator<Item = Self::SPOTriple>;
+           ObjectPtr = Self::ObjectPtr> + Ord;
+    type SPOIter: SortedIterator<Item = Self::SPOTriple>;
+    type SPORangeIter: SortedIterator<Item = Self::SPOTriple>;
     type OPSTriple: Triple<'g,
            SubjectPtr = Self::SubjectPtr,
            PredicatePtr = Self::PredicatePtr,
-           ObjectPtr = Self::ObjectPtr>;
-    type OPSRangeIter: Iterator<Item = Self::OPSTriple>;
+           ObjectPtr = Self::ObjectPtr> + Ord;
+    type OPSRangeIter: SortedIterator<Item = Self::OPSTriple>;
     fn iter(&'g self) -> Self::SPOIter;
 
     fn subject_ptr<'a, S>(&'g self, subject: S) -> Option<Self::SubjectPtr> where S: IntoSubject<'a>;

@@ -1,13 +1,14 @@
+use std::cmp;
+use std::marker::PhantomData;
 use std::mem;
+use rand;
+use compact_triple::*;
 use grammar;
 use graph;
+use iter::sorted_iterator::SortedIterator;
 use string_collector::*;
 #[cfg(test)]
 use triple64::*;
-use compact_triple::*;
-use std::cmp;
-use std::marker::PhantomData;
-use rand;
 
 pub struct GraphWriter<SPO, OPS>
     where SPO: CompactTriple<u32>,
@@ -472,6 +473,24 @@ impl<'g, SPO, OPS, T> Eq for Triple<'g, SPO, OPS, T>
           T: CompactTriple<u32>
 {
 }
+impl<'g, SPO, OPS, T> PartialOrd for Triple<'g, SPO, OPS, T>
+    where SPO: CompactTriple<u32>,
+          OPS: CompactTriple<u32>,
+          T: CompactTriple<u32>
+{
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl<'g, SPO, OPS, T> Ord for Triple<'g, SPO, OPS, T>
+    where SPO: CompactTriple<u32>,
+          OPS: CompactTriple<u32>,
+          T: CompactTriple<u32>
+{
+    fn cmp(&self, other: &Self) -> cmp::Ordering {
+        self.triple.cmp(&other.triple)
+    }
+}
 
 impl<'g, SPO: 'g, OPS: 'g, T> graph::Triple<'g> for Triple<'g, SPO, OPS, T>
     where SPO: CompactTriple<u32>,
@@ -602,6 +621,13 @@ impl<'g, SPO, OPS, T, F> Iterator for GraphIterator<'g, SPO, OPS, T, F>
         }
     }
 }
+impl<'g, SPO, OPS, T, F> SortedIterator for GraphIterator<'g, SPO, OPS, T, F>
+    where SPO: CompactTriple<u32>,
+          OPS: CompactTriple<u32>,
+          T: CompactTriple<u32>,
+          F: Index<SPO, OPS, T>
+{
+}
 
 pub struct TripleRangeIterator<'g, SPO: 'g, OPS: 'g, T, F>
     where SPO: CompactTriple<u32>,
@@ -637,6 +663,13 @@ impl<'g, SPO, OPS, T, F> Iterator for TripleRangeIterator<'g, SPO, OPS, T, F>
             None
         }
     }
+}
+impl<'g, SPO, OPS, T, F> SortedIterator for TripleRangeIterator<'g, SPO, OPS, T, F>
+    where SPO: CompactTriple<u32>,
+          OPS: CompactTriple<u32>,
+          T: CompactTriple<u32>,
+          F: Index<SPO, OPS, T>
+{
 }
 
 fn subject_blank_node<SPO>(subject: u32) -> SPO
