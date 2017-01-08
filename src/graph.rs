@@ -2,12 +2,14 @@ pub trait Graph<'g> {
     type SubjectPtr: SubjectPtr<'g>;
     type PredicatePtr: PredicatePtr<'g>;
     type ObjectPtr: ObjectPtr<'g>;
-    type SPOTriple: Triple<'g, SubjectPtr = Self::SubjectPtr,
+    type SPOTriple: Triple<'g,
+           SubjectPtr = Self::SubjectPtr,
            PredicatePtr = Self::PredicatePtr,
            ObjectPtr = Self::ObjectPtr>;
     type SPOIter: Iterator<Item = Self::SPOTriple>;
     type SPORangeIter: Iterator<Item = Self::SPOTriple>;
-    type OPSTriple: Triple<'g, SubjectPtr = Self::SubjectPtr,
+    type OPSTriple: Triple<'g,
+           SubjectPtr = Self::SubjectPtr,
            PredicatePtr = Self::PredicatePtr,
            ObjectPtr = Self::ObjectPtr>;
     type OPSRangeIter: Iterator<Item = Self::OPSTriple>;
@@ -44,8 +46,8 @@ pub trait Graph<'g> {
 pub trait GraphCreator<'g> {
     type Graph: Graph<'g>;
     fn create_blank_node(&mut self) -> BlankNode;
-    fn add_triple<'t,T>(&mut self, triple: &T) where T: Triple<'t>;
-    fn add<'a:'b,'b, S, O>(&'a mut self, subject: S, predicate: &str, object: O)
+    fn add_triple<'t, T>(&mut self, triple: &T) where T: Triple<'t>;
+    fn add<'a: 'b, 'b, S, O>(&'a mut self, subject: S, predicate: &str, object: O)
         where S: IntoSubject<'b>,
               O: IntoObject<'b>;
     fn collect(&mut self) -> Self::Graph;

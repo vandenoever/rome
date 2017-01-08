@@ -280,7 +280,7 @@ impl<'g, SPO: 'g, OPS: 'g> graph::GraphCreator<'g> for GraphWriter<SPO, OPS>
         self.highest_blank_node += 1;
         (self.highest_blank_node as usize, 0)
     }
-    fn add<'a:'b,'b, S, O>(&'a mut self, subject: S, predicate: &str, object: O)
+    fn add<'a: 'b, 'b, S, O>(&'a mut self, subject: S, predicate: &str, object: O)
         where S: graph::IntoSubject<'b>,
               O: graph::IntoObject<'b>
     {

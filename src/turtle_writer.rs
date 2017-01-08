@@ -13,7 +13,7 @@ struct TurtleWriter<'a, W>
     open_statement: bool,
 }
 
-pub fn write_turtle<'t,T, I, W>(namespaces: &Namespaces, triples: I, writer: &mut W) -> Result<()>
+pub fn write_turtle<'t, T, I, W>(namespaces: &Namespaces, triples: I, writer: &mut W) -> Result<()>
     where T: Triple<'t>,
           I: Iterator<Item = T>,
           W: Write
@@ -122,7 +122,7 @@ impl<'a, W> TurtleWriter<'a, W>
             &Object::Literal(ref literal) => self.write_literal(&literal, namespaces),
         }
     }
-    fn write_triple<'t,T>(&mut self, triple: &T, namespaces: &Namespaces) -> Result<()>
+    fn write_triple<'t, T>(&mut self, triple: &T, namespaces: &Namespaces) -> Result<()>
         where T: Triple<'t>
     {
         let subject = triple.subject();
