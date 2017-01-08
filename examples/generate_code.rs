@@ -9,10 +9,9 @@ use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::collections::BTreeMap;
 use std::collections::HashSet;
-use rdfio::graph_writer;
+use rdfio::graphs::tel;
+use rdfio::io::TurtleParser;
 use rdfio::graph::{Object, Graph, GraphCreator, Triple, SubjectPtr, ObjectPtr};
-use rdfio::triple_stream::*;
-use rdfio::triple128::*;
 use rdfio::namespaces::Namespaces;
 use rdfio::resource::{ResourceBase, IRI, ObjectIter};
 use rdfio::ontology::classes::rdf::Property;
@@ -22,7 +21,7 @@ use rdfio::ontology;
 use rdfio::ontology_adapter;
 use rdfio::iter::TransitiveIterator;
 
-type MyGraph = graph_writer::Graph<Triple128SPO, Triple128OPS>;
+type MyGraph = tel::Graph128;
 type OA<'g> = ontology_adapter::OntologyAdapter<'g, MyGraph>;
 type Writers = BTreeMap<Vec<u8>, Vec<u8>>;
 
@@ -156,7 +155,7 @@ fn closure<'g>(class: &Class<'g, MyGraph>) -> ObjectIter<'g, Class<'g, MyGraph>>
 fn infer(graph: &MyGraph) -> rdfio::Result<MyGraph> {
     // for every triple with rdfs:subClassOf infer that the subject and the
     // object are rdfs:Class instances
-    let mut writer = graph_writer::GraphWriter::with_capacity(65000);
+    let mut writer = tel::GraphCreator::with_capacity(65000);
     for triple in graph.iter().filter(|triple| triple.predicate() == RDFS_SUB_CLASS_OF) {
         writer.add(triple.subject(), RDF_TYPE, RDFS_CLASS);
         match triple.object() {
@@ -218,13 +217,13 @@ fn write_mod(o: &Output, iris: &Vec<String>) -> rdfio::Result<()> {
 }
 
 fn load_files(inputs: &Vec<String>) -> rdfio::Result<(Namespaces, MyGraph)> {
-    let mut writer = graph_writer::GraphWriter::with_capacity(65000);
+    let mut writer = tel::GraphCreator::with_capacity(65000);
     let mut prefixes = Namespaces::new();
     for input in inputs {
         let data = read_file(input)?;
         let mut base = String::from("file:");
         base.push_str(input);
-        let mut triples = TripleIterator::new(data.as_str(), &base)?;
+        let mut triples = TurtleParser::new(data.as_str(), &base)?;
         while let Some(triple) = triples.next() {
             writer.add_triple(&triple?);
         }

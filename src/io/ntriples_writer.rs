@@ -1,7 +1,7 @@
 use std::io::{Result, Write};
 use graph::*;
 
-struct NTripleWriter<'a, W>
+struct NTriplesWriter<'a, W>
     where W: Write + 'a
 {
     buffer: Vec<u8>,
@@ -9,12 +9,12 @@ struct NTripleWriter<'a, W>
 }
 
 /// write an RDF 1.1 N-Triples file in canonical form
-pub fn write_ntriples<T, I, W>(triples: I, writer: &mut W) -> Result<()>
-    where T: Triple,
+pub fn write_ntriples<'a, T, I, W>(triples: I, writer: &'a mut W) -> Result<()>
+    where T: Triple<'a>,
           I: Iterator<Item = T>,
           W: Write
 {
-    let mut writer = NTripleWriter {
+    let mut writer = NTriplesWriter {
         buffer: Vec::new(),
         writer: writer,
     };
@@ -24,7 +24,7 @@ pub fn write_ntriples<T, I, W>(triples: I, writer: &mut W) -> Result<()>
     Ok(())
 }
 
-impl<'a, W> NTripleWriter<'a, W>
+impl<'a, W> NTriplesWriter<'a, W>
     where W: Write + 'a
 {
     fn write_iri(&mut self, iri: &str) -> Result<()> {
@@ -86,7 +86,7 @@ impl<'a, W> NTripleWriter<'a, W>
         }
     }
     fn write_ntriple<T>(&mut self, triple: &T) -> Result<()>
-        where T: Triple
+        where T: Triple<'a>
     {
         try!(self.write_subject(&triple.subject()));
         try!(self.writer.write_all(b" "));

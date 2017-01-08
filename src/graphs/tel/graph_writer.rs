@@ -2,13 +2,13 @@ use std::cmp;
 use std::marker::PhantomData;
 use std::mem;
 use rand;
-use compact_triple::*;
-use grammar;
+use super::compact_triple::*;
+use constants;
 use graph;
 use iter::sorted_iterator::SortedIterator;
-use string_collector::*;
+use super::string_collector::*;
 #[cfg(test)]
-use triple64::*;
+use super::triple64::*;
 
 pub struct GraphWriter<SPO, OPS>
     where SPO: CompactTriple<u32>,
@@ -518,7 +518,7 @@ impl<'g, SPO: 'g, OPS: 'g, T> graph::Triple<'g> for Triple<'g, SPO, OPS, T>
         } else if self.triple.has_language() {
             graph::Object::Literal(graph::Literal {
                 lexical: self.graph.strings.get(StringId { id: self.triple.object() }),
-                datatype: grammar::RDF_LANG_STRING,
+                datatype: constants::RDF_LANG_STRING,
                 language: Some(self.graph
                     .datatype_or_lang
                     .get(StringId { id: self.triple.datatype_or_lang() })),

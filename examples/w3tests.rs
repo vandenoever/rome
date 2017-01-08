@@ -7,14 +7,12 @@ use std::io::{Read, Write};
 use std::path::Path;
 use std::rc::Rc;
 use rdfio::graph;
-use rdfio::graph_writer;
 use rdfio::graph::{Graph, GraphCreator, Triple};
-use rdfio::triple_stream::*;
-use rdfio::turtle_writer;
+use rdfio::graphs::tel;
+use rdfio::io::{TurtleParser, write_turtle};
 use rdfio::namespaces::Namespaces;
-use rdfio::triple64::*;
 
-type MyGraph = graph_writer::Graph<Triple64SPO, Triple64OPS>;
+type MyGraph = tel::Graph64;
 
 macro_rules! println_stderr(
     ($($arg:tt)*) => { {
@@ -154,8 +152,8 @@ fn read_file(path: &str) -> io::Result<String> {
 }
 
 fn load_graph(data: &str, base: &str) -> rdfio::Result<MyGraph> {
-    let mut writer = graph_writer::GraphWriter::with_capacity(65000);
-    let mut triples = try!(TripleIterator::new(data, base));
+    let mut writer = tel::GraphCreator::with_capacity(65000);
+    let mut triples = try!(TurtleParser::new(data, base));
     while let Some(triple) = triples.next() {
         writer.add_triple(&try!(triple));
     }
@@ -445,7 +443,7 @@ fn run_eval_negative_eval<'a>(test: &TestTurtleNegativeEval,
 }
 
 fn output_as_turtle(assertions: &Vec<Assertion>) -> rdfio::Result<()> {
-    let mut writer = graph_writer::GraphWriter::with_capacity(100000);
+    let mut writer = tel::GraphCreator::with_capacity(100000);
     for a in assertions {
         try!(write_assertion(&a, &mut writer));
     }
@@ -455,7 +453,7 @@ fn output_as_turtle(assertions: &Vec<Assertion>) -> rdfio::Result<()> {
     ns.set(b"earl", "http://www.w3.org/ns/earl#");
     ns.set(b"xsd", "http://www.w3.org/2001/XMLSchema#");
     ns.set(b"test", "http://www.w3.org/2013/TurtleTests/manifest.ttl#");
-    try!(turtle_writer::write_turtle(&ns, graph.iter(), &mut ::std::io::stdout()));
+    try!(write_turtle(&ns, graph.iter(), &mut ::std::io::stdout()));
     Ok(())
 }
 

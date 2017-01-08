@@ -1,4 +1,4 @@
-use compact_triple::*;
+use super::compact_triple::*;
 
 /// characteristic features of one triple type:
 /// - number of bits for blanks, iri, literals (bil)

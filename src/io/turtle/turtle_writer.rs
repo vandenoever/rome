@@ -1,7 +1,7 @@
 use std::io::{Result, Write};
 use graph::*;
 use namespaces::*;
-use grammar;
+use constants;
 
 struct TurtleWriter<'a, W>
     where W: Write + 'a
@@ -47,7 +47,7 @@ impl<'a, W> TurtleWriter<'a, W>
         self.writer.write_all(b" .\n")
     }
     fn write_iri(&mut self, iri: &str, namespaces: &Namespaces) -> Result<()> {
-        if iri == grammar::RDF_TYPE {
+        if iri == constants::RDF_TYPE {
             self.writer.write_all(b"a")
         } else {
             match namespaces.find_prefix(iri) {

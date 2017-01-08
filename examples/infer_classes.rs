@@ -9,14 +9,12 @@ use std::fs;
 use std::io;
 use std::io::{Read, Write};
 use std::path::Path;
-use rdfio::graph_writer;
+use rdfio::io::{TurtleParser, write_turtle};
 use rdfio::graph::{Object, Graph, GraphCreator, Triple};
-use rdfio::triple_stream::*;
-use rdfio::turtle_writer;
-use rdfio::triple64::*;
+use rdfio::graphs::tel;
 use rdfio::namespaces::Namespaces;
 
-type MyGraph = graph_writer::Graph<Triple64SPO, Triple64OPS>;
+type MyGraph = tel::Graph64;
 
 macro_rules! println_stderr(
     ($($arg:tt)*) => { {
@@ -39,8 +37,8 @@ fn read_file(path: &str) -> io::Result<String> {
 }
 
 fn load_graph(data: &str, base: &str) -> rdfio::Result<MyGraph> {
-    let mut writer = graph_writer::GraphWriter::with_capacity(65000);
-    let mut triples = try!(TripleIterator::new(data, base));
+    let mut writer = tel::GraphCreator::with_capacity(65000);
+    let mut triples = try!(TurtleParser::new(data, base));
     while let Some(triple) = triples.next() {
         writer.add_triple(&try!(triple));
     }
@@ -50,7 +48,7 @@ fn load_graph(data: &str, base: &str) -> rdfio::Result<MyGraph> {
 fn output_as_turtle(graph: &MyGraph) -> rdfio::Result<()> {
     let mut ns = Namespaces::new();
     ns.set(b"rdfs", "http://www.w3.org/2000/01/rdf-schema#");
-    try!(turtle_writer::write_turtle(&ns, graph.iter(), &mut ::std::io::stdout()));
+    try!(write_turtle(&ns, graph.iter(), &mut ::std::io::stdout()));
     Ok(())
 }
 
@@ -61,7 +59,7 @@ const RDF_TYPE: &'static str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
 fn infer(graph: &MyGraph) -> rdfio::Result<MyGraph> {
     // for every triple with rdfs:subClassOf infer that the subject and the
     // object are rdfs:Class instances
-    let mut writer = graph_writer::GraphWriter::with_capacity(65000);
+    let mut writer = tel::GraphCreator::with_capacity(65000);
     for triple in graph.iter().filter(|triple| triple.predicate() == RDFS_SUB_CLASS_OF) {
         writer.add(triple.subject(), RDF_TYPE, RDFS_CLASS);
         match triple.object() {
