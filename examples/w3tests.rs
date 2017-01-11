@@ -143,9 +143,9 @@ fn write_assertion<'a, 'g, W>(assertion: &'a Assertion, output: &mut W) -> rdfio
     where W: GraphCreator<'g>
 {
     let assertion_blank_node = output.create_blank_node();
-    output.add_blank_iri(assertion_blank_node, RDF_TYPE, EARL_ASSERTION);
+    output.add_blank_iri(assertion_blank_node.clone(), RDF_TYPE, EARL_ASSERTION);
     let date = format!("{}", assertion.date.rfc3339());
-    output.add_blank_literal(assertion_blank_node,
+    output.add_blank_literal(assertion_blank_node.clone(),
                              DC_DATE,
                              Literal {
                                  value: date,
@@ -153,9 +153,9 @@ fn write_assertion<'a, 'g, W>(assertion: &'a Assertion, output: &mut W) -> rdfio
                                  language: None,
                              });
     let result_blank_node = output.create_blank_node();
-    output.add_blank_iri(result_blank_node, RDF_TYPE, EARL_TEST_RESULT);
-    output.add_blank_blank(assertion_blank_node, EARL_RESULT, result_blank_node);
-    output.add_blank_blank(assertion_blank_node, EARL_RESULT, result_blank_node);
+    output.add_blank_iri(result_blank_node.clone(), RDF_TYPE, EARL_TEST_RESULT);
+    output.add_blank_blank(assertion_blank_node.clone(), EARL_RESULT, result_blank_node.clone());
+    output.add_blank_blank(assertion_blank_node.clone(), EARL_RESULT, result_blank_node.clone());
     let outcome = match assertion.result.outcome {
         Outcome::Passed => EARL_PASSED,
         Outcome::Failed => EARL_FAILED,

@@ -362,6 +362,9 @@ impl<SPO, OPS> Graph<SPO, OPS>
             },
         }
     }
+    pub fn len(&self) -> usize {
+        self.d.spo.len()
+    }
 }
 
 fn translate_object<T>(t: &mut T, translation: &Vec<u32>)
@@ -465,8 +468,5 @@ impl<'g, SPO: 'g, OPS: 'g> graph::Graph<'g> for Graph<SPO, OPS>
     }
     fn empty_ops_range(&'g self) -> Self::OPSRangeIter {
         self.empty_range_iter()
-    }
-    fn len(&self) -> usize {
-        self.d.spo.len()
     }
 }

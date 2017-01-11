@@ -5,8 +5,8 @@ use constants;
 
 struct TurtleWriter<'a, 'g, W: 'a, B: 'g, I: 'g>
     where W: Write,
-          B: BlankNodePtr<'g>,
-          I: IRIPtr<'g>
+          B: BlankNodePtr<'g> + Eq,
+          I: IRIPtr<'g> + Eq
 {
     buffer: Vec<u8>,
     base: String,
@@ -22,8 +22,8 @@ pub fn write_turtle<'g, T, I, W, T1: 'g, T2: 'g, T3: 'g>(namespaces: &Namespaces
     where T: Triple<'g, T1, T2, T3>,
           I: Iterator<Item = T>,
           W: Write,
-          T1: BlankNodePtr<'g>,
-          T2: IRIPtr<'g>,
+          T1: BlankNodePtr<'g> + Eq + Clone,
+          T2: IRIPtr<'g> + Eq + Clone,
           T3: LiteralPtr<'g>
 {
     let mut writer = TurtleWriter {
@@ -45,8 +45,8 @@ pub fn write_turtle<'g, T, I, W, T1: 'g, T2: 'g, T3: 'g>(namespaces: &Namespaces
 
 impl<'a, 'g, W: 'a, B, I> TurtleWriter<'a, 'g, W, B, I>
     where W: Write,
-          B: BlankNodePtr<'g>,
-          I: IRIPtr<'g>
+          B: BlankNodePtr<'g> + Eq + Clone,
+          I: IRIPtr<'g> + Eq + Clone
 {
     fn write_prefix(&mut self, ns: &Namespace) -> Result<()> {
         try!(self.writer.write_all(b"@prefix "));

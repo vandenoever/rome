@@ -1,44 +1,48 @@
-use std::fmt::Debug;
 use std::marker::PhantomData;
 use iter::sorted_iterator::SortedIterator;
 use constants;
 
-pub trait BlankNodePtr<'g>: Ord + Copy + Debug {
+pub trait BlankNodePtr<'g> {
     // todo: make graph_id into a trait so ensure that it is unique at runtime
     fn graph_id(&self) -> u32;
     fn node_id(&self) -> u32;
     fn to_blank_node_or_iri<I>(&self) -> BlankNodeOrIRI<'g, Self, I>
-        where I: IRIPtr<'g>
+        where Self: Clone,
+              I: IRIPtr<'g>
     {
         BlankNodeOrIRI::BlankNode(self.clone(), PhantomData)
     }
     fn to_resource<I, L>(&self) -> Resource<'g, Self, I, L>
-        where I: IRIPtr<'g>,
+        where Self: Clone,
+              I: IRIPtr<'g>,
               L: LiteralPtr<'g>
     {
         Resource::BlankNode(self.clone(), PhantomData)
     }
 }
-pub trait IRIPtr<'g>: Ord + Clone + Debug {
+pub trait IRIPtr<'g> {
     fn as_str(&self) -> &str;
     fn to_blank_node_or_iri<B>(&self) -> BlankNodeOrIRI<'g, B, Self>
-        where B: BlankNodePtr<'g>
+        where Self: Clone,
+              B: BlankNodePtr<'g>
     {
         BlankNodeOrIRI::IRI(self.clone())
     }
     fn to_resource<B, L>(&self) -> Resource<'g, B, Self, L>
-        where B: BlankNodePtr<'g>,
+        where Self: Clone,
+              B: BlankNodePtr<'g>,
               L: LiteralPtr<'g>
     {
         Resource::IRI(self.clone())
     }
 }
-pub trait LiteralPtr<'g>: Ord + Clone + Debug {
+pub trait LiteralPtr<'g> {
     fn as_str(&self) -> &str;
     fn datatype(&self) -> &str;
     fn language(&self) -> Option<&str>;
     fn to_resource<B, I>(&self) -> Resource<'g, B, I, Self>
-        where B: BlankNodePtr<'g>,
+        where Self: Clone,
+              B: BlankNodePtr<'g>,
               I: IRIPtr<'g>
     {
         Resource::Literal(self.clone())
@@ -53,8 +57,8 @@ pub enum BlankNodeOrIRI<'g, B: 'g, I: 'g>
     IRI(I),
 }
 impl<'g, B, I> BlankNodeOrIRI<'g, B, I>
-    where B: BlankNodePtr<'g>,
-          I: IRIPtr<'g>
+    where B: BlankNodePtr<'g> + Clone,
+          I: IRIPtr<'g> + Clone
 {
     pub fn as_iri(&self) -> Option<&I> {
         match self {
@@ -63,11 +67,12 @@ impl<'g, B, I> BlankNodeOrIRI<'g, B, I>
         }
     }
     pub fn to_resource<L>(&self) -> Resource<'g, B, I, L>
-        where L: LiteralPtr<'g>
+        where Self: Clone,
+              L: LiteralPtr<'g>
     {
         match self {
-            &BlankNodeOrIRI::BlankNode(ref t, _) => Resource::BlankNode(t.clone(), PhantomData),
-            &BlankNodeOrIRI::IRI(ref t) => Resource::IRI(t.clone()),
+            &BlankNodeOrIRI::BlankNode(ref b, _) => Resource::BlankNode(b.clone(), PhantomData),
+            &BlankNodeOrIRI::IRI(ref i) => Resource::IRI(i.clone()),
         }
     }
 }
@@ -98,11 +103,13 @@ impl<'g, I, L> IRIOrLiteral<'g, I, L>
         }
     }
     pub fn to_resource<B>(&self) -> Resource<'g, B, I, L>
-        where B: BlankNodePtr<'g>
+        where B: BlankNodePtr<'g>,
+              I: Clone,
+              L: Clone
     {
         match self {
-            &IRIOrLiteral::IRI(ref t, _) => Resource::IRI(t.clone()),
-            &IRIOrLiteral::Literal(ref t) => Resource::Literal(t.clone()),
+            &IRIOrLiteral::IRI(ref b, _) => Resource::IRI(b.clone()),
+            &IRIOrLiteral::Literal(ref l) => Resource::Literal(l.clone()),
         }
     }
 }
@@ -133,12 +140,15 @@ impl<'g, B, I, L> Resource<'g, B, I, L>
             _ => None,
         }
     }
-    pub fn to_blank_node_or_iri(&self) -> Option<BlankNodeOrIRI<'g, B, I>> {
+    pub fn to_blank_node_or_iri(&self) -> Option<BlankNodeOrIRI<'g, B, I>>
+        where B: Clone,
+              I: Clone
+    {
         match self {
-            &Resource::BlankNode(ref t, _) => {
-                Some(BlankNodeOrIRI::BlankNode(t.clone(), PhantomData))
+            &Resource::BlankNode(ref b, _) => {
+                Some(BlankNodeOrIRI::BlankNode(b.clone(), PhantomData))
             }
-            &Resource::IRI(ref t) => Some(BlankNodeOrIRI::IRI(t.clone())),
+            &Resource::IRI(ref i) => Some(BlankNodeOrIRI::IRI(i.clone())),
             _ => None,
         }
     }
@@ -191,9 +201,9 @@ pub trait GraphCreator<'g> {
 }
 
 pub trait Graph<'g> {
-    type BlankNodePtr: BlankNodePtr<'g>;
-    type IRIPtr: IRIPtr<'g>;
-    type LiteralPtr: LiteralPtr<'g>;
+    type BlankNodePtr: BlankNodePtr<'g> + Ord + Clone;
+    type IRIPtr: IRIPtr<'g> + Ord + Clone;
+    type LiteralPtr: LiteralPtr<'g> + Ord + Clone;
     type SPOTriple: Triple<'g, Self::BlankNodePtr, Self::IRIPtr, Self::LiteralPtr> + Ord;
     type SPOIter: SortedIterator<Item = Self::SPOTriple>;
     type SPORangeIter: SortedIterator<Item = Self::SPOTriple>;
@@ -221,9 +231,6 @@ pub trait Graph<'g> {
     fn empty_spo_range(&'g self) -> Self::SPORangeIter;
     /// iterator that returns no results
     fn empty_ops_range(&'g self) -> Self::OPSRangeIter;
-
-    /// return the number of triples in the graph
-    fn len(&self) -> usize;
 }
 
 impl<'g> IRIPtr<'g> for &'g str {
