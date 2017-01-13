@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::marker::PhantomData;
 use iter::sorted_iterator::SortedIterator;
 use constants;
@@ -20,6 +21,30 @@ pub trait BlankNodePtr<'g> {
         Resource::BlankNode(self.clone(), PhantomData)
     }
 }
+impl<'g> PartialEq for BlankNodePtr<'g> {
+    fn eq(&self, other: &BlankNodePtr<'g>) -> bool {
+        self.node_id() == other.node_id() && self.graph_id() == other.graph_id()
+    }
+}
+impl<'g> Eq for BlankNodePtr<'g> {}
+impl<'g> PartialOrd for BlankNodePtr<'g> {
+    fn partial_cmp(&self, other: &BlankNodePtr<'g>) -> Option<Ordering> {
+        let mut cmp = self.node_id().cmp(&other.node_id());
+        if cmp == Ordering::Equal {
+            cmp = self.graph_id().cmp(&other.graph_id())
+        }
+        Some(cmp)
+    }
+}
+impl<'g> Ord for BlankNodePtr<'g> {
+    fn cmp(&self, other: &BlankNodePtr<'g>) -> Ordering {
+        let mut cmp = self.node_id().cmp(&other.node_id());
+        if cmp == Ordering::Equal {
+            cmp = self.graph_id().cmp(&other.graph_id())
+        }
+        cmp
+    }
+}
 pub trait IRIPtr<'g> {
     fn as_str(&self) -> &str;
     fn to_blank_node_or_iri<B>(&self) -> BlankNodeOrIRI<'g, B, Self>
@@ -36,6 +61,22 @@ pub trait IRIPtr<'g> {
         Resource::IRI(self.clone())
     }
 }
+impl<'g> PartialEq for IRIPtr<'g> {
+    fn eq(&self, other: &IRIPtr<'g>) -> bool {
+        self.as_str() == other.as_str()
+    }
+}
+impl<'g> Eq for IRIPtr<'g> {}
+impl<'g> PartialOrd for IRIPtr<'g> {
+    fn partial_cmp(&self, other: &IRIPtr<'g>) -> Option<Ordering> {
+        Some(self.as_str().cmp(other.as_str()))
+    }
+}
+impl<'g> Ord for IRIPtr<'g> {
+    fn cmp(&self, other: &IRIPtr<'g>) -> Ordering {
+        self.as_str().cmp(other.as_str())
+    }
+}
 pub trait LiteralPtr<'g> {
     fn as_str(&self) -> &str;
     fn datatype(&self) -> &str;
@@ -48,6 +89,38 @@ pub trait LiteralPtr<'g> {
         Resource::Literal(self.clone())
     }
 }
+impl<'g> PartialEq for LiteralPtr<'g> {
+    fn eq(&self, other: &LiteralPtr<'g>) -> bool {
+        self.as_str() == other.as_str() && self.datatype() == other.datatype() &&
+        self.language() == other.language()
+    }
+}
+impl<'g> Eq for LiteralPtr<'g> {}
+impl<'g> PartialOrd for LiteralPtr<'g> {
+    fn partial_cmp(&self, other: &LiteralPtr<'g>) -> Option<Ordering> {
+        let mut cmp = self.as_str().cmp(&other.as_str());
+        if cmp == Ordering::Equal {
+            cmp = self.datatype().cmp(&other.datatype())
+        }
+        if cmp == Ordering::Equal {
+            cmp = self.language().cmp(&other.language())
+        }
+        Some(cmp)
+    }
+}
+impl<'g> Ord for LiteralPtr<'g> {
+    fn cmp(&self, other: &LiteralPtr<'g>) -> Ordering {
+        let mut cmp = self.as_str().cmp(&other.as_str());
+        if cmp == Ordering::Equal {
+            cmp = self.datatype().cmp(&other.datatype())
+        }
+        if cmp == Ordering::Equal {
+            cmp = self.language().cmp(&other.language())
+        }
+        cmp
+    }
+}
+
 #[derive(PartialEq,Eq,PartialOrd,Ord,Clone,Debug)]
 pub enum BlankNodeOrIRI<'g, B: 'g, I: 'g>
     where B: BlankNodePtr<'g>,
@@ -60,9 +133,15 @@ impl<'g, B, I> BlankNodeOrIRI<'g, B, I>
     where B: BlankNodePtr<'g> + Clone,
           I: IRIPtr<'g> + Clone
 {
+    pub fn as_blank_node(&self) -> Option<&B> {
+        match self {
+            &BlankNodeOrIRI::BlankNode(ref b, _) => Some(b),
+            _ => None,
+        }
+    }
     pub fn as_iri(&self) -> Option<&I> {
         match self {
-            &BlankNodeOrIRI::IRI(ref t) => Some(t),
+            &BlankNodeOrIRI::IRI(ref i) => Some(i),
             _ => None,
         }
     }
@@ -128,6 +207,12 @@ impl<'g, B, I, L> Resource<'g, B, I, L>
           I: IRIPtr<'g>,
           L: LiteralPtr<'g>
 {
+    pub fn as_blank_node(&self) -> Option<&B> {
+        match self {
+            &Resource::BlankNode(ref b, _) => Some(b),
+            _ => None,
+        }
+    }
     pub fn as_iri(&self) -> Option<&I> {
         match self {
             &Resource::IRI(ref t) => Some(t),
