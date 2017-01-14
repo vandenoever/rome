@@ -7,7 +7,9 @@ pub enum Object {
     IRI,
     Literal
 }
-// trait that makes it possible to look into a triple
+
+/// TripleCmpWrap can wrap a Triple and has no associated types.
+/// This makes it possible to re-use a pointer
 pub trait TripleCmpWrap<'g> {
     fn cmp_subject_blank_node(&self, graph_id: u32, node_id: u32) -> cmp::Ordering;
     fn cmp_subject_iri(&self, o: &str) -> cmp::Ordering;
@@ -129,82 +131,98 @@ pub fn get_equal_ops<'g, K:'g, T:'g, B:'g, I:'g, L:'g,>(iter: &mut Peekable<K>, 
     return None;
 }
 
+/// Graphs that are used in GraphCollection must implement TripleCmpWrap.
+/// This macro does that.
+macro_rules!
+impl_triple_cmp_wrap {
+    ($graph_type:path) => {
+        impl_triple_cmp_wrap_spo_ops!(SPOTriple $graph_type);
+        impl_triple_cmp_wrap_spo_ops!(OPSTriple $graph_type);
+    }
+}
+
+/// internal macro used by impl_triple_cmp_wrap
+macro_rules!
+impl_triple_cmp_wrap_spo_ops {
+    ($name:ident $graph_type:path) => {
+
+        impl<'g> TripleCmpWrap<'g> for <$graph_type as Graph<'g>>::$name {
+            fn cmp_subject_blank_node(&self, graph_id: u32, node_id: u32) -> cmp::Ordering {
+                match self.subject() {
+                    BlankNodeOrIRI::BlankNode(b,_) => {
+                        let mut cmp = b.node_id().cmp(&node_id);
+                        if cmp == cmp::Ordering::Equal {
+                            cmp = b.graph_id().cmp(&graph_id)
+                        }
+                        cmp
+                    }
+                    _ => cmp::Ordering::Greater
+                }
+            }
+            fn cmp_subject_iri(&self, o: &str) -> cmp::Ordering {
+                match self.subject() {
+                    BlankNodeOrIRI::IRI(i) => i.as_str().cmp(o),
+                    _ => cmp::Ordering::Less
+                }
+            }
+            fn cmp_predicate(&self, o: &str) -> cmp::Ordering {
+                self.predicate().as_str().cmp(o)
+            }
+            fn cmp_object_blank_node(&self, graph_id: u32, node_id: u32) -> cmp::Ordering {
+                match self.object() {
+                    Resource::BlankNode(b,_) => {
+                        let mut cmp = b.node_id().cmp(&node_id);
+                        if cmp == cmp::Ordering::Equal {
+                            cmp = b.graph_id().cmp(&graph_id)
+                        }
+                        cmp
+                    }
+                    _ => cmp::Ordering::Greater
+                }
+            }
+            fn cmp_object_iri(&self, o: &str) -> cmp::Ordering {
+                match self.object() {
+                    Resource::BlankNode(_,_) => cmp::Ordering::Less,
+                    Resource::IRI(i) => i.as_str().cmp(o),
+                    Resource::Literal(_) => cmp::Ordering::Greater
+                }
+            }
+            fn cmp_object_literal(&self, o: &str, datatype: &str, language: Option<&str>) -> cmp::Ordering {
+                match self.object() {
+                    Resource::Literal(l) => {
+                        let mut cmp = l.as_str().cmp(o);
+                        if cmp == cmp::Ordering::Equal {
+                            cmp = l.datatype().cmp(datatype);
+                        }
+                        if cmp == cmp::Ordering::Equal {
+                            cmp = l.language().cmp(&language);
+                        }
+                        cmp
+                    },
+                    _ => cmp::Ordering::Less,
+                }
+            }
+            fn subject_is_blank_node(&self) -> bool {
+                match self.subject() {
+                    BlankNodeOrIRI::BlankNode(_,_) => true,
+                    _ => false
+                }
+            }
+            fn object_type(&self) -> Object {
+                match self.object() {
+                    Resource::BlankNode(_,_) => Object::BlankNode,
+                    Resource::IRI(_) => Object::IRI,
+                    Resource::Literal(_) => Object::Literal,
+                }
+            }
+        }
+
+    }
+}
+
 macro_rules!
 spo_ops {
     ($name:ident $names:ident($( $n:tt:$graph_type:path),+) ) => {
-
-$(
-    impl<'g> TripleCmpWrap<'g> for <$graph_type as Graph<'g>>::$name {
-        fn cmp_subject_blank_node(&self, graph_id: u32, node_id: u32) -> cmp::Ordering {
-            match self.subject() {
-                BlankNodeOrIRI::BlankNode(b,_) => {
-                    let mut cmp = b.node_id().cmp(&node_id);
-                    if cmp == cmp::Ordering::Equal {
-                        cmp = b.graph_id().cmp(&graph_id)
-                    }
-                    cmp
-                }
-                _ => cmp::Ordering::Greater
-            }
-        }
-        fn cmp_subject_iri(&self, o: &str) -> cmp::Ordering {
-            match self.subject() {
-                BlankNodeOrIRI::IRI(i) => i.as_str().cmp(o),
-                _ => cmp::Ordering::Less
-            }
-        }
-        fn cmp_predicate(&self, o: &str) -> cmp::Ordering {
-            self.predicate().as_str().cmp(o)
-        }
-        fn cmp_object_blank_node(&self, graph_id: u32, node_id: u32) -> cmp::Ordering {
-            match self.object() {
-                Resource::BlankNode(b,_) => {
-                    let mut cmp = b.node_id().cmp(&node_id);
-                    if cmp == cmp::Ordering::Equal {
-                        cmp = b.graph_id().cmp(&graph_id)
-                    }
-                    cmp
-                }
-                _ => cmp::Ordering::Greater
-            }
-        }
-        fn cmp_object_iri(&self, o: &str) -> cmp::Ordering {
-            match self.object() {
-                Resource::BlankNode(_,_) => cmp::Ordering::Less,
-                Resource::IRI(i) => i.as_str().cmp(o),
-                Resource::Literal(_) => cmp::Ordering::Greater
-            }
-        }
-        fn cmp_object_literal(&self, o: &str, datatype: &str, language: Option<&str>) -> cmp::Ordering {
-            match self.object() {
-                Resource::Literal(l) => {
-                    let mut cmp = l.as_str().cmp(o);
-                    if cmp == cmp::Ordering::Equal {
-                        cmp = l.datatype().cmp(datatype);
-                    }
-                    if cmp == cmp::Ordering::Equal {
-                        cmp = l.language().cmp(&language);
-                    }
-                    cmp
-                },
-                _ => cmp::Ordering::Less,
-            }
-        }
-        fn subject_is_blank_node(&self) -> bool {
-            match self.subject() {
-                BlankNodeOrIRI::BlankNode(_,_) => true,
-                _ => false
-            }
-        }
-        fn object_type(&self) -> Object {
-            match self.object() {
-                Resource::BlankNode(_,_) => Object::BlankNode,
-                Resource::IRI(_) => Object::IRI,
-                Resource::Literal(_) => Object::Literal,
-            }
-        }
-    }
-)+
 
 #[derive(Clone,PartialEq,Eq,PartialOrd,Ord)]
 pub struct $name<'g> {
@@ -267,7 +285,6 @@ pub mod $name {
     use std::iter::Peekable;
     use std::cmp;
     use super::*;
-    use graph::*;
     use iter::SortedIterator;
     type Graphs<'g> = ($($graph_type,)+);
     type BlankNodes<'g> = ($(Option<<$graph_type as Graph<'g>>::BlankNodePtr>,)+);
