@@ -154,8 +154,12 @@ fn write_assertion<'a, 'g, W>(assertion: &'a Assertion, output: &mut W) -> rdfio
                              });
     let result_blank_node = output.create_blank_node();
     output.add_blank_iri(result_blank_node.clone(), RDF_TYPE, EARL_TEST_RESULT);
-    output.add_blank_blank(assertion_blank_node.clone(), EARL_RESULT, result_blank_node.clone());
-    output.add_blank_blank(assertion_blank_node.clone(), EARL_RESULT, result_blank_node.clone());
+    output.add_blank_blank(assertion_blank_node.clone(),
+                           EARL_RESULT,
+                           result_blank_node.clone());
+    output.add_blank_blank(assertion_blank_node.clone(),
+                           EARL_RESULT,
+                           result_blank_node.clone());
     let outcome = match assertion.result.outcome {
         Outcome::Passed => EARL_PASSED,
         Outcome::Failed => EARL_FAILED,

@@ -451,7 +451,9 @@ impl<'g, SPO: 'g, OPS: 'g> graph::Graph<'g> for Graph<SPO, OPS>
                 predicate: IRIPtr<'g, SPO, OPS>)
                 -> Self::OPSRangeIter {
         let ops = match object {
-            graph::Resource::BlankNode(bn,_) => object_blank_node_predicate(bn.node, predicate.iri),
+            graph::Resource::BlankNode(bn, _) => {
+                object_blank_node_predicate(bn.node, predicate.iri)
+            }
             graph::Resource::IRI(iri) => object_iri_predicate(iri.iri, predicate.iri),
             graph::Resource::Literal(l) => object_literal_predicate(l.lexical, predicate.iri),
         };

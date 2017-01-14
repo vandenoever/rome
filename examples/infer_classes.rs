@@ -61,7 +61,9 @@ fn infer(graph: &MyGraph) -> rdfio::Result<MyGraph> {
     // object are rdfs:Class instances
     let mut writer = tel::GraphCreator::with_capacity(65000);
     for triple in graph.iter().filter(|triple| triple.predicate().as_str() == RDFS_SUB_CLASS_OF) {
-        writer.add_iri_iri(triple.subject().as_iri().unwrap().clone(), RDF_TYPE, RDFS_CLASS);
+        writer.add_iri_iri(triple.subject().as_iri().unwrap().clone(),
+                           RDF_TYPE,
+                           RDFS_CLASS);
         match triple.object() {
             Resource::BlankNode(b, _) => {
                 writer.add_blank_iri(b, RDF_TYPE, RDFS_CLASS);

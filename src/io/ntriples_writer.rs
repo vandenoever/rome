@@ -24,7 +24,7 @@ pub fn write_ntriples<'g, T: 'g, I, W, T1: 'g, T2: 'g, T3: 'g>(triples: I,
         writer: writer,
     };
     for triple in triples {
-        try!(writer.write_ntriple(&triple));
+        writer.write_ntriple(&triple)?;
     }
     Ok(())
 }
@@ -33,7 +33,7 @@ impl<'a, W: 'a> NTriplesWriter<'a, W>
     where W: Write
 {
     fn write_iri(&mut self, iri: &str) -> Result<()> {
-        try!(self.writer.write_all(b"<"));
+        self.writer.write_all(b"<")?;
         self.buffer.clear();
         for b in iri.as_bytes() {
             if *b < 20 || b"<>\"{}|^`\\".contains(b) {
@@ -42,17 +42,17 @@ impl<'a, W: 'a> NTriplesWriter<'a, W>
                 self.buffer.push(*b);
             }
         }
-        try!(self.writer.write_all(&self.buffer[..]));
+        self.writer.write_all(&self.buffer[..])?;
         self.writer.write_all(b">")
     }
     fn write_blank_node<'g, B>(&mut self, blank_node: B) -> Result<()>
         where B: BlankNodePtr<'g>
     {
-        try!(self.writer.write_all(b"_:"));
-        try!(write!(self.writer,
-                    "{}_{}",
-                    blank_node.graph_id(),
-                    blank_node.node_id()));
+        self.writer.write_all(b"_:")?;
+        write!(self.writer,
+               "{}_{}",
+               blank_node.graph_id(),
+               blank_node.node_id())?;
         Ok(())
     }
     fn write_literal_value(&mut self, value: &str) -> Result<()> {
@@ -68,15 +68,15 @@ impl<'a, W: 'a> NTriplesWriter<'a, W>
     fn write_literal<'g, L>(&mut self, literal: L) -> Result<()>
         where L: LiteralPtr<'g>
     {
-        try!(self.writer.write_all(b"\""));
-        try!(self.write_literal_value(literal.as_str()));
-        try!(self.writer.write_all(b"\""));
+        self.writer.write_all(b"\"")?;
+        self.write_literal_value(literal.as_str())?;
+        self.writer.write_all(b"\"")?;
         if let Some(langtag) = literal.language() {
-            try!(self.writer.write_all(b"@"));
-            try!(self.writer.write_all(langtag.as_bytes()));
+            self.writer.write_all(b"@")?;
+            self.writer.write_all(langtag.as_bytes())?;
         } else if literal.datatype() != "http://www.w3.org/2001/XMLSchema#string" {
-            try!(self.writer.write_all(b"^^"));
-            try!(self.write_iri(literal.datatype()));
+            self.writer.write_all(b"^^")?;
+            self.write_iri(literal.datatype())?;
         }
         Ok(())
     }
@@ -109,11 +109,11 @@ impl<'a, W: 'a> NTriplesWriter<'a, W>
               I: IRIPtr<'g>,
               L: LiteralPtr<'g>
     {
-        try!(self.write_subject(triple.subject()));
-        try!(self.writer.write_all(b" "));
-        try!(self.write_predicate(triple.predicate().as_str()));
-        try!(self.writer.write_all(b" "));
-        try!(self.write_object(triple.object()));
+        self.write_subject(triple.subject())?;
+        self.writer.write_all(b" ")?;
+        self.write_predicate(triple.predicate().as_str())?;
+        self.writer.write_all(b" ")?;
+        self.write_object(triple.object())?;
         self.writer.write_all(b" .\n")
     }
 }

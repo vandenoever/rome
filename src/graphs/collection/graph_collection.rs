@@ -5,7 +5,7 @@ use std::iter::Peekable;
 pub enum Object {
     BlankNode,
     IRI,
-    Literal
+    Literal,
 }
 
 /// TripleCmpWrap can wrap a Triple and has no associated types.
@@ -20,34 +20,28 @@ pub trait TripleCmpWrap<'g> {
     fn subject_is_blank_node(&self) -> bool;
     fn object_type(&self) -> Object;
 }
-fn compare_subject<'g, B: 'g, I: 'g>(a: &TripleCmpWrap, b: BlankNodeOrIRI<'g, B,I>) -> cmp::Ordering
+fn compare_subject<'g, B: 'g, I: 'g>(a: &TripleCmpWrap,
+                                     b: BlankNodeOrIRI<'g, B, I>)
+                                     -> cmp::Ordering
     where B: BlankNodePtr<'g>,
           I: IRIPtr<'g>
 {
     match b {
-        BlankNodeOrIRI::BlankNode(b,_) => {
-            a.cmp_subject_blank_node(b.graph_id(), b.node_id())
-        }
-        BlankNodeOrIRI::IRI(i) => {
-            a.cmp_subject_iri(i.as_str())
-        }
+        BlankNodeOrIRI::BlankNode(b, _) => a.cmp_subject_blank_node(b.graph_id(), b.node_id()),
+        BlankNodeOrIRI::IRI(i) => a.cmp_subject_iri(i.as_str()),
     }
 }
-fn compare_object<'g, B: 'g, I: 'g, L: 'g>(a: &TripleCmpWrap, b: Resource<'g, B, I, L>) -> cmp::Ordering
+fn compare_object<'g, B: 'g, I: 'g, L: 'g>(a: &TripleCmpWrap,
+                                           b: Resource<'g, B, I, L>)
+                                           -> cmp::Ordering
     where B: BlankNodePtr<'g>,
           I: IRIPtr<'g>,
           L: LiteralPtr<'g>
 {
     match b {
-        Resource::BlankNode(b,_) => {
-            a.cmp_object_blank_node(b.graph_id(), b.node_id())
-        }
-        Resource::IRI(i) => {
-            a.cmp_object_iri(i.as_str())
-        }
-        Resource::Literal(l) => {
-            a.cmp_object_literal(l.as_str(), l.datatype(), l.language())
-        }
+        Resource::BlankNode(b, _) => a.cmp_object_blank_node(b.graph_id(), b.node_id()),
+        Resource::IRI(i) => a.cmp_object_iri(i.as_str()),
+        Resource::Literal(l) => a.cmp_object_literal(l.as_str(), l.datatype(), l.language()),
     }
 }
 // sort by subject, predicate, object
@@ -55,7 +49,7 @@ pub fn compare_spo<'g, B: 'g, I: 'g, L: 'g, T: 'g>(a: &TripleCmpWrap, b: &T) -> 
     where B: BlankNodePtr<'g>,
           I: IRIPtr<'g>,
           L: LiteralPtr<'g>,
-          T: Triple<'g,B,I,L>
+          T: Triple<'g, B, I, L>
 {
     let mut cmp = compare_subject(a, b.subject());
     if cmp == cmp::Ordering::Less {
@@ -71,7 +65,7 @@ pub fn compare_ops<'g, B: 'g, I: 'g, L: 'g, T: 'g>(a: &TripleCmpWrap, b: &T) -> 
     where B: BlankNodePtr<'g>,
           I: IRIPtr<'g>,
           L: LiteralPtr<'g>,
-          T: Triple<'g,B,I,L>
+          T: Triple<'g, B, I, L>
 {
     let mut cmp = compare_object(a, b.object());
     if cmp == cmp::Ordering::Less {
@@ -85,12 +79,14 @@ pub fn compare_ops<'g, B: 'g, I: 'g, L: 'g, T: 'g>(a: &TripleCmpWrap, b: &T) -> 
 // get the triple that is equal to the given triple and if needed,
 // advance the iterator
 // the iterator is forwarded one position at most
-pub fn get_equal_spo<'g, K:'g, T:'g, B:'g, I:'g, L:'g,>(iter: &mut Peekable<K>, t: &TripleCmpWrap<'g>) -> Option<T>
-    where K: Iterator<Item=T>,
+pub fn get_equal_spo<'g, K: 'g, T: 'g, B: 'g, I: 'g, L: 'g>(iter: &mut Peekable<K>,
+                                                            t: &TripleCmpWrap<'g>)
+                                                            -> Option<T>
+    where K: Iterator<Item = T>,
           B: BlankNodePtr<'g>,
           I: IRIPtr<'g>,
           L: LiteralPtr<'g>,
-          T: Triple<'g,B,I,L>
+          T: Triple<'g, B, I, L>
 {
     let cmp = {
         let v = iter.peek();
@@ -109,12 +105,14 @@ pub fn get_equal_spo<'g, K:'g, T:'g, B:'g, I:'g, L:'g,>(iter: &mut Peekable<K>, 
 // get the triple that is equal to the given triple and if needed,
 // advance the iterator
 // the iterator is forwarded one position at most
-pub fn get_equal_ops<'g, K:'g, T:'g, B:'g, I:'g, L:'g,>(iter: &mut Peekable<K>, t: &TripleCmpWrap<'g>) -> Option<T>
-    where K: Iterator<Item=T>,
+pub fn get_equal_ops<'g, K: 'g, T: 'g, B: 'g, I: 'g, L: 'g>(iter: &mut Peekable<K>,
+                                                            t: &TripleCmpWrap<'g>)
+                                                            -> Option<T>
+    where K: Iterator<Item = T>,
           B: BlankNodePtr<'g>,
           I: IRIPtr<'g>,
           L: LiteralPtr<'g>,
-          T: Triple<'g,B,I,L>
+          T: Triple<'g, B, I, L>
 {
     let cmp = {
         let v = iter.peek();
@@ -590,13 +588,12 @@ pub mod $name {
     }
 }
 
-/*
-graph_collection!(test_collection(0: a::G<'g>, 1: b::G<'g>, 2: c::G<'g>));
-
-pub fn test() {
-    let a = a::G{phantom: PhantomData};
-    let b = b::G{phantom: PhantomData};
-    let c = c::G{phantom: PhantomData};
-    test_collection::GraphCollection::new((a,b,c));
-}
-*/
+// graph_collection!(test_collection(0: a::G<'g>, 1: b::G<'g>, 2: c::G<'g>));
+//
+// pub fn test() {
+// let a = a::G{phantom: PhantomData};
+// let b = b::G{phantom: PhantomData};
+// let c = c::G{phantom: PhantomData};
+// test_collection::GraphCollection::new((a,b,c));
+// }
+//

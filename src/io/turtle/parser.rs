@@ -194,7 +194,7 @@ impl<'a> TripleIterator<'a> {
         }
         let rc = Rc::new(String::new());
         Ok(TripleIterator {
-            statement_iterator: try!(StatementIterator::new(src)),
+            statement_iterator: StatementIterator::new(src)?,
             buffer: String::new(),
             base: String::from(base),
             prefixes: Namespaces::new(),
@@ -225,18 +225,18 @@ impl<'a> TripleIterator<'a> {
                 Ok(Statement::Prefix(prefix, iri)) => {
                     let mut result = String::with_capacity(iri.len());
                     self.buffer.clear();
-                    try!(unescape_iri(iri, &mut self.buffer));
-                    try!(join_iri(self.base.as_str(), self.buffer.as_str(), &mut result));
+                    unescape_iri(iri, &mut self.buffer)?;
+                    join_iri(self.base.as_str(), self.buffer.as_str(), &mut result)?;
                     self.set_prefix(prefix, result);
                 }
                 Ok(Statement::Base(new_base)) => {
                     self.buffer.clear();
-                    try!(unescape_iri(new_base, &mut self.buffer));
+                    unescape_iri(new_base, &mut self.buffer)?;
                     let old_base = self.base.clone();
-                    try!(join_iri(old_base.as_str(), self.buffer.as_str(), &mut self.base));
+                    join_iri(old_base.as_str(), self.buffer.as_str(), &mut self.base)?;
                 }
                 Ok(Statement::Triples(new_triples)) => {
-                    try!(add_triples(new_triples, &mut self.blank_nodes, &mut self.triple_buffer));
+                    add_triples(new_triples, &mut self.blank_nodes, &mut self.triple_buffer)?;
                     return Ok(self.triple_buffer.len());
                 }
                 Err(e) => return Err(e),
@@ -255,7 +255,7 @@ fn resolve_triple<'g>(triple: Triple,
     Ok(IteratorTriple {
         subject: match triple.subject {
             SingleSubject::IRI(iri) => {
-                try!(resolve_iri(iri, prefixes, base, buffer, &mut strings.subject));
+                resolve_iri(iri, prefixes, base, buffer, &mut strings.subject)?;
                 graph::BlankNodeOrIRI::IRI(IRIPtr {
                     iri: strings.subject.clone(),
                     phantom: PhantomData,
@@ -271,11 +271,11 @@ fn resolve_triple<'g>(triple: Triple,
             }
         },
         predicate: {
-            try!(resolve_iri(triple.predicate,
-                             prefixes,
-                             base,
-                             buffer,
-                             &mut strings.predicate));
+            resolve_iri(triple.predicate,
+                        prefixes,
+                        base,
+                        buffer,
+                        &mut strings.predicate)?;
             IRIPtr {
                 iri: strings.predicate.clone(),
                 phantom: PhantomData,
@@ -283,7 +283,7 @@ fn resolve_triple<'g>(triple: Triple,
         },
         object: match triple.object {
             SingleObject::IRI(iri) => {
-                try!(resolve_iri(iri, prefixes, base, buffer, &mut strings.object));
+                resolve_iri(iri, prefixes, base, buffer, &mut strings.object)?;
                 graph::Resource::IRI(IRIPtr {
                     iri: strings.object.clone(),
                     phantom: PhantomData,
@@ -300,15 +300,11 @@ fn resolve_triple<'g>(triple: Triple,
             SingleObject::Literal(l) => {
                 graph::Resource::Literal(LiteralPtr {
                     lexical: {
-                        try!(unescape_literal(l.lexical, &mut strings.object));
+                        unescape_literal(l.lexical, &mut strings.object)?;
                         strings.object.clone()
                     },
                     datatype: {
-                        try!(resolve_iri(l.datatype,
-                                         prefixes,
-                                         base,
-                                         buffer,
-                                         &mut strings.datatype));
+                        resolve_iri(l.datatype, prefixes, base, buffer, &mut strings.datatype)?;
                         strings.datatype.clone()
                     },
                     language: match l.language {
@@ -333,7 +329,7 @@ fn resolve_triple<'g>(triple: Triple,
 fn unescape_literal(string: &str, to: &mut Rc<String>) -> Result<()> {
     let p = Rc::make_mut(to);
     p.clear();
-    try!(unescape(string, p));
+    unescape(string, p)?;
     Ok(())
 }
 fn resolve_iri(iri: IRI,
@@ -347,14 +343,14 @@ fn resolve_iri(iri: IRI,
     match iri {
         IRI::IRI(iri) => {
             buffer.clear();
-            try!(unescape_iri(iri, buffer));
-            try!(join_iri(base, buffer.as_str(), p));
+            unescape_iri(iri, buffer)?;
+            join_iri(base, buffer.as_str(), p)?;
         }
         IRI::PrefixedName(prefix, local) => {
             match prefixes.find_namespace(prefix.as_bytes()) {
                 Some(ns) => {
                     p.push_str(ns);
-                    try!(pn_local_unescape(local, p));
+                    pn_local_unescape(local, p)?;
                 }
                 None => return Err(Error::Custom("Cannot find prefix.")),
             }
@@ -434,7 +430,7 @@ fn make_collection<'a>(collection: Vec<Object<'a>>,
     let mut head = SingleSubject::IRI(IRI::IRI(RDF_NIL));
     for object in collection.into_iter().rev() {
         let this = blank_nodes.new_blank();
-        let o = try!(make_object(object, blank_nodes, triple_buffer));
+        let o = make_object(object, blank_nodes, triple_buffer)?;
         triple_buffer.push(Triple {
             subject: SingleSubject::BlankNode(this),
             predicate: IRI::IRI(RDF_FIRST),
@@ -457,9 +453,7 @@ fn make_subject<'a>(subject: Subject<'a>,
     Ok(match subject {
         Subject::IRI(iri) => SingleSubject::IRI(iri),
         Subject::BlankNode(blank) => SingleSubject::BlankNode(make_blank(blank, blank_nodes)),
-        Subject::Collection(collection) => {
-            try!(make_collection(collection, blank_nodes, triple_buffer))
-        }
+        Subject::Collection(collection) => make_collection(collection, blank_nodes, triple_buffer)?,
     })
 }
 
@@ -471,16 +465,13 @@ fn make_object<'a>(object: Object<'a>,
         Object::IRI(iri) => SingleObject::IRI(iri),
         Object::BlankNode(blank) => SingleObject::BlankNode(make_blank(blank, blank_nodes)),
         Object::Collection(collection) => {
-            s2o(try!(make_collection(collection, blank_nodes, triple_buffer)))
+            s2o(make_collection(collection, blank_nodes, triple_buffer)?)
         }
         Object::Literal(l) => SingleObject::Literal(l),
         Object::BlankNodePropertyList(predicated_objects_list) => {
             let blank = blank_nodes.new_blank();
             let subject = SingleSubject::BlankNode(blank);
-            try!(add_predicated_objects(subject,
-                                        predicated_objects_list,
-                                        blank_nodes,
-                                        triple_buffer));
+            add_predicated_objects(subject, predicated_objects_list, blank_nodes, triple_buffer)?;
             SingleObject::BlankNode(blank)
         }
     })
@@ -496,7 +487,7 @@ fn add_predicated_objects<'a>(subject: SingleSubject<'a>,
             let triple = Triple {
                 subject: subject.clone(),
                 predicate: po.verb.clone(),
-                object: try!(make_object(o, blank_nodes, triple_buffer)),
+                object: make_object(o, blank_nodes, triple_buffer)?,
             };
             triple_buffer.push(triple);
         }
@@ -508,7 +499,7 @@ fn add_triples<'a>(new_triples: Triples<'a>,
                    blank_nodes: &mut BlankNodes<'a>,
                    triple_buffer: &mut Vec<Triple<'a>>)
                    -> Result<()> {
-    let subject = try!(make_subject(new_triples.subject, blank_nodes, triple_buffer));
+    let subject = make_subject(new_triples.subject, blank_nodes, triple_buffer)?;
     add_predicated_objects(subject,
                            new_triples.predicated_objects_list,
                            blank_nodes,
