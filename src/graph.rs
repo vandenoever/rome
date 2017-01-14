@@ -307,11 +307,6 @@ pub trait Graph<'g> {
                 predicate: Self::IRIPtr)
                 -> Self::OPSRangeIter;
 
-    /// iterator over all triples with the same subject and predicate
-    fn iter_subject_predicate(&'g self,
-                              subject: BlankNodeOrIRI<'g, Self::BlankNodePtr, Self::IRIPtr>,
-                              predicate: &str)
-                              -> Self::SPORangeIter;
     /// iterator that returns no results
     fn empty_spo_range(&'g self) -> Self::SPORangeIter;
     /// iterator that returns no results

@@ -542,35 +542,6 @@ pub mod $name {
             };
             OPSRangeIter { iters: iters }
         }
-        /// iterator over all triples with the same subject and predicate
-        fn iter_subject_predicate(&'g self,
-                                  subject: BlankNodeOrIRI<'g, Self::BlankNodePtr, Self::IRIPtr>,
-                                  predicate: &str)
-                                  -> Self::SPORangeIter {
-            let iters = match subject {
-                BlankNodeOrIRI::BlankNode(b,ph) => { ($(
-                    match b.nodes.$n {
-                        Some(b) => {
-                            self.graphs.$n.iter_subject_predicate(BlankNodeOrIRI::BlankNode(b,ph), predicate)
-                        },
-                        _ => {
-                            self.graphs.$n.empty_spo_range()
-                        }
-                    }.peekable()
-                ,)+) },
-                BlankNodeOrIRI::IRI(i) => { ($(
-                    match i.iris.$n {
-                        Some(i) => {
-                            self.graphs.$n.iter_subject_predicate(BlankNodeOrIRI::IRI(i), predicate)
-                        },
-                        _ => {
-                            self.graphs.$n.empty_spo_range()
-                        }
-                    }.peekable()
-                ,)+) }
-            };
-            SPORangeIter { iters: iters }
-        }
         /// iterator that returns no results
         fn empty_spo_range(&'g self) -> Self::SPORangeIter {
             SPORangeIter {
