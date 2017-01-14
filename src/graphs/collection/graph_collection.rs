@@ -310,7 +310,7 @@ pub mod $name {
                     return v.graph_id();
                 }
             )+
-            unreachable!()
+            panic!("unreachable")
         }
         fn node_id(&self) -> u32 {
             $(
@@ -318,7 +318,7 @@ pub mod $name {
                     return v.node_id();
                 }
             )+
-            unreachable!()
+            panic!("unreachable")
         }
     }
     #[derive(Clone,PartialEq,Eq,PartialOrd,Ord)]
@@ -332,7 +332,7 @@ pub mod $name {
                     return v.as_str();
                 }
             )+
-            unreachable!()
+            panic!("unreachable")
         }
     }
     #[derive(Clone,PartialEq,Eq,PartialOrd,Ord)]
@@ -346,7 +346,7 @@ pub mod $name {
                     return v.as_str();
                 }
             )+
-            unreachable!()
+            panic!("unreachable")
         }
         fn datatype(&self) -> &str {
             $(
@@ -354,7 +354,7 @@ pub mod $name {
                     return v.datatype();
                 }
             )+
-            unreachable!()
+            panic!("unreachable")
         }
         fn language(&self) -> Option<&str> {
             $(
@@ -362,7 +362,7 @@ pub mod $name {
                     return v.language();
                 }
             )+
-            unreachable!()
+            panic!("unreachable")
         }
     }
     pub struct SPOIter<'g> {

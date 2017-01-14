@@ -62,14 +62,14 @@ impl<'g, R> IRI<'g, R>
     pub fn this(&self) -> &rb!(IRIPtr) {
         match self.resource.this().as_iri() {
             Some(iri) => iri,
-            _ => unreachable!()
+            _ => panic!("unreachable")
         }
     }
     pub fn as_str(&self) -> &str {
         use graph::IRIPtr;
         match self.resource.this() {
             &graph::Resource::IRI(ref iri) => iri.as_str(),
-            _ => unreachable!()
+            _ => panic!("unreachable")
         }
     }
 }
