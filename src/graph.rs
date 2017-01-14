@@ -289,10 +289,10 @@ pub trait Graph<'g> {
     type BlankNodePtr: BlankNodePtr<'g> + Ord + Clone;
     type IRIPtr: IRIPtr<'g> + Ord + Clone;
     type LiteralPtr: LiteralPtr<'g> + Ord + Clone;
-    type SPOTriple: Triple<'g, Self::BlankNodePtr, Self::IRIPtr, Self::LiteralPtr> + Ord;
+    type SPOTriple: Triple<'g, Self::BlankNodePtr, Self::IRIPtr, Self::LiteralPtr> + Ord + Clone;
     type SPOIter: SortedIterator<Item = Self::SPOTriple>;
     type SPORangeIter: SortedIterator<Item = Self::SPOTriple>;
-    type OPSTriple: Triple<'g, Self::BlankNodePtr, Self::IRIPtr, Self::LiteralPtr> + Ord;
+    type OPSTriple: Triple<'g, Self::BlankNodePtr, Self::IRIPtr, Self::LiteralPtr> + Ord + Clone;
     type OPSRangeIter: SortedIterator<Item = Self::OPSTriple>;
     fn iter(&'g self) -> Self::SPOIter;
 

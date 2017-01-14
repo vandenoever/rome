@@ -184,7 +184,7 @@ pub type Resource<'t, SPO, OPS> = graph::Resource<'t,
                                                   IRIPtr<'t, SPO, OPS>,
                                                   LiteralPtr<'t, SPO, OPS>>;
 
-
+#[derive(Clone)]
 pub struct Triple<'g, SPO: 'g, OPS: 'g, T>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>,
