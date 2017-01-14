@@ -133,6 +133,9 @@ impl StringCollection {
 fn binary_search_by_index<F>(len: usize, mut f: F) -> Result<usize, usize>
     where F: FnMut(usize) -> Ordering
 {
+    if len == 0 {
+        return Err(0);
+    }
     let mut l = 0;
     let mut r = len - 1;
     loop {
