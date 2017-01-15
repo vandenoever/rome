@@ -80,7 +80,9 @@ pub fn compare_ops<'g, B: 'g, I: 'g, L: 'g, T: 'g>(a: &TripleCmpWrap, b: &T) -> 
 // advance the iterator
 // the iterator is forwarded one position at most
 pub fn get_equal_spo<'g, K: 'g, T: 'g, B: 'g, I: 'g, L: 'g>(iter: &mut Peekable<K>,
-                                                            t: &TripleCmpWrap<'g>)
+                                                            t: &TripleCmpWrap<'g>,
+                                                            n: &mut u8,
+                                                            min_n: u8)
                                                             -> Option<T>
     where K: Iterator<Item = T>,
           B: BlankNodePtr<'g>,
@@ -88,6 +90,10 @@ pub fn get_equal_spo<'g, K: 'g, T: 'g, B: 'g, I: 'g, L: 'g>(iter: &mut Peekable<
           L: LiteralPtr<'g>,
           T: Triple<'g, B, I, L>
 {
+    *n += 1;
+    if *n == min_n {
+        return iter.next();
+    }
     let cmp = {
         let v = iter.peek();
         if v.is_none() {
@@ -106,7 +112,9 @@ pub fn get_equal_spo<'g, K: 'g, T: 'g, B: 'g, I: 'g, L: 'g>(iter: &mut Peekable<
 // advance the iterator
 // the iterator is forwarded one position at most
 pub fn get_equal_ops<'g, K: 'g, T: 'g, B: 'g, I: 'g, L: 'g>(iter: &mut Peekable<K>,
-                                                            t: &TripleCmpWrap<'g>)
+                                                            t: &TripleCmpWrap<'g>,
+                                                            n: &mut u8,
+                                                            min_n: u8)
                                                             -> Option<T>
     where K: Iterator<Item = T>,
           B: BlankNodePtr<'g>,
@@ -114,6 +122,10 @@ pub fn get_equal_ops<'g, K: 'g, T: 'g, B: 'g, I: 'g, L: 'g>(iter: &mut Peekable<
           L: LiteralPtr<'g>,
           T: Triple<'g, B, I, L>
 {
+    *n += 1;
+    if *n == min_n {
+        return iter.next();
+    }
     let cmp = {
         let v = iter.peek();
         if v.is_none() {
@@ -346,17 +358,22 @@ pub mod $name {
         type Item = SPOTriple<'g>;
         fn next(&mut self) -> Option<SPOTriple<'g>> {
             let triples = ($(self.iters.$n.peek().map(|v|v.clone()),)+);
+            let mut n = 0;
+            let mut min_n = 0;
             let mut min = None;
             $(
+                n += 1;
                 if let Some(t) = triples.$n.as_ref() {
                     if min.is_none() || compare_spo(min.unwrap(), t) == cmp::Ordering::Greater {
+                        min_n = n;
                         min = Some(t as &TripleCmpWrap);
                     }
                 }
             )+
             if let Some(t) = min {
+                n = 0;
                 Some(SPOTriple::new(t, ($(
-                    get_equal_spo(&mut self.iters.$n, t),
+                    get_equal_spo(&mut self.iters.$n, t, &mut n, min_n),
                 )+)))
             } else {
                 None
@@ -371,17 +388,22 @@ pub mod $name {
         type Item = SPOTriple<'g>;
         fn next(&mut self) -> Option<SPOTriple<'g>> {
             let triples = ($(self.iters.$n.peek().map(|v|v.clone()),)+);
+            let mut n = 0;
+            let mut min_n = 0;
             let mut min = None;
             $(
+                n += 1;
                 if let Some(t) = triples.$n.as_ref() {
                     if min.is_none() || compare_spo(min.unwrap(), t) == cmp::Ordering::Greater {
+                        min_n = n;
                         min = Some(t as &TripleCmpWrap);
                     }
                 }
             )+
             if let Some(t) = min {
+                n = 0;
                 Some(SPOTriple::new(t, ($(
-                    get_equal_spo(&mut self.iters.$n, t),
+                    get_equal_spo(&mut self.iters.$n, t, &mut n, min_n),
                 )+)))
             } else {
                 None
@@ -396,17 +418,22 @@ pub mod $name {
         type Item = OPSTriple<'g>;
         fn next(&mut self) -> Option<OPSTriple<'g>> {
             let triples = ($(self.iters.$n.peek().map(|v|v.clone()),)+);
+            let mut n = 0;
+            let mut min_n = 0;
             let mut min = None;
             $(
+                n += 1;
                 if let Some(t) = triples.$n.as_ref() {
                     if min.is_none() || compare_ops(min.unwrap(), t) == cmp::Ordering::Greater {
+                        min_n = n;
                         min = Some(t as &TripleCmpWrap);
                     }
                 }
             )+
             if let Some(t) = min {
+                n = 0;
                 Some(OPSTriple::new(t, ($(
-                    get_equal_ops(&mut self.iters.$n, t),
+                    get_equal_ops(&mut self.iters.$n, t, &mut n, min_n),
                 )+)))
             } else {
                 None
