@@ -285,7 +285,7 @@ impl<'g, SPO: 'g, OPS: 'g> graph::GraphCreator<'g, BlankNodePtr<'g, SPO, OPS>>
         self.add(triple.subject(), triple.predicate(), triple.object());
     }
 
-    fn collect(&mut self) -> Graph<SPO, OPS> {
+    fn collect(mut self) -> Graph<SPO, OPS> {
         let (translation, string_collection) = self.string_collector.collect();
         let (datatrans, datatype_lang_collection) = self.datatype_lang_collector.collect();
         let mut spo = Vec::new();
@@ -399,7 +399,7 @@ impl<'g, SPO: 'g, OPS: 'g> graph::GraphCreator<'g, BlankNodePtr<'g, SPO, OPS>>
 #[test]
 fn collect_empty() {
     let bnc = BlankNodeCreator::new();
-    let mut writer: GraphWriter<Triple64SPO, Triple64OPS> = GraphWriter::with_capacity(0, &bnc);
+    let writer: GraphWriter<Triple64SPO, Triple64OPS> = GraphWriter::with_capacity(0, &bnc);
     use graph::GraphCreator;
     writer.collect();
 }

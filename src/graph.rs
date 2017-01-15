@@ -253,7 +253,7 @@ pub trait GraphCreator<'g, B: 'g>
         where S: IRIPtr<'s>,
               P: IRIPtr<'p>,
               O: LiteralPtr<'o>;
-    fn collect(&mut self) -> Self::Graph;
+    fn collect(self) -> Self::Graph;
 }
 
 pub trait Graph<'g> {
