@@ -34,7 +34,7 @@ pub trait ResourceBase<'g>: Clone + Ord {
     fn iter(graph: &'g ontology_adapter::OntologyAdapter<'g, Self::Graph>) -> Self::SubjectIter;
     fn this(&self) -> &resource!();
     fn graph(&self) -> &'g ontology_adapter::OntologyAdapter<'g, Self::Graph>;
-    fn predicate<R>(&self, predicate: Option<rb!(IRIPtr)>) -> ObjectIter<'g,R>
+    fn predicate<R>(&self, predicate: Option<&rb!(IRIPtr)>) -> ObjectIter<'g,R>
         where R: ResourceBase<'g, Graph = Self::Graph>,
               <Self as ResourceBase<'g>>::Graph: 'g,
               Self: 'g
@@ -43,7 +43,7 @@ pub trait ResourceBase<'g>: Clone + Ord {
         let iter = match predicate {
             None => graph.empty_spo_range(),
             Some(ref predicate) => match self.this().to_blank_node_or_iri() {
-                Some(subject) => graph.iter_s_p(subject, predicate.clone()),
+                Some(subject) => graph.iter_s_p(subject, (*predicate).clone()),
                 None => graph.empty_spo_range(),
             }
         };
@@ -157,7 +157,7 @@ impl<'g, R: 'g> ResourceBase<'g> for IRI<'g, R>
     fn graph(&self) -> &'g ontology_adapter::OntologyAdapter<'g, Self::Graph> {
         self.resource.graph()
     }
-    fn predicate<O>(&self, predicate: Option<rb!(IRIPtr)>) -> ObjectIter<'g,O>
+    fn predicate<O>(&self, predicate: Option<&rb!(IRIPtr)>) -> ObjectIter<'g,O>
         where O: ResourceBase<'g,Graph = Self::Graph>
     {
         self.resource.predicate(predicate)
@@ -248,11 +248,6 @@ pub trait $trait_name<'g>: resource::ResourceBase<'g>
     fn property_iri() -> &'static str {
         $iri
     }
-    fn property_iri_ptr(&self) -> Option<<Self::Graph as graph::Graph<'g>>::IRIPtr>
-        where <Self as resource::ResourceBase<'g>>::Graph: 'g
-    {
-        self.graph().class_iri($pos).map(|i|i.clone())
-    }
     $(#[$meta])*
     #[doc=$iri]
     fn $function<G>(&self) -> resource::ObjectIter<'g,$range>
@@ -261,7 +256,7 @@ pub trait $trait_name<'g>: resource::ResourceBase<'g>
               <Self as resource::ResourceBase<'g>>::Graph: 'g,
               Self: 'g
     {
-        resource::ResourceBase::predicate(self, self.property_iri_ptr())
+        resource::ResourceBase::predicate(self, self.graph().preloaded_iri($pos))
     }
 }
     }
@@ -286,9 +281,6 @@ impl<'g, G> $name<'g,G>
     #[doc=$iri]
     pub fn class_iri() -> &'static str {
         $iri
-    }
-    pub fn class_iri_ptr(&self) -> Option<G::IRIPtr> {
-        self.graph.class_iri($pos).map(|i|i.clone())
     }
 }
 impl<'g, G> PartialEq for $name<'g,G>
@@ -337,8 +329,8 @@ impl<'g, G:'g> resource::ResourceBase<'g> for $name<'g,G>
     fn iter(graph: &'g ontology_adapter::OntologyAdapter<'g,G>)
             -> resource::SubjectIter<'g,Self> {
         use graph::IRIPtr;
-        let rdf_type = graph.class_iri(0);
-        let class = graph.class_iri($pos);
+        let rdf_type = graph.preloaded_iri(0);
+        let class = graph.preloaded_iri($pos);
         let iter = match (rdf_type, class) {
             (Some(rdf_type),Some(class)) => graph.iter_o_p(class.to_resource(), rdf_type.clone()),
             _ => graph.empty_ops_range()
@@ -419,6 +411,7 @@ mod tests {
     impl<'g,G> Domain<'g> for Property<'g,G> where G: graph::Graph<'g> {}
     impl<'g,G> Range<'g> for Property<'g,G> where G: graph::Graph<'g> {}
     impl<'g,G> Comment<'g> for Property<'g,G> where G: graph::Graph<'g> {}
+    impl<'g,G> Comment<'g> for Literal<'g,G> where G: graph::Graph<'g> {}
 
     #[test]
     fn instantiate_ontology_classes() {
@@ -427,13 +420,13 @@ mod tests {
         let graph: tel::Graph64 = creator.collect();
         let ontology = adapter(&graph);
         for class in IRI::<Class<_>>::iter(&ontology) {
-            class.class_iri_ptr();
+            class.comment();
         }
         for property in IRI::<Property<_>>::iter(&ontology) {
-            property.class_iri_ptr();
+            property.comment();
         }
         for literal in IRI::<Literal<_>>::iter(&ontology) {
-            literal.class_iri_ptr();
+            literal.comment();
         }
     }
     #[test]
