@@ -85,7 +85,7 @@ struct BlankNodes<'a, B: 'a>
 #[derive(Clone,PartialEq,Eq,PartialOrd,Ord,Debug)]
 pub struct IRIPtr<'g> {
     iri: Rc<String>,
-    phantom: PhantomData<&'g u32>,
+    phantom: PhantomData<&'g u8>,
 }
 impl<'g> graph::IRIPtr<'g> for IRIPtr<'g> {
     fn as_str(&self) -> &str {
@@ -97,7 +97,7 @@ pub struct LiteralPtr<'g> {
     pub lexical: Rc<String>,
     pub datatype: Rc<String>,
     pub language: Option<Rc<String>>,
-    phantom: PhantomData<&'g u32>,
+    phantom: PhantomData<&'g u8>,
 }
 impl<'g> graph::LiteralPtr<'g> for LiteralPtr<'g> {
     fn as_str(&self) -> &str {

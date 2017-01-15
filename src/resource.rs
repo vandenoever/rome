@@ -53,7 +53,7 @@ pub struct IRI<'g, R: 'g>
     where R: ResourceBase<'g>
 {
     resource: R,
-    phantom: std::marker::PhantomData<&'g R>,
+    phantom: std::marker::PhantomData<&'g u8>,
 }
 
 impl<'g, R> IRI<'g, R>

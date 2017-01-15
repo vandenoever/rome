@@ -27,7 +27,7 @@ fn compare_subject<'g, B: 'g, I: 'g>(a: &TripleCmpWrap,
     match b {
         // blank nodes from different graphs are different
         // the left side is less
-        BlankNodeOrIRI::BlankNode(b, _) => cmp::Ordering::Less,
+        BlankNodeOrIRI::BlankNode(_, _) => cmp::Ordering::Less,
         BlankNodeOrIRI::IRI(i) => a.cmp_subject_iri(i.as_str()),
     }
 }
@@ -39,7 +39,7 @@ fn compare_object<'g, B: 'g, I: 'g, L: 'g>(a: &TripleCmpWrap,
           L: LiteralPtr<'g>
 {
     match b {
-        Resource::BlankNode(b, _) => cmp::Ordering::Less,
+        Resource::BlankNode(_, _) => cmp::Ordering::Less,
         Resource::IRI(i) => a.cmp_object_iri(i.as_str()),
         Resource::Literal(l) => a.cmp_object_literal(l.as_str(), l.datatype(), l.language()),
     }
@@ -280,7 +280,7 @@ pub mod $name {
     }
     impl<'g> fmt::Display for BlankNode<'g> {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            write!(f, "_");
+            write!(f, "_")?;
             $(
                 match self.nodes.$n {
                     Some(b) => {
@@ -457,10 +457,10 @@ pub mod $name {
                     predicate: Self::IRIPtr)
                     -> Self::SPORangeIter {
             let iters = match subject {
-                BlankNodeOrIRI::BlankNode(b,ph) => { ($(
+                BlankNodeOrIRI::BlankNode(b, _) => { ($(
                     match (b.nodes.$n, predicate.iris.$n) {
                         (Some(b), Some(p)) => {
-                            self.graphs.$n.iter_s_p(BlankNodeOrIRI::BlankNode(b,ph), p)
+                            self.graphs.$n.iter_s_p(BlankNodeOrIRI::BlankNode(b, PhantomData), p)
                         },
                         _ => {
                             self.graphs.$n.empty_spo_range()
@@ -485,10 +485,10 @@ pub mod $name {
                     predicate: Self::IRIPtr)
                     -> Self::OPSRangeIter {
             let iters = match object {
-                Resource::BlankNode(b,ph) => { ($(
+                Resource::BlankNode(b, _) => { ($(
                     match (b.nodes.$n, predicate.iris.$n) {
                         (Some(b), Some(p)) => {
-                            self.graphs.$n.iter_o_p(Resource::BlankNode(b,ph), p)
+                            self.graphs.$n.iter_o_p(Resource::BlankNode(b, PhantomData), p)
                         },
                         _ => {
                             self.graphs.$n.empty_ops_range()

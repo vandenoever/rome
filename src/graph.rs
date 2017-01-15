@@ -99,7 +99,7 @@ pub enum BlankNodeOrIRI<'g, B: 'g, I: 'g>
     where B: BlankNodePtr<'g>,
           I: IRIPtr<'g>
 {
-    BlankNode(B, PhantomData<&'g u32>),
+    BlankNode(B, PhantomData<&'g u8>),
     IRI(I),
 }
 impl<'g, B, I> BlankNodeOrIRI<'g, B, I>
@@ -131,15 +131,13 @@ impl<'g, B, I> BlankNodeOrIRI<'g, B, I>
 #[derive(PartialEq,Eq,PartialOrd,Ord,Clone,Debug)]
 pub enum IRIOrLiteral<'g, I: 'g, L: 'g>
     where I: IRIPtr<'g>,
-          L: LiteralPtr<'g>,
           L: LiteralPtr<'g>
 {
-    IRI(I, PhantomData<&'g u32>),
+    IRI(I, PhantomData<&'g u8>),
     Literal(L),
 }
 impl<'g, I, L> IRIOrLiteral<'g, I, L>
     where I: IRIPtr<'g>,
-          L: LiteralPtr<'g>,
           L: LiteralPtr<'g>
 {
     pub fn as_iri(&self) -> Option<&I> {
@@ -171,7 +169,7 @@ pub enum Resource<'g, B: 'g, I: 'g, L: 'g>
           I: IRIPtr<'g>,
           L: LiteralPtr<'g>
 {
-    BlankNode(B, PhantomData<&'g u32>),
+    BlankNode(B, PhantomData<&'g u8>),
     IRI(I),
     Literal(L),
 }
