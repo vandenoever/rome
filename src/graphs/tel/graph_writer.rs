@@ -128,9 +128,6 @@ impl<SPO, OPS> GraphWriter<SPO, OPS>
             phantom: PhantomData,
         }
     }
-    pub fn highest_blank_node(&self) -> u32 {
-        self.highest_blank_node
-    }
     fn add_s_iri(&mut self, s: &str, p: &str, ot: TripleObjectType, o: u32, d: u32) {
         let s = check_prev(s, &mut self.prev_subject_iri, &mut self.string_collector);
         let p = check_prev(p, &mut self.prev_predicate, &mut self.string_collector);
@@ -194,8 +191,10 @@ impl<SPO, OPS> GraphWriter<SPO, OPS>
     {
         match subject {
             graph::BlankNodeOrIRI::BlankNode(subject, _) => {
+                self.check_blank_node(&subject);
                 match object {
                     graph::Resource::BlankNode(object, _) => {
+                        self.check_blank_node(&object);
                         self.add_blank_blank(subject.node_id, predicate.as_str(), object.node_id);
                     }
                     graph::Resource::IRI(object) => {
@@ -222,6 +221,7 @@ impl<SPO, OPS> GraphWriter<SPO, OPS>
             graph::BlankNodeOrIRI::IRI(subject) => {
                 match object {
                     graph::Resource::BlankNode(object, _) => {
+                        self.check_blank_node(&object);
                         self.add_iri_blank(subject.as_str(), predicate.as_str(), object.node_id);
                     }
                     graph::Resource::IRI(object) => {
