@@ -4,23 +4,20 @@ pub struct OntologyAdapter<'g, G: 'g>
     where G: Graph<'g>
 {
     graph: &'g G,
-    iris: Vec<Option<G::IRIPtr>>,
+    preloaded_iris: Vec<Option<G::IRIPtr>>,
 }
 
 impl<'g, G> OntologyAdapter<'g, G>
     where G: Graph<'g>
 {
-    pub fn new(graph: &'g G, iris: Vec<Option<G::IRIPtr>>) -> OntologyAdapter<'g, G> {
+    pub fn new(graph: &'g G, preloaded_iris: Vec<Option<G::IRIPtr>>) -> OntologyAdapter<'g, G> {
         OntologyAdapter {
             graph: graph,
-            iris: iris,
+            preloaded_iris: preloaded_iris,
         }
     }
     pub fn preloaded_iri(&self, i: usize) -> Option<&G::IRIPtr> {
-        match self.iris.get(i) {
-            Some(&Some(ref p)) => Some(p),
-            _ => None,
-        }
+        self.preloaded_iris[i].as_ref()
     }
     pub fn iter_s_p(&self,
                     subject: BlankNodeOrIRI<'g, G::BlankNodePtr, G::IRIPtr>,
