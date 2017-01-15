@@ -378,8 +378,8 @@ mod tests {
     use graph;
     use resource;
     use ontology_adapter;
-    use resource::{ResourceBase,IRI};
-    use graph::{GraphCreator};
+    use resource::{ResourceBase, IRI};
+    use graph::GraphWriter;
     use graphs::tel;
     use constants;
 

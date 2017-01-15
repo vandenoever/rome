@@ -143,7 +143,7 @@ fn write_assertion<'a, 'g, W, B: 'g>(assertion: &'a Assertion,
                                      blank_node_creator: &mut BlankNodeCreator<'g, B>,
                                      output: &mut W)
                                      -> rdfio::Result<()>
-    where W: GraphCreator<'g, B>,
+    where W: GraphWriter<'g, B>,
           B: BlankNodePtr<'g> + Clone
 {
     let assertion_blank_node = blank_node_creator.create_blank_node();

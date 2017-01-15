@@ -48,7 +48,7 @@ impl<'g, SPO: 'g, OPS: 'g> graph::BlankNodeCreator<'g, BlankNodePtr<'g, SPO, OPS
     }
 }
 
-pub struct GraphWriter<SPO, OPS>
+pub struct GraphCreator<SPO, OPS>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>
 {
@@ -105,16 +105,16 @@ fn check_prev(string: &str,
     }
     id
 }
-impl<SPO, OPS> GraphWriter<SPO, OPS>
+impl<SPO, OPS> GraphCreator<SPO, OPS>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>
 {
     pub fn with_capacity(capacity: usize,
                          blank_node_creator: &BlankNodeCreator<SPO, OPS>)
-                         -> GraphWriter<SPO, OPS> {
+                         -> GraphCreator<SPO, OPS> {
         let mut dlc = StringCollector::with_capacity(capacity);
         let lang_string_datatype_id = dlc.add_string(constants::RDF_LANG_STRING);
-        GraphWriter {
+        GraphCreator {
             graph_id: blank_node_creator.graph_id,
             string_collector: StringCollector::with_capacity(capacity),
             datatype_lang_collector: dlc,
@@ -271,8 +271,8 @@ fn create_ops<SPO, OPS>(spo: &[SPO]) -> Vec<OPS>
     ops
 }
 
-impl<'g, SPO: 'g, OPS: 'g> graph::GraphCreator<'g, BlankNodePtr<'g, SPO, OPS>>
-    for GraphWriter<SPO, OPS>
+impl<'g, SPO: 'g, OPS: 'g> graph::GraphWriter<'g, BlankNodePtr<'g, SPO, OPS>>
+    for GraphCreator<SPO, OPS>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>
 {
@@ -318,7 +318,7 @@ impl<'g, SPO: 'g, OPS: 'g> graph::GraphCreator<'g, BlankNodePtr<'g, SPO, OPS>>
     {
         self.check_blank_node(&subject);
         self.check_blank_node(&object);
-        GraphWriter::add_blank_blank(self, subject.node_id, predicate.as_str(), object.node_id);
+        GraphCreator::add_blank_blank(self, subject.node_id, predicate.as_str(), object.node_id);
     }
     fn add_blank_iri<'p, 'o, P, O>(&mut self,
                                    subject: BlankNodePtr<SPO, OPS>,
@@ -328,7 +328,7 @@ impl<'g, SPO: 'g, OPS: 'g> graph::GraphCreator<'g, BlankNodePtr<'g, SPO, OPS>>
               O: graph::IRIPtr<'o>
     {
         self.check_blank_node(&subject);
-        GraphWriter::add_blank_iri(self, subject.node_id, predicate.as_str(), object.as_str());
+        GraphCreator::add_blank_iri(self, subject.node_id, predicate.as_str(), object.as_str());
     }
     fn add_blank_literal<'p, 'o, P, O>(&mut self,
                                        subject: BlankNodePtr<SPO, OPS>,
@@ -340,18 +340,18 @@ impl<'g, SPO: 'g, OPS: 'g> graph::GraphCreator<'g, BlankNodePtr<'g, SPO, OPS>>
         self.check_blank_node(&subject);
         match object.language() {
             Some(lang) => {
-                GraphWriter::add_blank_lit_lang(self,
-                                                subject.node_id,
-                                                predicate.as_str(),
-                                                object.as_str(),
-                                                lang)
+                GraphCreator::add_blank_lit_lang(self,
+                                                 subject.node_id,
+                                                 predicate.as_str(),
+                                                 object.as_str(),
+                                                 lang)
             }
             None => {
-                GraphWriter::add_blank_lit(self,
-                                           subject.node_id,
-                                           predicate.as_str(),
-                                           object.as_str(),
-                                           object.datatype())
+                GraphCreator::add_blank_lit(self,
+                                            subject.node_id,
+                                            predicate.as_str(),
+                                            object.as_str(),
+                                            object.datatype())
             }
         }
     }
@@ -363,14 +363,14 @@ impl<'g, SPO: 'g, OPS: 'g> graph::GraphCreator<'g, BlankNodePtr<'g, SPO, OPS>>
               P: graph::IRIPtr<'p>
     {
         self.check_blank_node(&object);
-        GraphWriter::add_iri_blank(self, subject.as_str(), predicate.as_str(), object.node_id);
+        GraphCreator::add_iri_blank(self, subject.as_str(), predicate.as_str(), object.node_id);
     }
     fn add_iri_iri<'s, 'p, 'o, S, P, O>(&mut self, subject: S, predicate: P, object: O)
         where S: graph::IRIPtr<'s>,
               P: graph::IRIPtr<'p>,
               O: graph::IRIPtr<'o>
     {
-        GraphWriter::add_iri_iri(self, subject.as_str(), predicate.as_str(), object.as_str());
+        GraphCreator::add_iri_iri(self, subject.as_str(), predicate.as_str(), object.as_str());
     }
     fn add_iri_literal<'s, 'p, 'o, S, P, O>(&mut self, subject: S, predicate: P, object: O)
         where S: graph::IRIPtr<'s>,
@@ -379,18 +379,18 @@ impl<'g, SPO: 'g, OPS: 'g> graph::GraphCreator<'g, BlankNodePtr<'g, SPO, OPS>>
     {
         match object.language() {
             Some(lang) => {
-                GraphWriter::add_iri_lit_lang(self,
-                                              subject.as_str(),
-                                              predicate.as_str(),
-                                              object.as_str(),
-                                              lang)
+                GraphCreator::add_iri_lit_lang(self,
+                                               subject.as_str(),
+                                               predicate.as_str(),
+                                               object.as_str(),
+                                               lang)
             }
             None => {
-                GraphWriter::add_iri_lit(self,
-                                         subject.as_str(),
-                                         predicate.as_str(),
-                                         object.as_str(),
-                                         object.datatype())
+                GraphCreator::add_iri_lit(self,
+                                          subject.as_str(),
+                                          predicate.as_str(),
+                                          object.as_str(),
+                                          object.datatype())
             }
         }
     }
@@ -399,20 +399,20 @@ impl<'g, SPO: 'g, OPS: 'g> graph::GraphCreator<'g, BlankNodePtr<'g, SPO, OPS>>
 #[test]
 fn collect_empty() {
     let bnc = BlankNodeCreator::new();
-    let writer: GraphWriter<Triple64SPO, Triple64OPS> = GraphWriter::with_capacity(0, &bnc);
-    use graph::GraphCreator;
-    writer.collect();
+    let creator: GraphCreator<Triple64SPO, Triple64OPS> = GraphCreator::with_capacity(0, &bnc);
+    use graph::GraphWriter;
+    creator.collect();
 }
 
 #[test]
 fn keep_blank_subject() {
-    use graph::{BlankNodeCreator, GraphCreator, Graph, IRIPtr, Triple};
     let mut bnc = super::BlankNodeCreator::new();
-    let mut writer: GraphWriter<Triple64SPO, Triple64OPS> = GraphWriter::with_capacity(0, &bnc);
+    let mut creator: GraphCreator<Triple64SPO, Triple64OPS> = GraphCreator::with_capacity(0, &bnc);
+    use graph::{BlankNodeCreator, GraphWriter, Graph, IRIPtr, Triple};
     let blank1 = bnc.create_blank_node();
     let blank2 = bnc.create_blank_node();
-    writer.add_blank_blank(blank1.node_id, "", blank2.node_id);
-    let graph = writer.collect();
+    creator.add_blank_blank(blank1.node_id, "", blank2.node_id);
+    let graph = creator.collect();
     let triple = graph.iter().next().unwrap();
     assert_eq!(triple.subject(),
                graph::BlankNodeOrIRI::BlankNode(blank1, PhantomData));

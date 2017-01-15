@@ -11,7 +11,7 @@ use std::collections::BTreeMap;
 use std::collections::HashSet;
 use rdfio::graphs::tel;
 use rdfio::io::TurtleParser;
-use rdfio::graph::{Graph, GraphCreator, Triple, IRIPtr, LiteralPtr, Resource};
+use rdfio::graph::{Graph, GraphWriter, Triple, IRIPtr, LiteralPtr, Resource};
 use rdfio::namespaces::Namespaces;
 use rdfio::resource::{ResourceBase, IRI, ObjectIter};
 use rdfio::ontology::classes::rdf::Property;

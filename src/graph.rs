@@ -225,7 +225,7 @@ pub trait BlankNodeCreator<'a, B: 'a>
 {
     fn create_blank_node(&mut self) -> B;
 }
-pub trait GraphCreator<'g, B: 'g>
+pub trait GraphWriter<'g, B: 'g>
     where B: BlankNodePtr<'g>
 {
     type Graph: Graph<'g>;

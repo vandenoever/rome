@@ -10,7 +10,7 @@ use std::io;
 use std::io::{Read, Write};
 use std::path::Path;
 use rdfio::io::{TurtleParser, write_turtle};
-use rdfio::graph::{IRIPtr, Resource, Graph, GraphCreator, Triple};
+use rdfio::graph::{IRIPtr, Resource, Graph, GraphWriter, Triple};
 use rdfio::graphs::tel;
 use rdfio::namespaces::Namespaces;
 
