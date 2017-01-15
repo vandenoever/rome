@@ -1,4 +1,5 @@
 use std::io::{Result, Write};
+use std::fmt::Display;
 use graph::*;
 
 struct NTriplesWriter<'a, W: 'a>
@@ -15,7 +16,7 @@ pub fn write_ntriples<'g, T: 'g, I, W, T1: 'g, T2: 'g, T3: 'g>(triples: I,
     where T: Triple<'g, T1, T2, T3>,
           I: Iterator<Item = T>,
           W: Write,
-          T1: BlankNodePtr<'g>,
+          T1: BlankNodePtr<'g> + Display,
           T2: IRIPtr<'g>,
           T3: LiteralPtr<'g>
 {
@@ -46,13 +47,10 @@ impl<'a, W: 'a> NTriplesWriter<'a, W>
         self.writer.write_all(b">")
     }
     fn write_blank_node<'g, B>(&mut self, blank_node: B) -> Result<()>
-        where B: BlankNodePtr<'g>
+        where B: BlankNodePtr<'g> + Display
     {
         self.writer.write_all(b"_:")?;
-        write!(self.writer,
-               "{}_{}",
-               blank_node.graph_id(),
-               blank_node.node_id())?;
+        write!(self.writer, "{}", blank_node)?;
         Ok(())
     }
     fn write_literal_value(&mut self, value: &str) -> Result<()> {
@@ -81,7 +79,7 @@ impl<'a, W: 'a> NTriplesWriter<'a, W>
         Ok(())
     }
     fn write_subject<'g, B, I>(&mut self, subject: BlankNodeOrIRI<'g, B, I>) -> Result<()>
-        where B: BlankNodePtr<'g>,
+        where B: BlankNodePtr<'g> + Display,
               I: IRIPtr<'g>
     {
         match subject {
@@ -93,7 +91,7 @@ impl<'a, W: 'a> NTriplesWriter<'a, W>
         self.write_iri(predicate)
     }
     fn write_object<'g, B, I, L>(&mut self, object: Resource<'g, B, I, L>) -> Result<()>
-        where B: BlankNodePtr<'g>,
+        where B: BlankNodePtr<'g> + Display,
               I: IRIPtr<'g>,
               L: LiteralPtr<'g>
     {
@@ -105,7 +103,7 @@ impl<'a, W: 'a> NTriplesWriter<'a, W>
     }
     fn write_ntriple<'g, T: 'g, B: 'g, I: 'g, L: 'g>(&mut self, triple: &T) -> Result<()>
         where T: Triple<'g, B, I, L>,
-              B: BlankNodePtr<'g>,
+              B: BlankNodePtr<'g> + Display,
               I: IRIPtr<'g>,
               L: LiteralPtr<'g>
     {

@@ -379,7 +379,7 @@ mod tests {
     use resource;
     use ontology_adapter;
     use resource::{ResourceBase,IRI};
-    use graph::GraphCreator;
+    use graph::{GraphCreator};
     use graphs::tel;
     use constants;
 
@@ -422,7 +422,8 @@ mod tests {
 
     #[test]
     fn instantiate_ontology_classes() {
-        let mut creator = tel::GraphCreator::with_capacity(1000);
+        let bnc = tel::BlankNodeCreator::new();
+        let mut creator = tel::GraphCreator::with_capacity(1000, &bnc);
         let graph: tel::Graph64 = creator.collect();
         let ontology = adapter(&graph);
         for class in IRI::<Class<_>>::iter(&ontology) {

@@ -37,8 +37,9 @@ fn read_file(path: &str) -> io::Result<String> {
 }
 
 fn load_graph(data: &str, base: &str) -> rdfio::Result<MyGraph> {
-    let mut writer = tel::GraphCreator::with_capacity(65000);
-    let mut triples = try!(TurtleParser::new(data, base));
+    let mut blank_node_creator = tel::BlankNodeCreator::new();
+    let mut writer = tel::GraphCreator::with_capacity(65000, &blank_node_creator);
+    let mut triples = try!(TurtleParser::new(data, base, &mut blank_node_creator));
     while let Some(triple) = triples.next() {
         writer.add_triple(&try!(triple));
     }
@@ -59,7 +60,8 @@ const RDF_TYPE: &'static str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
 fn infer(graph: &MyGraph) -> rdfio::Result<MyGraph> {
     // for every triple with rdfs:subClassOf infer that the subject and the
     // object are rdfs:Class instances
-    let mut writer = tel::GraphCreator::with_capacity(65000);
+    let blank_node_creator = tel::BlankNodeCreator::new();
+    let mut writer = tel::GraphCreator::with_capacity(65000, &blank_node_creator);
     for triple in graph.iter().filter(|triple| triple.predicate().as_str() == RDFS_SUB_CLASS_OF) {
         writer.add_iri_iri(triple.subject().as_iri().unwrap().clone(),
                            RDF_TYPE,

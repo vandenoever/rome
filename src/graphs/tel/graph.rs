@@ -6,7 +6,6 @@ use super::string_collector::*;
 use super::triple::*;
 use super::iter::*;
 
-#[derive (Debug)]
 pub struct GraphData<SPO, OPS>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>
@@ -153,7 +152,7 @@ impl<SPO, OPS> Graph<SPO, OPS>
     fn create_subject_triple<'g>(&self, subject: &BlankNodeOrIRI<'g, SPO, OPS>) -> Option<SPO> {
         match subject {
             &graph::BlankNodeOrIRI::BlankNode(ref bn, _) if bn.graph_id == self.d.graph_id => {
-                Some(subject_blank_node(bn.node))
+                Some(subject_blank_node(bn.node_id))
             }
             &graph::BlankNodeOrIRI::IRI(ref iri) => Some(subject_iri(iri.iri)),
             _ => None,
@@ -421,7 +420,7 @@ impl<'g, SPO: 'g, OPS: 'g> graph::Graph<'g> for Graph<SPO, OPS>
                 -> Self::SPORangeIter {
         let spo = match subject {
             graph::BlankNodeOrIRI::BlankNode(bn, _) => {
-                subject_blank_node_predicate(bn.node, predicate.iri)
+                subject_blank_node_predicate(bn.node_id, predicate.iri)
             }
             graph::BlankNodeOrIRI::IRI(iri) => subject_iri_predicate(iri.iri, predicate.iri),
         };
@@ -433,7 +432,7 @@ impl<'g, SPO: 'g, OPS: 'g> graph::Graph<'g> for Graph<SPO, OPS>
                 -> Self::OPSRangeIter {
         let ops = match object {
             graph::Resource::BlankNode(bn, _) => {
-                object_blank_node_predicate(bn.node, predicate.iri)
+                object_blank_node_predicate(bn.node_id, predicate.iri)
             }
             graph::Resource::IRI(iri) => object_iri_predicate(iri.iri, predicate.iri),
             graph::Resource::Literal(l) => object_literal_predicate(l.lexical, predicate.iri),

@@ -76,24 +76,11 @@ impl<'a> Iterator for StatementIterator<'a> {
     }
 }
 
-struct BlankNodes<'a> {
-    blank_nodes: HashMap<&'a str, usize>,
-    next_blank: usize,
-}
-
-#[derive(Clone,Copy,PartialEq,Eq,PartialOrd,Ord,Debug)]
-pub struct BlankNodePtr<'g> {
-    graph_id: u32,
-    node_id: u32,
-    phantom: PhantomData<&'g u32>,
-}
-impl<'g> graph::BlankNodePtr<'g> for BlankNodePtr<'g> {
-    fn graph_id(&self) -> u32 {
-        self.graph_id
-    }
-    fn node_id(&self) -> u32 {
-        self.node_id
-    }
+struct BlankNodes<'a, B: 'a>
+    where B: graph::BlankNodePtr<'a>
+{
+    blank_node_creator: &'a mut graph::BlankNodeCreator<'a, B>,
+    blank_nodes: HashMap<&'a str, B>,
 }
 #[derive(Clone,PartialEq,Eq,PartialOrd,Ord,Debug)]
 pub struct IRIPtr<'g> {
@@ -126,23 +113,27 @@ impl<'g> graph::LiteralPtr<'g> for LiteralPtr<'g> {
         }
     }
 }
-type BlankNodeOrIRI<'t> = graph::BlankNodeOrIRI<'t, BlankNodePtr<'t>, IRIPtr<'t>>;
-type Resource<'t> = graph::Resource<'t, BlankNodePtr<'t>, IRIPtr<'t>, LiteralPtr<'t>>;
+type BlankNodeOrIRI<'t, B> = graph::BlankNodeOrIRI<'t, B, IRIPtr<'t>>;
+type Resource<'t, B> = graph::Resource<'t, B, IRIPtr<'t>, LiteralPtr<'t>>;
 
 #[derive(PartialEq,Eq)]
-pub struct IteratorTriple<'t> {
-    pub subject: BlankNodeOrIRI<'t>,
+pub struct IteratorTriple<'t, B: 't>
+    where B: graph::BlankNodePtr<'t>
+{
+    pub subject: BlankNodeOrIRI<'t, B>,
     pub predicate: IRIPtr<'t>,
-    pub object: Resource<'t>,
+    pub object: Resource<'t, B>,
 }
-impl<'t> graph::Triple<'t, BlankNodePtr<'t>, IRIPtr<'t>, LiteralPtr<'t>> for IteratorTriple<'t> {
-    fn subject(&self) -> BlankNodeOrIRI<'t> {
+impl<'t, B: 't> graph::Triple<'t, B, IRIPtr<'t>, LiteralPtr<'t>> for IteratorTriple<'t, B>
+    where B: graph::BlankNodePtr<'t> + Clone
+{
+    fn subject(&self) -> BlankNodeOrIRI<'t, B> {
         self.subject.clone()
     }
     fn predicate(&self) -> IRIPtr<'t> {
         self.predicate.clone()
     }
-    fn object(&self) -> Resource<'t> {
+    fn object(&self) -> Resource<'t, B> {
         self.object.clone()
     }
 }
@@ -154,13 +145,15 @@ struct Strings {
     language: Rc<String>,
 }
 
-pub struct TripleIterator<'a> {
+pub struct TripleIterator<'a, B: 'a>
+    where B: graph::BlankNodePtr<'a>
+{
     statement_iterator: StatementIterator<'a>,
     buffer: String,
     base: String,
     prefixes: Namespaces,
-    blank_nodes: BlankNodes<'a>,
-    triple_buffer: Vec<Triple<'a>>,
+    blank_nodes: BlankNodes<'a, B>,
+    triple_buffer: Vec<Triple<'a, B>>,
     done: bool,
     strings: Strings,
 }
@@ -187,8 +180,13 @@ fn join_iri(base: &str, p: &str, to: &mut String) -> Result<()> {
     Ok(())
 }
 
-impl<'a> TripleIterator<'a> {
-    pub fn new(src: &'a str, base: &str) -> Result<TripleIterator<'a>> {
+impl<'a, B: 'a> TripleIterator<'a, B>
+    where B: graph::BlankNodePtr<'a> + Clone
+{
+    pub fn new(src: &'a str,
+               base: &str,
+               blank_node_creator: &'a mut graph::BlankNodeCreator<'a, B>)
+               -> Result<TripleIterator<'a, B>> {
         if !is_absolute(base) {
             return Err(Error::Custom("base url is not absolute"));
         }
@@ -199,8 +197,8 @@ impl<'a> TripleIterator<'a> {
             base: String::from(base),
             prefixes: Namespaces::new(),
             blank_nodes: BlankNodes {
+                blank_node_creator: blank_node_creator,
                 blank_nodes: HashMap::new(),
-                next_blank: 0,
             },
             triple_buffer: Vec::new(),
             done: false,
@@ -246,12 +244,14 @@ impl<'a> TripleIterator<'a> {
     }
 }
 
-fn resolve_triple<'g>(triple: Triple,
-                      prefixes: &Namespaces,
-                      base: &str,
-                      buffer: &mut String,
-                      strings: &mut Strings)
-                      -> Result<IteratorTriple<'g>> {
+fn resolve_triple<'g, B: 'g>(triple: Triple<'g, B>,
+                             prefixes: &Namespaces,
+                             base: &str,
+                             buffer: &mut String,
+                             strings: &mut Strings)
+                             -> Result<IteratorTriple<'g, B>>
+    where B: graph::BlankNodePtr<'g>
+{
     Ok(IteratorTriple {
         subject: match triple.subject {
             SingleSubject::IRI(iri) => {
@@ -261,14 +261,7 @@ fn resolve_triple<'g>(triple: Triple,
                     phantom: PhantomData,
                 })
             }
-            SingleSubject::BlankNode(n) => {
-                graph::BlankNodeOrIRI::BlankNode(BlankNodePtr {
-                                                     node_id: n as u32,
-                                                     graph_id: 0,
-                                                     phantom: PhantomData,
-                                                 },
-                                                 PhantomData)
-            }
+            SingleSubject::BlankNode(n) => graph::BlankNodeOrIRI::BlankNode(n, PhantomData),
         },
         predicate: {
             resolve_iri(triple.predicate,
@@ -289,14 +282,7 @@ fn resolve_triple<'g>(triple: Triple,
                     phantom: PhantomData,
                 })
             }
-            SingleObject::BlankNode(n) => {
-                graph::Resource::BlankNode(BlankNodePtr {
-                                               node_id: n as u32,
-                                               graph_id: 0,
-                                               phantom: PhantomData,
-                                           },
-                                           PhantomData)
-            }
+            SingleObject::BlankNode(n) => graph::Resource::BlankNode(n, PhantomData),
             SingleObject::Literal(l) => {
                 graph::Resource::Literal(LiteralPtr {
                     lexical: {
@@ -359,24 +345,26 @@ fn resolve_iri(iri: IRI,
     Ok(())
 }
 
-impl<'a> BlankNodes<'a> {
-    fn new_blank(&mut self) -> usize {
-        let b = self.next_blank;
-        self.next_blank += 1;
-        b
+impl<'a, B> BlankNodes<'a, B>
+    where B: graph::BlankNodePtr<'a> + Clone
+{
+    fn new_blank(&mut self) -> B {
+        self.blank_node_creator.create_blank_node()
     }
-    fn get_blank(&mut self, label: &'a str) -> usize {
+    fn get_blank(&mut self, label: &'a str) -> B {
         if let Some(n) = self.blank_nodes.get(label) {
-            return *n;
+            return n.clone();
         }
         let n = self.new_blank();
-        self.blank_nodes.insert(label, n);
+        self.blank_nodes.insert(label, n.clone());
         n
     }
 }
 
-impl<'a> Iterator for TripleIterator<'a> {
-    type Item = Result<IteratorTriple<'a>>;
+impl<'a, B: 'a> Iterator for TripleIterator<'a, B>
+    where B: graph::BlankNodePtr<'a> + Clone
+{
+    type Item = Result<IteratorTriple<'a, B>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.done {
@@ -405,7 +393,9 @@ impl<'a> Iterator for TripleIterator<'a> {
     }
 }
 
-fn make_blank<'a>(blank_node: BlankNode<'a>, blank_nodes: &mut BlankNodes<'a>) -> usize {
+fn make_blank<'a, B: 'a>(blank_node: BlankNode<'a>, blank_nodes: &mut BlankNodes<'a, B>) -> B
+    where B: graph::BlankNodePtr<'a> + Clone
+{
     match blank_node {
         BlankNode::Anon => blank_nodes.new_blank(),
         BlankNode::BlankNode(label) => blank_nodes.get_blank(label),
@@ -416,28 +406,32 @@ const RDF_FIRST: &'static str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#firs
 const RDF_REST: &'static str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest";
 const RDF_NIL: &'static str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil";
 
-fn s2o(s: SingleSubject) -> SingleObject {
+fn s2o<'a, B>(s: SingleSubject<'a, B>) -> SingleObject<'a, B>
+    where B: graph::BlankNodePtr<'a>
+{
     match s {
         SingleSubject::IRI(iri) => SingleObject::IRI(iri),
         SingleSubject::BlankNode(n) => SingleObject::BlankNode(n),
     }
 }
 
-fn make_collection<'a>(collection: Vec<Object<'a>>,
-                       blank_nodes: &mut BlankNodes<'a>,
-                       triple_buffer: &mut Vec<Triple<'a>>)
-                       -> Result<SingleSubject<'a>> {
+fn make_collection<'a, B>(collection: Vec<Object<'a>>,
+                          blank_nodes: &mut BlankNodes<'a, B>,
+                          triple_buffer: &mut Vec<Triple<'a, B>>)
+                          -> Result<SingleSubject<'a, B>>
+    where B: graph::BlankNodePtr<'a> + Clone
+{
     let mut head = SingleSubject::IRI(IRI::IRI(RDF_NIL));
     for object in collection.into_iter().rev() {
         let this = blank_nodes.new_blank();
         let o = make_object(object, blank_nodes, triple_buffer)?;
         triple_buffer.push(Triple {
-            subject: SingleSubject::BlankNode(this),
+            subject: SingleSubject::BlankNode(this.clone()),
             predicate: IRI::IRI(RDF_FIRST),
             object: o,
         });
         triple_buffer.push(Triple {
-            subject: SingleSubject::BlankNode(this),
+            subject: SingleSubject::BlankNode(this.clone()),
             predicate: IRI::IRI(RDF_REST),
             object: s2o(head),
         });
@@ -446,10 +440,12 @@ fn make_collection<'a>(collection: Vec<Object<'a>>,
     Ok(head)
 }
 
-fn make_subject<'a>(subject: Subject<'a>,
-                    blank_nodes: &mut BlankNodes<'a>,
-                    triple_buffer: &mut Vec<Triple<'a>>)
-                    -> Result<SingleSubject<'a>> {
+fn make_subject<'a, B>(subject: Subject<'a>,
+                       blank_nodes: &mut BlankNodes<'a, B>,
+                       triple_buffer: &mut Vec<Triple<'a, B>>)
+                       -> Result<SingleSubject<'a, B>>
+    where B: graph::BlankNodePtr<'a> + Clone
+{
     Ok(match subject {
         Subject::IRI(iri) => SingleSubject::IRI(iri),
         Subject::BlankNode(blank) => SingleSubject::BlankNode(make_blank(blank, blank_nodes)),
@@ -457,10 +453,12 @@ fn make_subject<'a>(subject: Subject<'a>,
     })
 }
 
-fn make_object<'a>(object: Object<'a>,
-                   blank_nodes: &mut BlankNodes<'a>,
-                   triple_buffer: &mut Vec<Triple<'a>>)
-                   -> Result<SingleObject<'a>> {
+fn make_object<'a, B>(object: Object<'a>,
+                      blank_nodes: &mut BlankNodes<'a, B>,
+                      triple_buffer: &mut Vec<Triple<'a, B>>)
+                      -> Result<SingleObject<'a, B>>
+    where B: graph::BlankNodePtr<'a> + Clone
+{
     Ok(match object {
         Object::IRI(iri) => SingleObject::IRI(iri),
         Object::BlankNode(blank) => SingleObject::BlankNode(make_blank(blank, blank_nodes)),
@@ -470,18 +468,20 @@ fn make_object<'a>(object: Object<'a>,
         Object::Literal(l) => SingleObject::Literal(l),
         Object::BlankNodePropertyList(predicated_objects_list) => {
             let blank = blank_nodes.new_blank();
-            let subject = SingleSubject::BlankNode(blank);
+            let subject = SingleSubject::BlankNode(blank.clone());
             add_predicated_objects(subject, predicated_objects_list, blank_nodes, triple_buffer)?;
             SingleObject::BlankNode(blank)
         }
     })
 }
 
-fn add_predicated_objects<'a>(subject: SingleSubject<'a>,
-                              predicated_objects_list: Vec<PredicatedObjects<'a>>,
-                              blank_nodes: &mut BlankNodes<'a>,
-                              triple_buffer: &mut Vec<Triple<'a>>)
-                              -> Result<()> {
+fn add_predicated_objects<'a, B>(subject: SingleSubject<'a, B>,
+                                 predicated_objects_list: Vec<PredicatedObjects<'a>>,
+                                 blank_nodes: &mut BlankNodes<'a, B>,
+                                 triple_buffer: &mut Vec<Triple<'a, B>>)
+                                 -> Result<()>
+    where B: graph::BlankNodePtr<'a> + Clone
+{
     for po in predicated_objects_list {
         for o in po.objects.into_iter() {
             let triple = Triple {
@@ -495,10 +495,12 @@ fn add_predicated_objects<'a>(subject: SingleSubject<'a>,
     Ok(())
 }
 
-fn add_triples<'a>(new_triples: Triples<'a>,
-                   blank_nodes: &mut BlankNodes<'a>,
-                   triple_buffer: &mut Vec<Triple<'a>>)
-                   -> Result<()> {
+fn add_triples<'a, B>(new_triples: Triples<'a>,
+                      blank_nodes: &mut BlankNodes<'a, B>,
+                      triple_buffer: &mut Vec<Triple<'a, B>>)
+                      -> Result<()>
+    where B: graph::BlankNodePtr<'a> + Clone
+{
     let subject = make_subject(new_triples.subject, blank_nodes, triple_buffer)?;
     add_predicated_objects(subject,
                            new_triples.predicated_objects_list,

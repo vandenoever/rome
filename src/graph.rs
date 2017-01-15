@@ -4,9 +4,6 @@ use iter::sorted_iterator::SortedIterator;
 use constants;
 
 pub trait BlankNodePtr<'g> {
-    // todo: make graph_id into a trait so ensure that it is unique at runtime
-    fn graph_id(&self) -> u32;
-    fn node_id(&self) -> u32;
     fn to_blank_node_or_iri<I>(&self) -> BlankNodeOrIRI<'g, Self, I>
         where Self: Clone,
               I: IRIPtr<'g>
@@ -19,30 +16,6 @@ pub trait BlankNodePtr<'g> {
               L: LiteralPtr<'g>
     {
         Resource::BlankNode(self.clone(), PhantomData)
-    }
-}
-impl<'g> PartialEq for BlankNodePtr<'g> {
-    fn eq(&self, other: &BlankNodePtr<'g>) -> bool {
-        self.node_id() == other.node_id() && self.graph_id() == other.graph_id()
-    }
-}
-impl<'g> Eq for BlankNodePtr<'g> {}
-impl<'g> PartialOrd for BlankNodePtr<'g> {
-    fn partial_cmp(&self, other: &BlankNodePtr<'g>) -> Option<Ordering> {
-        let mut cmp = self.node_id().cmp(&other.node_id());
-        if cmp == Ordering::Equal {
-            cmp = self.graph_id().cmp(&other.graph_id())
-        }
-        Some(cmp)
-    }
-}
-impl<'g> Ord for BlankNodePtr<'g> {
-    fn cmp(&self, other: &BlankNodePtr<'g>) -> Ordering {
-        let mut cmp = self.node_id().cmp(&other.node_id());
-        if cmp == Ordering::Equal {
-            cmp = self.graph_id().cmp(&other.graph_id())
-        }
-        cmp
     }
 }
 pub trait IRIPtr<'g> {
@@ -252,26 +225,29 @@ pub trait Triple<'g, B, I, L>
 pub trait IntoIRIPtr<'a> {
     fn iri<I>(self) -> I where I: IRIPtr<'a>;
 }
-
-pub trait GraphCreator<'g> {
+pub trait BlankNodeCreator<'a, B: 'a>
+    where B: BlankNodePtr<'a>
+{
+    fn create_blank_node(&mut self) -> B;
+}
+pub trait GraphCreator<'g, B: 'g>
+    where B: BlankNodePtr<'g>
+{
     type Graph: Graph<'g>;
-    fn create_blank_node(&mut self) -> <Self::Graph as Graph<'g>>::BlankNodePtr;
-    fn add_triple<'h, T, B: 'h, I: 'h, L: 'h>(&mut self, triple: &T)
-        where T: Triple<'h, B, I, L>,
-              B: BlankNodePtr<'h>,
-              I: IRIPtr<'h>,
-              L: LiteralPtr<'h>;
-    fn add_blank_blank<'p, P>(&mut self, subject: <Self::Graph as Graph<'g>>::BlankNodePtr,
-            predicate: P,
-            object: <Self::Graph as Graph<'g>>::BlankNodePtr)
-        where P: IRIPtr<'p>;
-    fn add_blank_iri<'p, 'o, P, O>(&mut self, subject: <Self::Graph as Graph<'g>>::BlankNodePtr, predicate: P, object: O)
+    /// Add a triple.
+    ///
+    fn add_triple<T: 'g, I: 'g, L: 'g>(&mut self, triple: &T)
+        where T: Triple<'g, B, I, L>,
+              I: IRIPtr<'g>,
+              L: LiteralPtr<'g>;
+    fn add_blank_blank<'p, P>(&mut self, subject: B, predicate: P, object: B) where P: IRIPtr<'p>;
+    fn add_blank_iri<'p, 'o, P, O>(&mut self, subject: B, predicate: P, object: O)
         where P: IRIPtr<'p>,
               O: IRIPtr<'o>;
-    fn add_blank_literal<'p, 'o, P, O>(&mut self, subject: <Self::Graph as Graph<'g>>::BlankNodePtr, predicate: P, object: O)
+    fn add_blank_literal<'p, 'o, P, O>(&mut self, subject: B, predicate: P, object: O)
         where P: IRIPtr<'p>,
               O: LiteralPtr<'o>;
-    fn add_iri_blank<'s, 'p, S, P>(&mut self, subject: S, predicate: P, object: <Self::Graph as Graph<'g>>::BlankNodePtr)
+    fn add_iri_blank<'s, 'p, S, P>(&mut self, subject: S, predicate: P, object: B)
         where S: IRIPtr<'s>,
               P: IRIPtr<'p>;
     fn add_iri_iri<'s, 'p, 'o, S, P, O>(&mut self, subject: S, predicate: P, object: O)

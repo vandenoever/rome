@@ -1,4 +1,5 @@
 use std::io::{Result, Write};
+use std::fmt::Display;
 use graph::*;
 use namespaces::*;
 use constants;
@@ -22,7 +23,7 @@ pub fn write_turtle<'g, T, I, W, T1: 'g, T2: 'g, T3: 'g>(namespaces: &Namespaces
     where T: Triple<'g, T1, T2, T3>,
           I: Iterator<Item = T>,
           W: Write,
-          T1: BlankNodePtr<'g> + Eq + Clone,
+          T1: BlankNodePtr<'g> + Eq + Clone + Display,
           T2: IRIPtr<'g> + Eq + Clone,
           T3: LiteralPtr<'g>
 {
@@ -45,7 +46,7 @@ pub fn write_turtle<'g, T, I, W, T1: 'g, T2: 'g, T3: 'g>(namespaces: &Namespaces
 
 impl<'a, 'g, W: 'a, B, I> TurtleWriter<'a, 'g, W, B, I>
     where W: Write,
-          B: BlankNodePtr<'g> + Eq + Clone,
+          B: BlankNodePtr<'g> + Eq + Clone + Display,
           I: IRIPtr<'g> + Eq + Clone
 {
     fn write_prefix(&mut self, ns: &Namespace) -> Result<()> {
@@ -88,10 +89,7 @@ impl<'a, 'g, W: 'a, B, I> TurtleWriter<'a, 'g, W, B, I>
     }
     fn write_blank_node(&mut self, blank_node: B) -> Result<()> {
         self.writer.write_all(b"_:")?;
-        write!(self.writer,
-               "{}_{}",
-               blank_node.graph_id(),
-               blank_node.node_id())?;
+        write!(self.writer, "{}", blank_node)?;
         Ok(())
     }
     fn write_literal_value(&mut self, value: &str) -> Result<()> {

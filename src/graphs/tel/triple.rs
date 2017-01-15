@@ -12,7 +12,7 @@ pub struct BlankNodePtr<'g, SPO: 'g, OPS: 'g>
           OPS: CompactTriple<u32>
 {
     pub graph_id: u32,
-    pub node: u32,
+    pub node_id: u32,
     pub phantom: PhantomData<&'g (SPO, OPS)>,
 }
 impl<'g, SPO, OPS> PartialEq for BlankNodePtr<'g, SPO, OPS>
@@ -22,26 +22,28 @@ impl<'g, SPO, OPS> PartialEq for BlankNodePtr<'g, SPO, OPS>
     fn eq(&self, other: &Self) -> bool {
         // TODO: figure if we want PartialEq and Eq for nodes at all
         // (probably only PartialEq)
-        self.node == other.node
+        self.node_id == other.node_id && self.graph_id == other.graph_id
+    }
+}
+impl<'g, SPO, OPS> fmt::Display for BlankNodePtr<'g, SPO, OPS>
+    where SPO: CompactTriple<u32>,
+          OPS: CompactTriple<u32>
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.node_id)
     }
 }
 impl<'g, SPO, OPS> graph::BlankNodePtr<'g> for BlankNodePtr<'g, SPO, OPS>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>
 {
-    fn graph_id(&self) -> u32 {
-        self.graph_id
-    }
-    fn node_id(&self) -> u32 {
-        self.node
-    }
 }
 impl<'g, SPO, OPS> fmt::Debug for BlankNodePtr<'g, SPO, OPS>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "_:{}", self.node)
+        write!(f, "_:{}", self.node_id)
     }
 }
 #[derive (Clone)]
@@ -246,7 +248,7 @@ impl<'g, SPO: 'g, OPS: 'g, T> graph::Triple<'g,
         } else {
             graph::BlankNodeOrIRI::BlankNode(BlankNodePtr{
                     graph_id:self.graph.graph_id,
-                    node: self.triple.subject(),phantom:PhantomData },
+                    node_id: self.triple.subject(),phantom:PhantomData },
                 PhantomData)
         }
     }
@@ -259,7 +261,7 @@ impl<'g, SPO: 'g, OPS: 'g, T> graph::Triple<'g,
         } else if self.triple.object_is_blank_node() {
             graph::Resource::BlankNode(BlankNodePtr{
                     graph_id: self.graph.graph_id,
-                    node: self.triple.object(),phantom:PhantomData
+                    node_id: self.triple.object(),phantom:PhantomData
                 },PhantomData)
         } else if self.triple.has_language() {
             graph::Resource::Literal(LiteralPtr {

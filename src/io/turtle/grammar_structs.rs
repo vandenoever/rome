@@ -1,20 +1,28 @@
+use graph::BlankNodePtr;
+
 #[derive(PartialEq,Eq)]
-pub struct Triple<'a> {
-    pub subject: SingleSubject<'a>,
+pub struct Triple<'a, B: 'a>
+    where B: BlankNodePtr<'a>
+{
+    pub subject: SingleSubject<'a, B>,
     pub predicate: IRI<'a>,
-    pub object: SingleObject<'a>,
+    pub object: SingleObject<'a, B>,
 }
 
 #[derive(Debug,PartialEq,Eq,Clone)]
-pub enum SingleSubject<'a> {
+pub enum SingleSubject<'a, B: 'a>
+    where B: BlankNodePtr<'a>
+{
     IRI(IRI<'a>),
-    BlankNode(usize),
+    BlankNode(B),
 }
 
 #[derive(Debug,PartialEq,Eq)]
-pub enum SingleObject<'a> {
+pub enum SingleObject<'a, B: 'a>
+    where B: BlankNodePtr<'a>
+{
     IRI(IRI<'a>),
-    BlankNode(usize),
+    BlankNode(B),
     Literal(Literal<'a>),
 }
 

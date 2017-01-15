@@ -13,4 +13,5 @@ use self::triple128::*;
 
 pub type Graph64 = graph::Graph<Triple64SPO, Triple64OPS>;
 pub type Graph128 = graph::Graph<Triple128SPO, Triple128OPS>;
+pub type BlankNodeCreator<A, B> = graph_writer::BlankNodeCreator<A, B>;
 pub type GraphCreator<A, B> = graph_writer::GraphWriter<A, B>;

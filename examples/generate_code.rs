@@ -152,7 +152,8 @@ fn closure<'g>(class: &Class<'g, MyGraph>) -> ObjectIter<'g, Class<'g, MyGraph>>
 fn infer(graph: &MyGraph) -> rdfio::Result<MyGraph> {
     // for every triple with rdfs:subClassOf infer that the subject and the
     // object are rdfs:Class instances
-    let mut writer = tel::GraphCreator::with_capacity(65000);
+    let blank_node_creator = tel::BlankNodeCreator::new();
+    let mut writer = tel::GraphCreator::with_capacity(65000, &blank_node_creator);
     for triple in graph.iter().filter(|triple| triple.predicate().as_str() == RDFS_SUB_CLASS_OF) {
         // blank nodes will panic
         writer.add_iri_iri(triple.subject().as_iri().unwrap().clone(),
@@ -215,13 +216,14 @@ fn write_mod(o: &Output, iris: &Vec<String>) -> rdfio::Result<()> {
 }
 
 fn load_files(inputs: &Vec<String>) -> rdfio::Result<(Namespaces, MyGraph)> {
-    let mut writer = tel::GraphCreator::with_capacity(65000);
+    let mut blank_node_creator = tel::BlankNodeCreator::new();
+    let mut writer = tel::GraphCreator::with_capacity(65000, &blank_node_creator);
     let mut prefixes = Namespaces::new();
     for input in inputs {
         let data = read_file(input)?;
         let mut base = String::from("file:");
         base.push_str(input);
-        let mut triples = TurtleParser::new(data.as_str(), &base)?;
+        let mut triples = TurtleParser::new(data.as_str(), &base, &mut blank_node_creator)?;
         while let Some(triple) = triples.next() {
             writer.add_triple(&triple?);
         }

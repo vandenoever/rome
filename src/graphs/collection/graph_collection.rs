@@ -11,10 +11,8 @@ pub enum Object {
 /// TripleCmpWrap can wrap a Triple and has no associated types.
 /// This makes it possible to re-use a pointer
 pub trait TripleCmpWrap<'g> {
-    fn cmp_subject_blank_node(&self, graph_id: u32, node_id: u32) -> cmp::Ordering;
     fn cmp_subject_iri(&self, o: &str) -> cmp::Ordering;
     fn cmp_predicate(&self, o: &str) -> cmp::Ordering;
-    fn cmp_object_blank_node(&self, graph_id: u32, node_id: u32) -> cmp::Ordering;
     fn cmp_object_iri(&self, o: &str) -> cmp::Ordering;
     fn cmp_object_literal(&self, o: &str, datatype: &str, language: Option<&str>) -> cmp::Ordering;
     fn subject_is_blank_node(&self) -> bool;
@@ -27,7 +25,9 @@ fn compare_subject<'g, B: 'g, I: 'g>(a: &TripleCmpWrap,
           I: IRIPtr<'g>
 {
     match b {
-        BlankNodeOrIRI::BlankNode(b, _) => a.cmp_subject_blank_node(b.graph_id(), b.node_id()),
+        // blank nodes from different graphs are different
+        // the left side is less
+        BlankNodeOrIRI::BlankNode(b, _) => cmp::Ordering::Less,
         BlankNodeOrIRI::IRI(i) => a.cmp_subject_iri(i.as_str()),
     }
 }
@@ -39,7 +39,7 @@ fn compare_object<'g, B: 'g, I: 'g, L: 'g>(a: &TripleCmpWrap,
           L: LiteralPtr<'g>
 {
     match b {
-        Resource::BlankNode(b, _) => a.cmp_object_blank_node(b.graph_id(), b.node_id()),
+        Resource::BlankNode(b, _) => cmp::Ordering::Less,
         Resource::IRI(i) => a.cmp_object_iri(i.as_str()),
         Resource::Literal(l) => a.cmp_object_literal(l.as_str(), l.datatype(), l.language()),
     }
@@ -145,18 +145,6 @@ impl_triple_cmp_wrap_spo_ops {
     ($name:ident $graph_type:path) => {
 
         impl<'g> TripleCmpWrap<'g> for <$graph_type as Graph<'g>>::$name {
-            fn cmp_subject_blank_node(&self, graph_id: u32, node_id: u32) -> cmp::Ordering {
-                match self.subject() {
-                    BlankNodeOrIRI::BlankNode(b,_) => {
-                        let mut cmp = b.node_id().cmp(&node_id);
-                        if cmp == cmp::Ordering::Equal {
-                            cmp = b.graph_id().cmp(&graph_id)
-                        }
-                        cmp
-                    }
-                    _ => cmp::Ordering::Greater
-                }
-            }
             fn cmp_subject_iri(&self, o: &str) -> cmp::Ordering {
                 match self.subject() {
                     BlankNodeOrIRI::IRI(i) => i.as_str().cmp(o),
@@ -165,18 +153,6 @@ impl_triple_cmp_wrap_spo_ops {
             }
             fn cmp_predicate(&self, o: &str) -> cmp::Ordering {
                 self.predicate().as_str().cmp(o)
-            }
-            fn cmp_object_blank_node(&self, graph_id: u32, node_id: u32) -> cmp::Ordering {
-                match self.object() {
-                    Resource::BlankNode(b,_) => {
-                        let mut cmp = b.node_id().cmp(&node_id);
-                        if cmp == cmp::Ordering::Equal {
-                            cmp = b.graph_id().cmp(&graph_id)
-                        }
-                        cmp
-                    }
-                    _ => cmp::Ordering::Greater
-                }
             }
             fn cmp_object_iri(&self, o: &str) -> cmp::Ordering {
                 match self.object() {
@@ -282,6 +258,7 @@ pub mod $name {
     use std::marker::PhantomData;
     use std::iter::Peekable;
     use std::cmp;
+    use std::fmt;
     use super::*;
     use iter::SortedIterator;
     type Graphs<'g> = ($($graph_type,)+);
@@ -301,24 +278,23 @@ pub mod $name {
     pub struct BlankNode<'g> {
         nodes: BlankNodes<'g>
     }
-    impl<'g> BlankNodePtr<'g> for BlankNode<'g> {
-        fn graph_id(&self) -> u32 {
+    impl<'g> fmt::Display for BlankNode<'g> {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            write!(f, "_");
             $(
-                if let Some(ref v) = self.nodes.$n {
-                    return v.graph_id();
+                match self.nodes.$n {
+                    Some(b) => {
+                        write!(f, "._{}", b)?;
+                    }
+                    None => {
+                        write!(f, "._")?;
+                    }
                 }
-            )+
-            panic!("unreachable")
-        }
-        fn node_id(&self) -> u32 {
-            $(
-                if let Some(ref v) = self.nodes.$n {
-                    return v.node_id();
-                }
-            )+
-            panic!("unreachable")
+            )*
+            Ok(())
         }
     }
+    impl<'g> BlankNodePtr<'g> for BlankNode<'g> {}
     #[derive(Clone,PartialEq,Eq,PartialOrd,Ord)]
     pub struct IRI<'g> {
         iris: IRIs<'g>,
