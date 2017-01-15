@@ -32,16 +32,16 @@ fn read_file(path: &str) -> io::Result<String> {
         Ok(f) => f,
     };
     let mut s = String::new();
-    try!(f.read_to_string(&mut s));
+    f.read_to_string(&mut s)?;
     Ok(s)
 }
 
 fn load_graph(data: &str, base: &str) -> rdfio::Result<MyGraph> {
     let mut blank_node_creator = tel::BlankNodeCreator::new();
     let mut writer = tel::GraphCreator::with_capacity(65000, &blank_node_creator);
-    let mut triples = try!(TurtleParser::new(data, base, &mut blank_node_creator));
+    let mut triples = TurtleParser::new(data, base, &mut blank_node_creator)?;
     while let Some(triple) = triples.next() {
-        writer.add_triple(&try!(triple));
+        writer.add_triple(&triple?);
     }
     Ok(writer.collect().sort_blank_nodes())
 }
@@ -49,7 +49,7 @@ fn load_graph(data: &str, base: &str) -> rdfio::Result<MyGraph> {
 fn output_as_turtle(graph: &MyGraph) -> rdfio::Result<()> {
     let mut ns = Namespaces::new();
     ns.set(b"rdfs", "http://www.w3.org/2000/01/rdf-schema#");
-    try!(write_turtle(&ns, graph.iter(), &mut ::std::io::stdout()));
+    write_turtle(&ns, graph.iter(), &mut ::std::io::stdout())?;
     Ok(())
 }
 
@@ -80,10 +80,10 @@ fn infer(graph: &MyGraph) -> rdfio::Result<MyGraph> {
 }
 
 fn run(path: &str, base: &str) -> rdfio::Result<()> {
-    let data = try!(read_file(path));
-    let graph = try!(load_graph(data.as_str(), base));
-    let result = try!(infer(&graph));
-    try!(output_as_turtle(&result));
+    let data = read_file(path)?;
+    let graph = load_graph(data.as_str(), base)?;
+    let result = infer(&graph)?;
+    output_as_turtle(&result)?;
     Ok(())
 }
 
