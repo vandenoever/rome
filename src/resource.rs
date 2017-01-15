@@ -34,8 +34,24 @@ pub trait ResourceBase<'g>: Clone + Ord {
     fn iter(graph: &'g ontology_adapter::OntologyAdapter<'g, Self::Graph>) -> Self::SubjectIter;
     fn this(&self) -> &resource!();
     fn graph(&self) -> &'g ontology_adapter::OntologyAdapter<'g, Self::Graph>;
-    fn predicate<R>(&self, predicate: Option<rb!(IRIPtr)>) -> ObjectIter<'g, R>
-        where R: ResourceBase<'g, Graph = Self::Graph>;
+    fn predicate<R>(&self, predicate: Option<rb!(IRIPtr)>) -> ObjectIter<'g,R>
+        where R: ResourceBase<'g, Graph = Self::Graph>,
+              <Self as ResourceBase<'g>>::Graph: 'g,
+              Self: 'g
+    {
+        let graph = self.graph();
+        let iter = match predicate {
+            None => graph.empty_spo_range(),
+            Some(ref predicate) => match self.this().to_blank_node_or_iri() {
+                Some(subject) => graph.iter_s_p(subject, predicate.clone()),
+                None => graph.empty_spo_range(),
+            }
+        };
+        ObjectIter {
+            graph: graph,
+            iter: iter,
+        }
+    }
     fn iri(&self) -> Option<IRI<'g, Self>> {
         match self.this() {
             &graph::Resource::IRI(_) => Some(IRI {
@@ -141,9 +157,9 @@ impl<'g, R: 'g> ResourceBase<'g> for IRI<'g, R>
     fn graph(&self) -> &'g ontology_adapter::OntologyAdapter<'g, Self::Graph> {
         self.resource.graph()
     }
-    fn predicate<O>(&self, predicate: Option<rb!(IRIPtr)>)
-                    -> ObjectIter<'g,O>
-        where O: ResourceBase<'g,Graph = Self::Graph>{
+    fn predicate<O>(&self, predicate: Option<rb!(IRIPtr)>) -> ObjectIter<'g,O>
+        where O: ResourceBase<'g,Graph = Self::Graph>
+    {
         self.resource.predicate(predicate)
     }
 }
@@ -151,8 +167,8 @@ impl<'g, R: 'g> ResourceBase<'g> for IRI<'g, R>
 pub struct ObjectIter<'g, R: 'g>
     where R: ResourceBase<'g>
 {
-    pub graph: &'g ontology_adapter::OntologyAdapter<'g, R::Graph>,
-    pub iter: <R::Graph as graph::Graph<'g>>::SPORangeIter,
+    graph: &'g ontology_adapter::OntologyAdapter<'g, R::Graph>,
+    iter: <R::Graph as graph::Graph<'g>>::SPORangeIter,
 }
 
 impl<'g, R> Iterator for ObjectIter<'g, R>
@@ -242,7 +258,8 @@ pub trait $trait_name<'g>: resource::ResourceBase<'g>
     fn $function<G>(&self) -> resource::ObjectIter<'g,$range>
         where $range: resource::ResourceBase<'g,Graph = Self::Graph>,
               G: graph::Graph<'g>,
-              <Self as resource::ResourceBase<'g>>::Graph: 'g
+              <Self as resource::ResourceBase<'g>>::Graph: 'g,
+              Self: 'g
     {
         resource::ResourceBase::predicate(self, self.property_iri_ptr())
     }
@@ -309,7 +326,7 @@ impl<'g, G:'g> resource::ResourceBase<'g> for $name<'g,G>
     where G: graph::Graph<'g>
 {
     type Graph = G;
-    type SubjectIter = resource::SubjectIter<'g,Self>;
+    type SubjectIter = resource::SubjectIter<'g, Self>;
     fn new(resource: resource!(),
             graph: &'g ontology_adapter::OntologyAdapter<'g,G>) -> Self {
         $name {
@@ -320,10 +337,10 @@ impl<'g, G:'g> resource::ResourceBase<'g> for $name<'g,G>
     fn iter(graph: &'g ontology_adapter::OntologyAdapter<'g,G>)
             -> resource::SubjectIter<'g,Self> {
         use graph::IRIPtr;
-        let a = graph.class_iri(0);
-        let c = graph.class_iri($pos);
-        let iter = match (a, c) {
-            (Some(a),Some(c)) => graph.iter_o_p(c.to_resource(), a.clone()),
+        let rdf_type = graph.class_iri(0);
+        let class = graph.class_iri($pos);
+        let iter = match (rdf_type, class) {
+            (Some(rdf_type),Some(class)) => graph.iter_o_p(class.to_resource(), rdf_type.clone()),
             _ => graph.empty_ops_range()
         };
         resource::SubjectIter {
@@ -336,23 +353,6 @@ impl<'g, G:'g> resource::ResourceBase<'g> for $name<'g,G>
     }
     fn graph(&self) -> &'g ontology_adapter::OntologyAdapter<'g,G> {
         &self.graph
-    }
-
-    fn predicate<R>(&self, predicate: Option<G::IRIPtr>)
-            -> resource::ObjectIter<'g,R>
-        where R: resource::ResourceBase<'g,Graph = G>
-    {
-        let iter = match predicate {
-            None => self.graph.empty_spo_range(),
-            Some(ref predicate) => match self.this().to_blank_node_or_iri() {
-                Some(subject) => self.graph.iter_s_p(subject, predicate.clone()),
-                None => self.graph.empty_spo_range(),
-            }
-        };
-        resource::ObjectIter {
-            graph: self.graph,
-            iter: iter,
-        }
     }
 }
 }}
