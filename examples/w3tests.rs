@@ -9,7 +9,7 @@ use std::rc::Rc;
 use rdfio::graph;
 use rdfio::graph::*;
 use rdfio::graphs::tel;
-use rdfio::io::{TurtleParser, write_turtle};
+use rdfio::io::{TurtleParser, write_turtle, write_ntriples};
 use rdfio::namespaces::Namespaces;
 
 type MyGraph = tel::Graph64;
@@ -430,21 +430,20 @@ fn run_eval(test: &TestTurtleEval, base: &str, base_dir: &str) -> rdfio::Result<
                             ttl_graph.len(),
                             nt_graph.len()));
     }
-    let iter = ttl_graph.iter().zip(nt_graph.iter());
-    for i in iter {
-        if i.0 != i.1 {
-            return fail(&test.id,
-                        &ttl_path,
-                        format!("unequal triples:\n {:?} {:?} {:?}\n !=\n {:?} {:?} {:?}",
-                                i.0.subject(),
-                                i.0.predicate(),
-                                i.0.object(),
-                                i.1.subject(),
-                                i.1.predicate(),
-                                i.1.object()));
-        }
+    let graph1 = graph_to_ntriples(&ttl_graph)?;
+    let graph2 = graph_to_ntriples(&nt_graph)?;
+    if graph1 != graph2 {
+        return fail(&test.id,
+                    &ttl_path,
+                    format!("unequal graphs:\n{}\n{}\n", graph1, graph2));
     }
     pass(&test.id, &ttl_path)
+}
+fn graph_to_ntriples(graph: &MyGraph) -> rdfio::Result<String> {
+    let mut bytes = Vec::new();
+    write_ntriples(graph.iter(), &mut bytes)?;
+    let string = String::from_utf8(bytes)?;
+    Ok(string)
 }
 fn run_eval_positive_syntax<'a>(test: &TestTurtlePositiveSyntax,
                                 base: &str,

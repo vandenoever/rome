@@ -249,7 +249,7 @@ impl<SPO, OPS> GraphWriter<SPO, OPS>
     }
     fn check_blank_node(&self, blank_node: &BlankNodePtr<SPO, OPS>) {
         assert_eq!(self.graph_id,
-                   blank_node.node_id,
+                   blank_node.graph_id,
                    "Blank node is not associated with this graph creator.");
     }
 }

@@ -1,6 +1,7 @@
 use std::io;
 use std::result;
 use std::fmt;
+use std::string;
 use nom;
 pub type Result<T> = result::Result<T, Error>;
 
@@ -36,5 +37,10 @@ impl From<nom::ErrorKind> for Error {
 impl From<String> for Error {
     fn from(error: String) -> Error {
         Error::String(error)
+    }
+}
+impl From<string::FromUtf8Error> for Error {
+    fn from(_: string::FromUtf8Error) -> Error {
+        Error::Custom("Error decoding invalid UTF-8")
     }
 }
