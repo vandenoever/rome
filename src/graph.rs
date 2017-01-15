@@ -220,9 +220,6 @@ pub trait Triple<'g, B, I, L>
     fn object(&self) -> Resource<'g, B, I, L>;
 }
 
-pub trait IntoIRIPtr<'a> {
-    fn iri<I>(self) -> I where I: IRIPtr<'a>;
-}
 pub trait BlankNodeCreator<'a, B: 'a>
     where B: BlankNodePtr<'a>
 {
