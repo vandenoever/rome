@@ -31,23 +31,25 @@ pub trait ResourceBase<'g>: Clone + Ord {
     type Graph: graph::Graph<'g>;
     type SubjectIter: Iterator<Item = Self> + iter::SortedIterator;
     fn new(this: resource!(), graph: &'g adapter!()) -> Self;
+    /// Iterate over all instances of this class
     fn iter(graph: &'g adapter!()) -> Self::SubjectIter;
     fn this(&self) -> &resource!();
-    fn graph(&self) -> &'g adapter!();
-    fn predicate<R>(&self, predicate: Option<&rb!(IRIPtr)>) -> ObjectIter<'g,R>
-        where R: ResourceBase<'g, Graph = Self::Graph>,
+    fn adapter(&self) -> &'g adapter!();
+    /// iterate over all the objects for this subject and the given predicate
+    fn iter_objects<O>(&self, predicate: Option<&rb!(IRIPtr)>) -> ObjectIter<'g,O>
+        where O: ResourceBase<'g, Graph = Self::Graph>,
               Self: 'g
     {
-        let graph = self.graph();
+        let adapter = self.adapter();
         let iter = match predicate {
             Some(ref predicate) => match self.this().to_blank_node_or_iri() {
-                Some(subject) => graph.iter_s_p(subject, (*predicate).clone()),
-                None => graph.empty_spo_range(),
+                Some(subject) => adapter.iter_s_p(subject, (*predicate).clone()),
+                None => adapter.empty_spo_range(),
             },
-            None => graph.empty_spo_range(),
+            None => adapter.empty_spo_range(),
         };
         ObjectIter {
-            graph: graph,
+            adapter: adapter,
             iter: iter,
         }
     }
@@ -151,20 +153,20 @@ impl<'g, R: 'g> ResourceBase<'g> for IRI<'g, R>
     fn this(&self) -> &resource!() {
         self.resource.this()
     }
-    fn graph(&self) -> &'g adapter!() {
-        self.resource.graph()
+    fn adapter(&self) -> &'g adapter!() {
+        self.resource.adapter()
     }
-    fn predicate<O>(&self, predicate: Option<&rb!(IRIPtr)>) -> ObjectIter<'g,O>
+    fn iter_objects<O>(&self, predicate: Option<&rb!(IRIPtr)>) -> ObjectIter<'g,O>
         where O: ResourceBase<'g, Graph = Self::Graph>
     {
-        self.resource.predicate(predicate)
+        self.resource.iter_objects(predicate)
     }
 }
 
 pub struct ObjectIter<'g, R: 'g>
     where R: ResourceBase<'g>
 {
-    graph: &'g ontology_adapter::OntologyAdapter<'g, R::Graph>,
+    adapter: &'g ontology_adapter::OntologyAdapter<'g, R::Graph>,
     iter: <R::Graph as graph::Graph<'g>>::SPORangeIter,
 }
 
@@ -174,7 +176,7 @@ impl<'g, R> Iterator for ObjectIter<'g, R>
     type Item = R;
     fn next(&mut self) -> Option<Self::Item> {
         match self.iter.next() {
-            Some(triple) => Some(R::new(triple.object(), &self.graph)),
+            Some(triple) => Some(R::new(triple.object(), &self.adapter)),
             None => None,
         }
     }
@@ -185,7 +187,7 @@ impl<'g, R> iter::SortedIterator for ObjectIter<'g, R> where R: ResourceBase<'g>
 pub struct SubjectIter<'g, R: 'g>
     where R: ResourceBase<'g>
 {
-    pub graph: &'g ontology_adapter::OntologyAdapter<'g, R::Graph>,
+    pub adapter: &'g ontology_adapter::OntologyAdapter<'g, R::Graph>,
     pub iter: <R::Graph as graph::Graph<'g>>::OPSRangeIter,
 }
 
@@ -198,7 +200,7 @@ impl<'g, R> Iterator for SubjectIter<'g, R>
             Some(triple) => {
                 let s = triple.subject();
                 let o = s.to_resource();
-                Some(R::new(o, &self.graph))
+                Some(R::new(o, &self.adapter))
             }
             None => None,
         }
@@ -252,7 +254,7 @@ pub trait $trait_name<'g>: resource::ResourceBase<'g>
               G: graph::Graph<'g>,
               Self: 'g
     {
-        resource::ResourceBase::predicate(self, self.graph().preloaded_iri($pos))
+        resource::ResourceBase::iter_objects(self, self.adapter().preloaded_iri($pos))
     }
 }
     }
@@ -269,7 +271,7 @@ pub struct $name<'g, G: 'g>
     where G: graph::Graph<'g>
 {
     resource: g_resource!(),
-    graph: &'g ontology_adapter::OntologyAdapter<'g, G>,
+    adapter: &'g ontology_adapter::OntologyAdapter<'g, G>,
 }
 impl<'g, G> $name<'g, G>
     where G: graph::Graph<'g>
@@ -294,7 +296,7 @@ impl<'g, G> Clone for $name<'g, G>
     fn clone(&self) -> Self {
         $name {
             resource: self.resource.clone(),
-            graph: self.graph.clone(),
+            adapter: self.adapter.clone(),
         }
     }
 }
@@ -315,47 +317,32 @@ impl<'g, G: 'g> resource::ResourceBase<'g> for $name<'g, G>
 {
     type Graph = G;
     type SubjectIter = resource::SubjectIter<'g, Self>;
-    fn new(resource: resource!(), graph: &'g adapter!()) -> Self {
+    fn new(resource: resource!(), adapter: &'g adapter!()) -> Self {
         $name {
             resource: resource,
-            graph: graph,
+            adapter: adapter,
         }
     }
-    fn iter(graph: &'g adapter!()) -> resource::SubjectIter<'g, Self> {
+    fn iter(adapter: &'g adapter!()) -> resource::SubjectIter<'g, Self> {
         use graph::IRIPtr;
-        let rdf_type = graph.preloaded_iri(0);
-        let class = graph.preloaded_iri($pos);
+        let rdf_type = adapter.preloaded_iri(0);
+        let class = adapter.preloaded_iri($pos);
         let iter = match (rdf_type, class) {
-            (Some(rdf_type),Some(class)) => graph.iter_o_p(class.to_resource(), rdf_type.clone()),
-            _ => graph.empty_ops_range()
+            (Some(rdf_type),Some(class)) => adapter.iter_o_p(class.to_resource(), rdf_type.clone()),
+            _ => adapter.empty_ops_range()
         };
         resource::SubjectIter {
-            graph: graph,
+            adapter: adapter,
             iter: iter,
         }
     }
     fn this(&self) -> &resource!() {
         &self.resource
     }
-    fn graph(&self) -> &'g adapter!() {
-        &self.graph
+    fn adapter(&self) -> &'g adapter!() {
+        &self.adapter
     }
 }
-}}
-
-macro_rules! sub_class_of{(
-    $subclass:ident,
-    $class:ident) => {
-
-impl<'g, G> From<$subclass<'g, G>> for $class<G> where G: graph::Graph<'g> {
-    fn from(f: $subclass<'g, G>) -> Self {
-        $class {
-            iri: f.iri,
-            graph: f.graph,
-        }
-    }
-}
-
 }}
 
 #[cfg(test)]
