@@ -94,19 +94,11 @@ pub fn get_equal_spo<'g, K: 'g, T: 'g, B: 'g, I: 'g, L: 'g>(iter: &mut Peekable<
     if *n == min_n {
         return iter.next();
     }
-    let cmp = {
-        let v = iter.peek();
-        if v.is_none() {
-            return None;
-        }
-        compare_spo(t, v.unwrap())
+    let equal = match iter.peek() {
+        Some(v) => compare_spo(t, v) == cmp::Ordering::Equal,
+        None => false,
     };
-    if cmp == cmp::Ordering::Equal {
-        // the triple was found
-        return iter.next();
-    }
-    // this iterator has a triple but it's not its turn yet
-    return None;
+    if equal { iter.next() } else { None }
 }
 // get the triple that is equal to the given triple and if needed,
 // advance the iterator
@@ -126,19 +118,11 @@ pub fn get_equal_ops<'g, K: 'g, T: 'g, B: 'g, I: 'g, L: 'g>(iter: &mut Peekable<
     if *n == min_n {
         return iter.next();
     }
-    let cmp = {
-        let v = iter.peek();
-        if v.is_none() {
-            return None;
-        }
-        compare_ops(t, v.unwrap())
+    let equal = match iter.peek() {
+        Some(v) => compare_ops(t, v) == cmp::Ordering::Equal,
+        None => false,
     };
-    if cmp == cmp::Ordering::Equal {
-        // the triple was found
-        return iter.next();
-    }
-    // this iterator has a triple but it's not its turn yet
-    return None;
+    if equal { iter.next() } else { None }
 }
 
 /// Graphs that are used in GraphCollection must implement TripleCmpWrap.
