@@ -31,21 +31,20 @@ pub trait ResourceBase<'g>: Clone + Ord {
     type Graph: graph::Graph<'g>;
     type SubjectIter: Iterator<Item = Self> + iter::SortedIterator;
     fn new(this: resource!(), graph: &'g adapter!()) -> Self;
-    fn iter(graph: &'g ontology_adapter::OntologyAdapter<'g, Self::Graph>) -> Self::SubjectIter;
+    fn iter(graph: &'g adapter!()) -> Self::SubjectIter;
     fn this(&self) -> &resource!();
-    fn graph(&self) -> &'g ontology_adapter::OntologyAdapter<'g, Self::Graph>;
+    fn graph(&self) -> &'g adapter!();
     fn predicate<R>(&self, predicate: Option<&rb!(IRIPtr)>) -> ObjectIter<'g,R>
         where R: ResourceBase<'g, Graph = Self::Graph>,
-              <Self as ResourceBase<'g>>::Graph: 'g,
               Self: 'g
     {
         let graph = self.graph();
         let iter = match predicate {
-            None => graph.empty_spo_range(),
             Some(ref predicate) => match self.this().to_blank_node_or_iri() {
                 Some(subject) => graph.iter_s_p(subject, (*predicate).clone()),
                 None => graph.empty_spo_range(),
-            }
+            },
+            None => graph.empty_spo_range(),
         };
         ObjectIter {
             graph: graph,
@@ -140,25 +139,23 @@ impl<'g, R: 'g> ResourceBase<'g> for IRI<'g, R>
 {
     type Graph = R::Graph;
     type SubjectIter = IRISubjectIter<'g, R>;
-    fn new(this: resource!(),
-           graph: &'g ontology_adapter::OntologyAdapter<'g, Self::Graph>)
-           -> Self {
+    fn new(this: resource!(), graph: &'g adapter!()) -> Self {
         IRI {
             resource: R::new(this, graph),
             phantom: std::marker::PhantomData,
         }
     }
-    fn iter(graph: &'g ontology_adapter::OntologyAdapter<'g, Self::Graph>) -> Self::SubjectIter {
+    fn iter(graph: &'g adapter!()) -> Self::SubjectIter {
         IRISubjectIter { iter: R::iter(graph) }
     }
     fn this(&self) -> &resource!() {
         self.resource.this()
     }
-    fn graph(&self) -> &'g ontology_adapter::OntologyAdapter<'g, Self::Graph> {
+    fn graph(&self) -> &'g adapter!() {
         self.resource.graph()
     }
     fn predicate<O>(&self, predicate: Option<&rb!(IRIPtr)>) -> ObjectIter<'g,O>
-        where O: ResourceBase<'g,Graph = Self::Graph>
+        where O: ResourceBase<'g, Graph = Self::Graph>
     {
         self.resource.predicate(predicate)
     }
@@ -250,10 +247,9 @@ pub trait $trait_name<'g>: resource::ResourceBase<'g>
     }
     $(#[$meta])*
     #[doc=$iri]
-    fn $function<G>(&self) -> resource::ObjectIter<'g,$range>
-        where $range: resource::ResourceBase<'g,Graph = Self::Graph>,
+    fn $function<G>(&self) -> resource::ObjectIter<'g, $range>
+        where $range: resource::ResourceBase<'g, Graph = Self::Graph>,
               G: graph::Graph<'g>,
-              <Self as resource::ResourceBase<'g>>::Graph: 'g,
               Self: 'g
     {
         resource::ResourceBase::predicate(self, self.graph().preloaded_iri($pos))
@@ -269,13 +265,13 @@ macro_rules! class{(
     $pos:expr) => {
 
 $(#[$meta])*
-pub struct $name<'g,G:'g>
+pub struct $name<'g, G: 'g>
     where G: graph::Graph<'g>
 {
     resource: g_resource!(),
-    graph: &'g ontology_adapter::OntologyAdapter<'g,G>,
+    graph: &'g ontology_adapter::OntologyAdapter<'g, G>,
 }
-impl<'g, G> $name<'g,G>
+impl<'g, G> $name<'g, G>
     where G: graph::Graph<'g>
 {
     #[doc=$iri]
@@ -283,16 +279,16 @@ impl<'g, G> $name<'g,G>
         $iri
     }
 }
-impl<'g, G> PartialEq for $name<'g,G>
+impl<'g, G> PartialEq for $name<'g, G>
     where G: graph::Graph<'g>
 {
-    fn eq(&self, rhs: &$name<'g,G>) -> bool {
+    fn eq(&self, rhs: &$name<'g, G>) -> bool {
         self.resource.eq(&rhs.resource)
     }
 }
-impl<'g, G> Eq for $name<'g,G> where G: graph::Graph<'g> {}
+impl<'g, G> Eq for $name<'g, G> where G: graph::Graph<'g> {}
 
-impl<'g, G> Clone for $name<'g,G>
+impl<'g, G> Clone for $name<'g, G>
     where G: graph::Graph<'g>
 {
     fn clone(&self) -> Self {
@@ -302,32 +298,30 @@ impl<'g, G> Clone for $name<'g,G>
         }
     }
 }
-impl<'g, G> PartialOrd for $name<'g,G>
+impl<'g, G> PartialOrd for $name<'g, G>
      where G: graph::Graph<'g>
 {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         self.resource.partial_cmp(&other.resource)
     }
 }
-impl<'g, G> Ord for $name<'g,G> where G: graph::Graph<'g> {
+impl<'g, G> Ord for $name<'g, G> where G: graph::Graph<'g> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.resource.cmp(&other.resource)
     }
 }
-impl<'g, G:'g> resource::ResourceBase<'g> for $name<'g,G>
+impl<'g, G: 'g> resource::ResourceBase<'g> for $name<'g, G>
     where G: graph::Graph<'g>
 {
     type Graph = G;
     type SubjectIter = resource::SubjectIter<'g, Self>;
-    fn new(resource: resource!(),
-            graph: &'g ontology_adapter::OntologyAdapter<'g,G>) -> Self {
+    fn new(resource: resource!(), graph: &'g adapter!()) -> Self {
         $name {
             resource: resource,
             graph: graph,
         }
     }
-    fn iter(graph: &'g ontology_adapter::OntologyAdapter<'g,G>)
-            -> resource::SubjectIter<'g,Self> {
+    fn iter(graph: &'g adapter!()) -> resource::SubjectIter<'g, Self> {
         use graph::IRIPtr;
         let rdf_type = graph.preloaded_iri(0);
         let class = graph.preloaded_iri($pos);
@@ -343,7 +337,7 @@ impl<'g, G:'g> resource::ResourceBase<'g> for $name<'g,G>
     fn this(&self) -> &resource!() {
         &self.resource
     }
-    fn graph(&self) -> &'g ontology_adapter::OntologyAdapter<'g,G> {
+    fn graph(&self) -> &'g adapter!() {
         &self.graph
     }
 }
@@ -401,17 +395,17 @@ mod tests {
     class!(:"http://www.w3.org/2000/01/rdf-schema#Class", Class, 1);
     class!(:"http://www.w3.org/1999/02/22-rdf-syntax-ns#Property", Property, 2);
     class!(:"http://www.w3.org/2000/01/rdf-schema#Literal", Literal, 3);
-    property!(:"http://www.w3.org/2000/01/rdf-schema#comment", Comment, comment, Literal<'g,G>, 4);
-    property!(:"http://www.w3.org/2000/01/rdf-schema#domain", Domain, domain, Class<'g,G>, 5);
-    property!(:"http://www.w3.org/2000/01/rdf-schema#range", Range, range, Class<'g,G>, 6);
-    property!(:"http://www.w3.org/2000/01/rdf-schema#subClassOf", SubClassOf, sub_class_of, Class<'g,G>, 7);
+    property!(:"http://www.w3.org/2000/01/rdf-schema#comment", Comment, comment, Literal<'g, G>, 4);
+    property!(:"http://www.w3.org/2000/01/rdf-schema#domain", Domain, domain, Class<'g, G>, 5);
+    property!(:"http://www.w3.org/2000/01/rdf-schema#range", Range, range, Class<'g, G>, 6);
+    property!(:"http://www.w3.org/2000/01/rdf-schema#subClassOf", SubClassOf, sub_class_of, Class<'g, G>, 7);
 
-    impl<'g,G> SubClassOf<'g> for Class<'g,G> where G: graph::Graph<'g> {}
-    impl<'g,G> Comment<'g> for Class<'g,G> where G: graph::Graph<'g> {}
-    impl<'g,G> Domain<'g> for Property<'g,G> where G: graph::Graph<'g> {}
-    impl<'g,G> Range<'g> for Property<'g,G> where G: graph::Graph<'g> {}
-    impl<'g,G> Comment<'g> for Property<'g,G> where G: graph::Graph<'g> {}
-    impl<'g,G> Comment<'g> for Literal<'g,G> where G: graph::Graph<'g> {}
+    impl<'g, G> SubClassOf<'g> for Class<'g, G> where G: graph::Graph<'g> {}
+    impl<'g, G> Comment<'g> for Class<'g, G> where G: graph::Graph<'g> {}
+    impl<'g, G> Domain<'g> for Property<'g, G> where G: graph::Graph<'g> {}
+    impl<'g, G> Range<'g> for Property<'g, G> where G: graph::Graph<'g> {}
+    impl<'g, G> Comment<'g> for Property<'g, G> where G: graph::Graph<'g> {}
+    impl<'g, G> Comment<'g> for Literal<'g, G> where G: graph::Graph<'g> {}
 
     #[test]
     fn instantiate_ontology_classes() {
