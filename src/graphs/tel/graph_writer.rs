@@ -26,7 +26,7 @@ impl<SPO, OPS> BlankNodeCreator<SPO, OPS>
 {
     pub fn new() -> BlankNodeCreator<SPO, OPS> {
         BlankNodeCreator {
-            graph_id: 0,
+            graph_id: rand::random::<u32>(),
             highest_blank_node: 0,
             phantom: PhantomData,
         }
@@ -186,9 +186,9 @@ impl<SPO, OPS> GraphWriter<SPO, OPS>
         self.add_s_blank(subject, predicate, TripleObjectType::LiteralLang, o.id, l);
     }
     fn add<'t, I, L>(&mut self,
-                      subject: graph::BlankNodeOrIRI<'t, BlankNodePtr<'t, SPO, OPS>, I>,
-                      predicate: I,
-                      object: graph::Resource<'t, BlankNodePtr<'t, SPO, OPS>, I, L>)
+                     subject: graph::BlankNodeOrIRI<'t, BlankNodePtr<'t, SPO, OPS>, I>,
+                     predicate: I,
+                     object: graph::Resource<'t, BlankNodePtr<'t, SPO, OPS>, I, L>)
         where I: graph::IRIPtr<'t>,
               L: graph::LiteralPtr<'t>
     {
@@ -300,7 +300,7 @@ impl<'g, SPO: 'g, OPS: 'g> graph::GraphCreator<'g, BlankNodePtr<'g, SPO, OPS>>
         let ops = create_ops(&spo);
         Graph {
             d: GraphData {
-                graph_id: rand::random::<u32>(),
+                graph_id: self.graph_id,
                 strings: string_collection,
                 datatype_or_lang: datatype_lang_collection,
                 spo: spo,
@@ -406,25 +406,17 @@ fn collect_empty() {
 
 #[test]
 fn keep_blank_subject() {
-    let bnc = BlankNodeCreator::new();
+    use graph::{BlankNodeCreator, GraphCreator, Graph, IRIPtr, Triple};
+    let mut bnc = super::BlankNodeCreator::new();
     let mut writer: GraphWriter<Triple64SPO, Triple64OPS> = GraphWriter::with_capacity(0, &bnc);
-    writer.add_blank_blank(1, "", 2);
-    use graph::{GraphCreator, Graph, Triple, IRIPtr};
+    let blank1 = bnc.create_blank_node();
+    let blank2 = bnc.create_blank_node();
+    writer.add_blank_blank(blank1.node_id, "", blank2.node_id);
     let graph = writer.collect();
     let triple = graph.iter().next().unwrap();
     assert_eq!(triple.subject(),
-               graph::BlankNodeOrIRI::BlankNode(BlankNodePtr {
-                                                    graph_id: 0,
-                                                    node_id: 1,
-                                                    phantom: PhantomData,
-                                                },
-                                                PhantomData));
+               graph::BlankNodeOrIRI::BlankNode(blank1, PhantomData));
     assert_eq!(triple.predicate().as_str(), "");
     assert_eq!(triple.object(),
-               graph::Resource::BlankNode(BlankNodePtr {
-                                              graph_id: 0,
-                                              node_id: 2,
-                                              phantom: PhantomData,
-                                          },
-                                          PhantomData));
+               graph::Resource::BlankNode(blank2, PhantomData));
 }
