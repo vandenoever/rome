@@ -14,8 +14,7 @@ use rdfio::namespaces::Namespaces;
 
 type MyGraph = tel::Graph64;
 type MyIter<'g> = <MyGraph as Graph<'g>>::SPORangeIter;
-// type MyTriple<'g> = MyIter<'g>::Item;
-type BlankNodeOrIRI<'g> =
+type MyBlankNodeOrIRI<'g> =
     graph::BlankNodeOrIRI<'g, <MyGraph as Graph<'g>>::BlankNodePtr, <MyGraph as Graph<'g>>::IRIPtr>;
 type MyResource<'g> = graph::Resource<'g,
                                       <MyGraph as Graph<'g>>::BlankNodePtr,
@@ -244,7 +243,7 @@ fn to_approval<'g, B, I, L>(object: Resource<'g, B, I, L>) -> Result<Approval, S
 }
 
 fn load_test_turtle_eval(graph: &MyGraph,
-                         subject: BlankNodeOrIRI)
+                         subject: MyBlankNodeOrIRI)
                          -> Result<TestTurtleEval, String> {
     let mut i = graph.iter_subject(&subject);
     let (comment, prev) = read(None, &mut i, RDFS_COMMENT, to_string)?;
@@ -262,7 +261,7 @@ fn load_test_turtle_eval(graph: &MyGraph,
     })
 }
 fn load_positive_syntax(graph: &MyGraph,
-                        subject: BlankNodeOrIRI)
+                        subject: MyBlankNodeOrIRI)
                         -> Result<TestTurtlePositiveSyntax, String> {
     let mut i = graph.iter_subject(&subject);
     let (comment, prev) = read(None, &mut i, RDFS_COMMENT, to_string)?;
@@ -278,7 +277,7 @@ fn load_positive_syntax(graph: &MyGraph,
     })
 }
 fn load_negative_syntax(graph: &MyGraph,
-                        subject: BlankNodeOrIRI)
+                        subject: MyBlankNodeOrIRI)
                         -> Result<TestTurtleNegativeSyntax, String> {
     let mut i = graph.iter_subject(&subject);
     let (comment, prev) = read(None, &mut i, RDFS_COMMENT, to_string)?;
@@ -294,7 +293,7 @@ fn load_negative_syntax(graph: &MyGraph,
     })
 }
 fn load_negative_eval(graph: &MyGraph,
-                      subject: BlankNodeOrIRI)
+                      subject: MyBlankNodeOrIRI)
                       -> Result<TestTurtleNegativeEval, String> {
     let mut i = graph.iter_subject(&subject);
     let (comment, prev) = read(None, &mut i, RDFS_COMMENT, to_string)?;
@@ -319,7 +318,7 @@ fn eval_result(r: &Assertion) {
     }
 }
 
-fn subject_to_string(subject: &BlankNodeOrIRI) -> Rc<String> {
+fn subject_to_string(subject: &MyBlankNodeOrIRI) -> Rc<String> {
     match subject {
         &graph::BlankNodeOrIRI::IRI(ref iri) => Rc::new(String::from(iri.as_str())),
         _ => {

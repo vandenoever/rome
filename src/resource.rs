@@ -30,6 +30,8 @@ g_resource{() =>
 pub trait ResourceBase<'g>: Clone + Ord {
     type Graph: graph::Graph<'g>;
     type SubjectIter: Iterator<Item = Self> + iter::SortedIterator;
+    /// Wrap a [`Resource`][graph] with an ontology class.
+    /// And link a [`ResourceBase`][resource]
     fn new(this: resource!(), graph: &'g adapter!()) -> Self;
     /// Iterate over all instances of this class
     fn iter(graph: &'g adapter!()) -> Self::SubjectIter;
@@ -231,6 +233,7 @@ impl<'g, R: 'g> Iterator for IRISubjectIter<'g, R>
 
 impl<'g, R: 'g + ResourceBase<'g>> iter::SortedIterator for IRISubjectIter<'g, R> {}
 
+#[macro_export]
 macro_rules! property{(
     $(#[$meta:meta])*
     :$iri:expr,
@@ -260,6 +263,7 @@ pub trait $trait_name<'g>: resource::ResourceBase<'g>
     }
 }
 
+#[macro_export]
 macro_rules! class{(
     $(#[$meta:meta])*
     :$iri:expr,

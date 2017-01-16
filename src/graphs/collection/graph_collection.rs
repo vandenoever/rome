@@ -1,6 +1,6 @@
-use graph::*;
 use std::cmp;
 use std::iter::Peekable;
+use graph::*;
 
 pub enum Object {
     BlankNode,
@@ -127,6 +127,7 @@ pub fn get_equal_ops<'g, K: 'g, T: 'g, B: 'g, I: 'g, L: 'g>(iter: &mut Peekable<
 
 /// Graphs that are used in GraphCollection must implement TripleCmpWrap.
 /// This macro does that.
+#[macro_export]
 macro_rules!
 impl_triple_cmp_wrap {
     ($graph_type:path) => {
@@ -140,17 +141,20 @@ macro_rules!
 impl_triple_cmp_wrap_spo_ops {
     ($name:ident $graph_type:path) => {
 
-        impl<'g> TripleCmpWrap<'g> for <$graph_type as Graph<'g>>::$name {
+        impl<'g> TripleCmpWrap<'g> for <$graph_type as $crate::graph::Graph<'g>>::$name {
             fn cmp_subject_iri(&self, o: &str) -> cmp::Ordering {
+                use $crate::graph::{BlankNodeOrIRI, IRIPtr, Triple};
                 match self.subject() {
                     BlankNodeOrIRI::IRI(i) => i.as_str().cmp(o),
                     _ => cmp::Ordering::Less
                 }
             }
             fn cmp_predicate(&self, o: &str) -> cmp::Ordering {
+                use $crate::graph::{IRIPtr, Triple};
                 self.predicate().as_str().cmp(o)
             }
             fn cmp_object_iri(&self, o: &str) -> cmp::Ordering {
+                use graph::{IRIPtr, Resource, Triple};
                 match self.object() {
                     Resource::BlankNode(_,_) => cmp::Ordering::Less,
                     Resource::IRI(i) => i.as_str().cmp(o),
@@ -158,6 +162,7 @@ impl_triple_cmp_wrap_spo_ops {
                 }
             }
             fn cmp_object_literal(&self, o: &str, datatype: &str, language: Option<&str>) -> cmp::Ordering {
+                use $crate::graph::{LiteralPtr, Resource, Triple};
                 match self.object() {
                     Resource::Literal(l) => {
                         let mut cmp = l.as_str().cmp(o);
@@ -173,12 +178,14 @@ impl_triple_cmp_wrap_spo_ops {
                 }
             }
             fn subject_is_blank_node(&self) -> bool {
+                use $crate::graph::{BlankNodeOrIRI, Triple};
                 match self.subject() {
                     BlankNodeOrIRI::BlankNode(_,_) => true,
                     _ => false
                 }
             }
             fn object_type(&self) -> Object {
+                use $crate::graph::{Resource, Triple};
                 match self.object() {
                     Resource::BlankNode(_,_) => Object::BlankNode,
                     Resource::IRI(_) => Object::IRI,
@@ -196,19 +203,21 @@ spo_ops {
 
 #[derive(Clone,PartialEq,Eq,PartialOrd,Ord)]
 pub struct $name<'g> {
-    subject: BlankNodeOrIRI<'g,BlankNode<'g>,IRI<'g>>,
+    subject: $crate::graph::BlankNodeOrIRI<'g, BlankNode<'g>, IRI<'g>>,
     predicate: IRI<'g>,
-    object: Resource<'g,BlankNode<'g>,IRI<'g>,Literal<'g>>
+    object: $crate::graph::Resource<'g,BlankNode<'g>,IRI<'g>,Literal<'g>>
 }
+
 impl<'g> $name<'g> {
     fn new(triple_ref: &TripleCmpWrap<'g>, triples: $names<'g>) -> $name<'g> {
+        use std::marker::PhantomData;
         $name {
             subject: if triple_ref.subject_is_blank_node() {
-                BlankNodeOrIRI::BlankNode(BlankNode {
+                $crate::graph::BlankNodeOrIRI::BlankNode(BlankNode {
                     nodes: ($(triples.$n.as_ref().map(|t|t.subject().as_blank_node().unwrap().clone()),)+)
                 }, PhantomData)
             } else {
-                BlankNodeOrIRI::IRI(IRI {
+                $crate::graph::BlankNodeOrIRI::IRI(IRI {
                     iris: ($(triples.$n.as_ref().map(|t|t.subject().as_iri().unwrap().clone()),)+)
                 })
             },
@@ -244,19 +253,21 @@ impl<'g> Triple<'g, BlankNode<'g>, IRI<'g>, Literal<'g>> for $name<'g> {
     }
 }
 
-
+#[macro_export]
 macro_rules!
 graph_collection {
     ($name:ident($( $n:tt:$graph_type:path),+) ) => {
 
 
 pub mod $name {
-    use std::marker::PhantomData;
-    use std::iter::Peekable;
     use std::cmp;
     use std::fmt;
-    use super::*;
-    use iter::SortedIterator;
+    use std::marker::PhantomData;
+    use std::iter::Peekable;
+    use $crate::iter::SortedIterator;
+    use $crate::graph::*;
+    use $crate::graphs::collection::graph_collection::*;
+
     type Graphs<'g> = ($($graph_type,)+);
     type BlankNodes<'g> = ($(Option<<$graph_type as Graph<'g>>::BlankNodePtr>,)+);
     type IRIs<'g> = ($(Option<<$graph_type as Graph<'g>>::IRIPtr>,)+);
