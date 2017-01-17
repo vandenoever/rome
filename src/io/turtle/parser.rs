@@ -4,9 +4,9 @@ use super::grammar_helper::*;
 use std::marker::PhantomData;
 use std::collections::HashMap;
 use nom::IResult;
+use constants::*;
 use graph;
 use namespaces::*;
-use std::rc::Rc;
 use error::{Error, Result};
 use regex::Regex;
 
@@ -76,86 +76,33 @@ impl<'a> Iterator for StatementIterator<'a> {
     }
 }
 
-struct BlankNodes<'a, B: 'a>
-    where B: graph::BlankNodePtr<'a>
+struct ParserState<'a, W: 'a>
+    where W: graph::GraphWriter<'a>
 {
-    blank_node_creator: &'a mut graph::BlankNodeCreator<'a, B>,
-    blank_nodes: HashMap<&'a str, B>,
-}
-#[derive(Clone,PartialEq,Eq,PartialOrd,Ord,Debug)]
-pub struct IRIPtr<'g> {
-    iri: Rc<String>,
-    phantom: PhantomData<&'g u8>,
-}
-impl<'g> graph::IRIPtr<'g> for IRIPtr<'g> {
-    fn as_str(&self) -> &str {
-        self.iri.as_str()
-    }
-}
-#[derive(Clone,PartialEq,Eq,PartialOrd,Ord,Debug)]
-pub struct LiteralPtr<'g> {
-    pub lexical: Rc<String>,
-    pub datatype: Rc<String>,
-    pub language: Option<Rc<String>>,
-    phantom: PhantomData<&'g u8>,
-}
-impl<'g> graph::LiteralPtr<'g> for LiteralPtr<'g> {
-    fn as_str(&self) -> &str {
-        self.lexical.as_str()
-    }
-    fn datatype(&self) -> &str {
-        self.datatype.as_str()
-    }
-    fn language(&self) -> Option<&str> {
-        match &self.language {
-            &Some(ref l) => Some(l.as_str()),
-            &None => None,
-        }
-    }
-}
-type BlankNodeOrIRI<'t, B> = graph::BlankNodeOrIRI<'t, B, IRIPtr<'t>>;
-type Resource<'t, B> = graph::Resource<'t, B, IRIPtr<'t>, LiteralPtr<'t>>;
-
-#[derive(PartialEq,Eq)]
-pub struct IteratorTriple<'t, B: 't>
-    where B: graph::BlankNodePtr<'t>
-{
-    pub subject: BlankNodeOrIRI<'t, B>,
-    pub predicate: IRIPtr<'t>,
-    pub object: Resource<'t, B>,
-}
-impl<'t, B: 't> graph::Triple<'t, B, IRIPtr<'t>, LiteralPtr<'t>> for IteratorTriple<'t, B>
-    where B: graph::BlankNodePtr<'t> + Clone
-{
-    fn subject(&self) -> BlankNodeOrIRI<'t, B> {
-        self.subject.clone()
-    }
-    fn predicate(&self) -> IRIPtr<'t> {
-        self.predicate.clone()
-    }
-    fn object(&self) -> Resource<'t, B> {
-        self.object.clone()
-    }
-}
-struct Strings {
-    subject: Rc<String>,
-    predicate: Rc<String>,
-    object: Rc<String>,
-    datatype: Rc<String>,
-    language: Rc<String>,
-}
-
-pub struct TripleIterator<'a, B: 'a>
-    where B: graph::BlankNodePtr<'a>
-{
-    statement_iterator: StatementIterator<'a>,
-    buffer: String,
     base: String,
     prefixes: Namespaces,
-    blank_nodes: BlankNodes<'a, B>,
-    triple_buffer: Vec<Triple<'a, B>>,
+    blank_nodes: HashMap<&'a str, W::BlankNode>,
+    writer: &'a mut W,
+    buffer: String,
+    iri: String,
+    literal: String,
+    rdf_lang_string: Option<W::Datatype>,
+    xsd_boolean: Option<W::Datatype>,
+    xsd_decimal: Option<W::Datatype>,
+    xsd_double: Option<W::Datatype>,
+    xsd_integer: Option<W::Datatype>,
+    xsd_string: Option<W::Datatype>,
+    rdf_first: Option<W::IRI>,
+    rdf_rest: Option<W::IRI>,
+    rdf_nil: Option<W::IRI>,
+}
+
+pub struct TurtleParser<'a, W: 'a>
+    where W: graph::GraphWriter<'a>
+{
+    statement_iterator: StatementIterator<'a>,
+    state: ParserState<'a, W>,
     done: bool,
-    strings: Strings,
 }
 
 fn is_absolute(url: &str) -> bool {
@@ -180,178 +127,109 @@ fn join_iri(base: &str, p: &str, to: &mut String) -> Result<()> {
     Ok(())
 }
 
-impl<'a, B: 'a> TripleIterator<'a, B>
-    where B: graph::BlankNodePtr<'a> + Clone
+impl<'a, W: 'a> TurtleParser<'a, W>
+    where W: graph::GraphWriter<'a>
 {
-    pub fn new(src: &'a str,
-               base: &str,
-               blank_node_creator: &'a mut graph::BlankNodeCreator<'a, B>)
-               -> Result<TripleIterator<'a, B>> {
+    pub fn new(src: &'a str, base: &str, writer: &'a mut W) -> Result<TurtleParser<'a, W>> {
         if !is_absolute(base) {
             return Err(Error::Custom("base url is not absolute"));
         }
-        let rc = Rc::new(String::new());
-        Ok(TripleIterator {
+        Ok(TurtleParser {
             statement_iterator: StatementIterator::new(src)?,
-            buffer: String::new(),
-            base: String::from(base),
-            prefixes: Namespaces::new(),
-            blank_nodes: BlankNodes {
-                blank_node_creator: blank_node_creator,
+            state: ParserState {
+                base: String::from(base),
+                prefixes: Namespaces::new(),
                 blank_nodes: HashMap::new(),
+                writer: writer,
+                buffer: String::new(),
+                iri: String::new(),
+                literal: String::new(),
+                rdf_lang_string: None,
+                xsd_boolean: None,
+                xsd_decimal: None,
+                xsd_double: None,
+                xsd_integer: None,
+                xsd_string: None,
+                rdf_first: None,
+                rdf_rest: None,
+                rdf_nil: None,
             },
-            triple_buffer: Vec::new(),
             done: false,
-            strings: Strings {
-                subject: rc.clone(),
-                predicate: rc.clone(),
-                object: rc.clone(),
-                datatype: rc.clone(),
-                language: rc.clone(),
-            },
         })
     }
     pub fn prefixes(&self) -> &Namespaces {
-        &self.prefixes
+        &self.state.prefixes
     }
     fn set_prefix(&mut self, prefix: &'a str, value: String) {
-        self.prefixes.insert(prefix.as_bytes(), value);
+        self.state.prefixes.insert(prefix.as_bytes(), value);
     }
-    fn fill_buffer(&mut self) -> Result<usize> {
-        while let Some(statement) = self.statement_iterator.next() {
+    /// return Ok(true) when done
+    fn parse_statement(&mut self) -> Result<bool> {
+        if let Some(statement) = self.statement_iterator.next() {
             match statement {
                 Ok(Statement::Prefix(prefix, iri)) => {
                     let mut result = String::with_capacity(iri.len());
-                    self.buffer.clear();
-                    unescape_iri(iri, &mut self.buffer)?;
-                    join_iri(self.base.as_str(), self.buffer.as_str(), &mut result)?;
+                    self.state.buffer.clear();
+                    unescape_iri(iri, &mut self.state.buffer)?;
+                    join_iri(self.state.base.as_str(),
+                             self.state.buffer.as_str(),
+                             &mut result)?;
                     self.set_prefix(prefix, result);
                 }
                 Ok(Statement::Base(new_base)) => {
-                    self.buffer.clear();
-                    unescape_iri(new_base, &mut self.buffer)?;
-                    let old_base = self.base.clone();
-                    join_iri(old_base.as_str(), self.buffer.as_str(), &mut self.base)?;
+                    self.state.buffer.clear();
+                    unescape_iri(new_base, &mut self.state.buffer)?;
+                    let old_base = self.state.base.clone();
+                    join_iri(old_base.as_str(),
+                             self.state.buffer.as_str(),
+                             &mut self.state.base)?;
                 }
                 Ok(Statement::Triples(new_triples)) => {
-                    add_triples(new_triples, &mut self.blank_nodes, &mut self.triple_buffer)?;
-                    return Ok(self.triple_buffer.len());
+                    add_triples(new_triples, &mut self.state)?;
                 }
                 Err(e) => return Err(e),
             }
+            Ok(false)
+        } else {
+            Ok(true)
         }
-        Ok(0)
     }
 }
 
-fn resolve_triple<'g, B: 'g>(triple: Triple<'g, B>,
-                             prefixes: &Namespaces,
-                             base: &str,
-                             buffer: &mut String,
-                             strings: &mut Strings)
-                             -> Result<IteratorTriple<'g, B>>
-    where B: graph::BlankNodePtr<'g>
+impl<'a, W: 'a> Iterator for TurtleParser<'a, W>
+    where W: graph::GraphWriter<'a>
 {
-    Ok(IteratorTriple {
-        subject: match triple.subject {
-            SingleSubject::IRI(iri) => {
-                resolve_iri(iri, prefixes, base, buffer, &mut strings.subject)?;
-                graph::BlankNodeOrIRI::IRI(IRIPtr {
-                    iri: strings.subject.clone(),
-                    phantom: PhantomData,
-                })
-            }
-            SingleSubject::BlankNode(n) => graph::BlankNodeOrIRI::BlankNode(n, PhantomData),
-        },
-        predicate: {
-            resolve_iri(triple.predicate,
-                        prefixes,
-                        base,
-                        buffer,
-                        &mut strings.predicate)?;
-            IRIPtr {
-                iri: strings.predicate.clone(),
-                phantom: PhantomData,
-            }
-        },
-        object: match triple.object {
-            SingleObject::IRI(iri) => {
-                resolve_iri(iri, prefixes, base, buffer, &mut strings.object)?;
-                graph::Resource::IRI(IRIPtr {
-                    iri: strings.object.clone(),
-                    phantom: PhantomData,
-                })
-            }
-            SingleObject::BlankNode(n) => graph::Resource::BlankNode(n, PhantomData),
-            SingleObject::Literal(l) => {
-                graph::Resource::Literal(LiteralPtr {
-                    lexical: {
-                        unescape_literal(l.lexical, &mut strings.object)?;
-                        strings.object.clone()
-                    },
-                    datatype: {
-                        resolve_iri(l.datatype, prefixes, base, buffer, &mut strings.datatype)?;
-                        strings.datatype.clone()
-                    },
-                    language: match l.language {
-                        Some(l) => {
-                            {
-                                let s = Rc::make_mut(&mut strings.language);
-                                s.clear();
-                                for c in l.chars() {
-                                    s.extend(c.to_lowercase());
-                                }
-                            }
-                            Some(strings.language.clone())
-                        }
-                        None => None,
-                    },
-                    phantom: PhantomData,
-                })
-            }
-        },
-    })
-}
-fn unescape_literal(string: &str, to: &mut Rc<String>) -> Result<()> {
-    let p = Rc::make_mut(to);
-    p.clear();
-    unescape(string, p)?;
-    Ok(())
-}
-fn resolve_iri(iri: IRI,
-               prefixes: &Namespaces,
-               base: &str,
-               buffer: &mut String,
-               to: &mut Rc<String>)
-               -> Result<()> {
-    let p = Rc::make_mut(to);
-    p.clear();
-    match iri {
-        IRI::IRI(iri) => {
-            buffer.clear();
-            unescape_iri(iri, buffer)?;
-            join_iri(base, buffer.as_str(), p)?;
+    type Item = Result<()>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.done {
+            return None;
         }
-        IRI::PrefixedName(prefix, local) => {
-            match prefixes.find_namespace(prefix.as_bytes()) {
-                Some(ns) => {
-                    p.push_str(ns);
-                    pn_local_unescape(local, p)?;
-                }
-                None => return Err(Error::Custom("Cannot find prefix.")),
+        match self.parse_statement() {
+            Ok(true) => {
+                self.done = true;
+                None
             }
+            Ok(_) => Some(Ok(())),
+            Err(e) => Some(Err(e)),
         }
     }
+}
+
+
+fn unescape_literal<'a>(string: &str, to: &'a mut String) -> Result<()> {
+    to.clear();
+    unescape(string, to)?;
     Ok(())
 }
 
-impl<'a, B> BlankNodes<'a, B>
-    where B: graph::BlankNodePtr<'a> + Clone
+impl<'a, W> ParserState<'a, W>
+    where W: graph::GraphWriter<'a>
 {
-    fn new_blank(&mut self) -> B {
-        self.blank_node_creator.create_blank_node()
+    fn new_blank(&mut self) -> W::BlankNode {
+        self.writer.create_blank_node()
     }
-    fn get_blank(&mut self, label: &'a str) -> B {
+    fn get_blank(&mut self, label: &'a str) -> W::BlankNode {
         if let Some(n) = self.blank_nodes.get(label) {
             return n.clone();
         }
@@ -359,46 +237,82 @@ impl<'a, B> BlankNodes<'a, B>
         self.blank_nodes.insert(label, n.clone());
         n
     }
-}
-
-impl<'a, B: 'a> Iterator for TripleIterator<'a, B>
-    where B: graph::BlankNodePtr<'a> + Clone
-{
-    type Item = Result<IteratorTriple<'a, B>>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.done {
-            return None;
-        }
-        if self.triple_buffer.len() == 0 {
-            match self.fill_buffer() {
-                Ok(0) => {
-                    self.done = true;
-                    return None;
+    fn resolve_iri(&mut self, iri: IRI) -> Result<()> {
+        self.iri.clear();
+        match iri {
+            IRI::IRI(iri) => {
+                self.buffer.clear();
+                unescape_iri(iri, &mut self.buffer)?;
+                join_iri(&self.base, self.buffer.as_str(), &mut self.iri)?;
+            }
+            IRI::PrefixedName(prefix, local) => {
+                match self.prefixes.find_namespace(prefix.as_bytes()) {
+                    Some(ns) => {
+                        self.iri.push_str(ns);
+                        pn_local_unescape(local, &mut self.iri)?;
+                    }
+                    None => return Err(Error::Custom("Cannot find prefix.")),
                 }
-                Ok(_) => {}
-                Err(e) => return Some(Err(e)),
             }
         }
-        match self.triple_buffer.pop() {
-            Some(t) => {
-                Some(resolve_triple(t,
-                                    &self.prefixes,
-                                    &self.base,
-                                    &mut self.buffer,
-                                    &mut self.strings))
+        Ok(())
+    }
+    fn get_datatype(&mut self, datatype: Datatype) -> Result<W::Datatype> {
+        Ok(match datatype {
+            Datatype::IRI(iri) => {
+                self.resolve_iri(iri)?;
+                self.writer.create_datatype(&self.iri)
             }
-            None => None,
-        }
+            Datatype::RDFLangString => {
+                get_cached_datatype(&mut self.rdf_lang_string, self.writer, RDF_LANG_STRING)
+            }
+            Datatype::XSDBoolean => {
+                get_cached_datatype(&mut self.xsd_boolean, self.writer, XSD_BOOLEAN)
+            }
+            Datatype::XSDDecimal => {
+                get_cached_datatype(&mut self.xsd_decimal, self.writer, XSD_DECIMAL)
+            }
+            Datatype::XSDDouble => {
+                get_cached_datatype(&mut self.xsd_double, self.writer, XSD_DOUBLE)
+            }
+            Datatype::XSDInteger => {
+                get_cached_datatype(&mut self.xsd_integer, self.writer, XSD_INTEGER)
+            }
+            Datatype::XSDString => {
+                get_cached_datatype(&mut self.xsd_string, self.writer, XSD_STRING)
+            }
+        })
     }
 }
 
-fn make_blank<'a, B: 'a>(blank_node: BlankNode<'a>, blank_nodes: &mut BlankNodes<'a, B>) -> B
-    where B: graph::BlankNodePtr<'a> + Clone
+fn get_cached_datatype<'a, W: 'a>(cache: &mut Option<W::Datatype>,
+                                  writer: &mut W,
+                                  datatype: &str)
+                                  -> W::Datatype
+    where W: graph::GraphWriter<'a>
+{
+    if cache.is_none() {
+        *cache = Some(writer.create_datatype(datatype));
+    }
+    cache.clone().unwrap()
+
+}
+
+fn get_cached_iri<'a, W: 'a>(cache: &mut Option<W::IRI>, writer: &mut W, iri: &str) -> W::IRI
+    where W: graph::GraphWriter<'a>
+{
+    if cache.is_none() {
+        *cache = Some(writer.create_iri(&iri));
+    }
+    cache.clone().unwrap()
+}
+
+fn make_blank<'a, W: 'a>(blank_node: BlankNode<'a>, state: &mut ParserState<'a, W>) -> W::BlankNode
+    where W: graph::GraphWriter<'a>
 {
     match blank_node {
-        BlankNode::Anon => blank_nodes.new_blank(),
-        BlankNode::BlankNode(label) => blank_nodes.get_blank(label),
+        BlankNode::Anon => state.new_blank(),
+        BlankNode::BlankNode(label) => state.get_blank(label),
     }
 }
 
@@ -406,106 +320,123 @@ const RDF_FIRST: &'static str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#firs
 const RDF_REST: &'static str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest";
 const RDF_NIL: &'static str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil";
 
-fn s2o<'a, B>(s: SingleSubject<'a, B>) -> SingleObject<'a, B>
-    where B: graph::BlankNodePtr<'a>
+fn s2o<'a, W>(s: graph::WriterBlankNodeOrIRI<'a, W>) -> graph::WriterResource<'a, W>
+    where W: graph::GraphWriter<'a>
 {
     match s {
-        SingleSubject::IRI(iri) => SingleObject::IRI(iri),
-        SingleSubject::BlankNode(n) => SingleObject::BlankNode(n),
+        graph::WriterBlankNodeOrIRI::IRI(iri) => graph::WriterResource::IRI(iri),
+        graph::WriterBlankNodeOrIRI::BlankNode(n, p) => graph::WriterResource::BlankNode(n, p),
     }
 }
 
-fn make_collection<'a, B>(collection: Vec<Object<'a>>,
-                          blank_nodes: &mut BlankNodes<'a, B>,
-                          triple_buffer: &mut Vec<Triple<'a, B>>)
-                          -> Result<SingleSubject<'a, B>>
-    where B: graph::BlankNodePtr<'a> + Clone
+fn make_collection<'a, W>(collection: Vec<Object<'a>>,
+                          state: &mut ParserState<'a, W>)
+                          -> Result<graph::WriterBlankNodeOrIRI<'a, W>>
+    where W: graph::GraphWriter<'a>
 {
-    let mut head = SingleSubject::IRI(IRI::IRI(RDF_NIL));
+    let mut head =
+        graph::WriterBlankNodeOrIRI::IRI(get_cached_iri(&mut state.rdf_nil, state.writer, RDF_NIL));
     for object in collection.into_iter().rev() {
-        let this = blank_nodes.new_blank();
-        let o = make_object(object, blank_nodes, triple_buffer)?;
-        triple_buffer.push(Triple {
-            subject: SingleSubject::BlankNode(this.clone()),
-            predicate: IRI::IRI(RDF_FIRST),
-            object: o,
-        });
-        triple_buffer.push(Triple {
-            subject: SingleSubject::BlankNode(this.clone()),
-            predicate: IRI::IRI(RDF_REST),
-            object: s2o(head),
-        });
-        head = SingleSubject::BlankNode(this);
+        let this = state.new_blank();
+        let rdf_first = get_cached_iri(&mut state.rdf_first, state.writer, RDF_FIRST);
+        let rdf_rest = get_cached_iri(&mut state.rdf_rest, state.writer, RDF_REST);
+        let o = make_object(object, state)?;
+        match o {
+            graph::WriterResource::BlankNode(o, _) => {
+                state.writer.add_blank_blank(&this, &rdf_first, &o);
+            }
+            graph::WriterResource::IRI(o) => {
+                state.writer.add_blank_iri(&this, &rdf_first, &o);
+            }
+            graph::WriterResource::Literal(o) => {
+                state.writer.add_blank_literal(&this, &rdf_first, &o);
+            }
+        }
+        match head {
+            graph::WriterBlankNodeOrIRI::BlankNode(head, _) => {
+                state.writer.add_blank_blank(&this, &rdf_rest, &head);
+            }
+            graph::WriterBlankNodeOrIRI::IRI(head) => {
+                state.writer.add_blank_iri(&this, &rdf_rest, &head);
+            }
+        }
+        head = graph::WriterBlankNodeOrIRI::BlankNode(this, PhantomData);
     }
     Ok(head)
 }
 
-fn make_subject<'a, B>(subject: Subject<'a>,
-                       blank_nodes: &mut BlankNodes<'a, B>,
-                       triple_buffer: &mut Vec<Triple<'a, B>>)
-                       -> Result<SingleSubject<'a, B>>
-    where B: graph::BlankNodePtr<'a> + Clone
+fn make_subject<'a, W>(subject: Subject<'a>,
+                       state: &mut ParserState<'a, W>)
+                       -> Result<graph::WriterBlankNodeOrIRI<'a, W>>
+    where W: graph::GraphWriter<'a>
 {
     Ok(match subject {
-        Subject::IRI(iri) => SingleSubject::IRI(iri),
-        Subject::BlankNode(blank) => SingleSubject::BlankNode(make_blank(blank, blank_nodes)),
-        Subject::Collection(collection) => make_collection(collection, blank_nodes, triple_buffer)?,
+        Subject::BlankNode(blank) => {
+            graph::WriterBlankNodeOrIRI::BlankNode(make_blank(blank, state), PhantomData)
+        }
+        Subject::IRI(iri) => {
+            state.resolve_iri(iri)?;
+            graph::WriterBlankNodeOrIRI::IRI(state.writer.create_iri(&state.iri))
+        }
+        Subject::Collection(collection) => make_collection(collection, state)?,
     })
 }
 
-fn make_object<'a, B>(object: Object<'a>,
-                      blank_nodes: &mut BlankNodes<'a, B>,
-                      triple_buffer: &mut Vec<Triple<'a, B>>)
-                      -> Result<SingleObject<'a, B>>
-    where B: graph::BlankNodePtr<'a> + Clone
+fn make_object<'a, W>(object: Object<'a>,
+                      state: &mut ParserState<'a, W>)
+                      -> Result<graph::WriterResource<'a, W>>
+    where W: graph::GraphWriter<'a>
 {
     Ok(match object {
-        Object::IRI(iri) => SingleObject::IRI(iri),
-        Object::BlankNode(blank) => SingleObject::BlankNode(make_blank(blank, blank_nodes)),
-        Object::Collection(collection) => {
-            s2o(make_collection(collection, blank_nodes, triple_buffer)?)
+        Object::IRI(iri) => {
+            state.resolve_iri(iri)?;
+            graph::WriterResource::IRI(state.writer.create_iri(&state.iri))
         }
-        Object::Literal(l) => SingleObject::Literal(l),
+        Object::BlankNode(blank) => {
+            graph::WriterResource::BlankNode(make_blank(blank, state), PhantomData)
+        }
+        Object::Collection(collection) => s2o(make_collection(collection, state)?),
+        Object::Literal(l) => {
+            unescape_literal(l.lexical, &mut state.literal)?;
+            graph::WriterResource::Literal(if let Some(lang) = l.language {
+                let language = state.writer.create_language(&lang);
+                state.writer.create_literal_language(&state.literal, &language)
+            } else {
+                let datatype = state.get_datatype(l.datatype)?;
+                state.writer.create_literal_datatype(&state.literal, &datatype)
+            })
+        }
         Object::BlankNodePropertyList(predicated_objects_list) => {
-            let blank = blank_nodes.new_blank();
-            let subject = SingleSubject::BlankNode(blank.clone());
-            add_predicated_objects(subject, predicated_objects_list, blank_nodes, triple_buffer)?;
-            SingleObject::BlankNode(blank)
+            let blank = state.new_blank();
+            let subject = graph::WriterBlankNodeOrIRI::BlankNode(blank.clone(), PhantomData);
+            add_predicated_objects(subject, predicated_objects_list, state)?;
+            graph::WriterResource::BlankNode(blank, PhantomData)
         }
     })
 }
 
-fn add_predicated_objects<'a, B>(subject: SingleSubject<'a, B>,
+fn add_predicated_objects<'a, W>(subject: graph::WriterBlankNodeOrIRI<'a, W>,
                                  predicated_objects_list: Vec<PredicatedObjects<'a>>,
-                                 blank_nodes: &mut BlankNodes<'a, B>,
-                                 triple_buffer: &mut Vec<Triple<'a, B>>)
+                                 state: &mut ParserState<'a, W>)
                                  -> Result<()>
-    where B: graph::BlankNodePtr<'a> + Clone
+    where W: graph::GraphWriter<'a>
 {
     for po in predicated_objects_list {
+        state.resolve_iri(po.verb)?;
+        let predicate = state.writer.create_iri(&state.iri);
         for o in po.objects.into_iter() {
-            let triple = Triple {
-                subject: subject.clone(),
-                predicate: po.verb.clone(),
-                object: make_object(o, blank_nodes, triple_buffer)?,
-            };
-            triple_buffer.push(triple);
+            let object = make_object(o, state)?;
+            state.writer.add(&subject, &predicate, &object);
         }
     }
     Ok(())
 }
 
-fn add_triples<'a, B>(new_triples: Triples<'a>,
-                      blank_nodes: &mut BlankNodes<'a, B>,
-                      triple_buffer: &mut Vec<Triple<'a, B>>)
-                      -> Result<()>
-    where B: graph::BlankNodePtr<'a> + Clone
+fn add_triples<'a, W>(new_triples: Triples<'a>, state: &mut ParserState<'a, W>) -> Result<()>
+    where W: graph::GraphWriter<'a>
 {
-    let subject = make_subject(new_triples.subject, blank_nodes, triple_buffer)?;
-    add_predicated_objects(subject,
-                           new_triples.predicated_objects_list,
-                           blank_nodes,
-                           triple_buffer)
+    let subject = make_subject(new_triples.subject, state)?;
+    add_predicated_objects(subject, new_triples.predicated_objects_list, state)
 }
 
 #[test]
@@ -532,7 +463,6 @@ fn test_no_space_before_dot() {
     let mut i = StatementIterator::new(s).unwrap();
     i.next();
     let n = i.next();
-    println!("{:?}", n);
     assert!(n.is_some());
     assert!(n.unwrap().is_ok());
 }

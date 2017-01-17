@@ -11,7 +11,7 @@ use std::collections::BTreeMap;
 use std::collections::HashSet;
 use rdfio::graphs::tel;
 use rdfio::io::TurtleParser;
-use rdfio::graph::{Graph, GraphWriter, Triple, IRIPtr, LiteralPtr, Resource};
+use rdfio::graph::{Graph, GraphWriter, Triple, IRIPtr, LiteralPtr};
 use rdfio::namespaces::Namespaces;
 use rdfio::resource::{ResourceBase, IRI, ObjectIter};
 use rdfio::ontology::classes::rdf::Property;
@@ -152,41 +152,33 @@ fn closure<'g>(class: &Class<'g, MyGraph>) -> ObjectIter<'g, Class<'g, MyGraph>>
 fn infer(graph: &MyGraph) -> rdfio::Result<MyGraph> {
     // for every triple with rdfs:subClassOf infer that the subject and the
     // object are rdfs:Class instances
-    let blank_node_creator = tel::BlankNodeCreator::new();
-    let mut writer = tel::GraphCreator::with_capacity(65000, &blank_node_creator);
+    let mut writer = tel::GraphCreator::with_capacity(65000);
+    let rdf_type = graph.find_iri(RDF_TYPE).unwrap();
+    // let rdfs_class = graph.find_iri(RDFS_CLASS).unwrap().into();
     for triple in graph.iter().filter(|triple| triple.predicate().as_str() == RDFS_SUB_CLASS_OF) {
-        // blank nodes will panic
-        writer.add_iri_iri(triple.subject().as_iri().unwrap().clone(),
-                           RDF_TYPE,
-                           RDFS_CLASS);
-        match triple.object() {
-            Resource::BlankNode(b, _) => {
-                writer.add_blank_iri(b, RDF_TYPE, RDFS_CLASS);
-            }
-            Resource::IRI(iri) => {
-                writer.add_iri_iri(iri, RDF_TYPE, RDFS_CLASS);
-            }
-            _ => {}
-        }
+        // writer.add_same_type_triple(&triple.subject(), &rdf_type, &rdfs_class);
+        // if let Some(subject) = triple.object().to_blank_node_or_iri() {
+        // writer.add_same_type_triple(&subject, &rdf_type, &rdfs_class);
+        // }
+        //
     }
-
-    for triple in graph.iter() {
-        writer.add_triple(&triple);
-    }
-    {
-        // make subClassOf entailment concrete
-        let oa: ontology_adapter::OntologyAdapter<MyGraph> = ontology::adapter(graph);
-        for class in Class::iter(&oa) {
-            // let i = TransitiveIterator::new(class.sub_class_of(),
-            //                                |class: &Class<MyGraph>| class.sub_class_of());
-            let i = TransitiveIterator::new(class.sub_class_of(), closure);
-            for parent in i {
-                writer.add_iri_iri(class.this().as_iri().unwrap().clone(),
-                                   RDFS_SUB_CLASS_OF,
-                                   parent.this().as_iri().unwrap().clone());
-            }
-        }
-    }
+    // for triple in graph.iter() {
+    // writer.add_triple(&triple);
+    // }
+    // {
+    // make subClassOf entailment concrete
+    // let oa: ontology_adapter::OntologyAdapter<MyGraph> = ontology::adapter(graph);
+    // for class in Class::iter(&oa) {
+    // let i = TransitiveIterator::new(class.sub_class_of(),
+    //                                |class: &Class<MyGraph>| class.sub_class_of());
+    // let i = TransitiveIterator::new(class.sub_class_of(), closure);
+    // for parent in i {
+    // writer.add_iri_iri(class.this().as_iri().unwrap().clone(),
+    // RDFS_SUB_CLASS_OF,
+    // parent.this().as_iri().unwrap().clone());
+    // }
+    // }
+    // }
 
     Ok(writer.collect().sort_blank_nodes())
 }
@@ -216,16 +208,15 @@ fn write_mod(o: &Output, iris: &Vec<String>) -> rdfio::Result<()> {
 }
 
 fn load_files(inputs: &Vec<String>) -> rdfio::Result<(Namespaces, MyGraph)> {
-    let mut blank_node_creator = tel::BlankNodeCreator::new();
-    let mut writer = tel::GraphCreator::with_capacity(65000, &blank_node_creator);
+    let mut writer = tel::GraphCreator::with_capacity(65000);
     let mut prefixes = Namespaces::new();
     for input in inputs {
         let data = read_file(input)?;
         let mut base = String::from("file:");
         base.push_str(input);
-        let mut triples = TurtleParser::new(data.as_str(), &base, &mut blank_node_creator)?;
-        while let Some(triple) = triples.next() {
-            writer.add_triple(&triple?);
+        let mut triples = TurtleParser::new(data.as_str(), &base, &mut writer)?;
+        while let Some(step) = triples.next() {
+            step?;
         }
         for ns in triples.prefixes().iter() {
             prefixes.set(ns.prefix(), ns.namespace());

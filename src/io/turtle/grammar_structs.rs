@@ -1,31 +1,3 @@
-use graph::BlankNodePtr;
-
-#[derive(PartialEq,Eq)]
-pub struct Triple<'a, B: 'a>
-    where B: BlankNodePtr<'a>
-{
-    pub subject: SingleSubject<'a, B>,
-    pub predicate: IRI<'a>,
-    pub object: SingleObject<'a, B>,
-}
-
-#[derive(Debug,PartialEq,Eq,Clone)]
-pub enum SingleSubject<'a, B: 'a>
-    where B: BlankNodePtr<'a>
-{
-    IRI(IRI<'a>),
-    BlankNode(B),
-}
-
-#[derive(Debug,PartialEq,Eq)]
-pub enum SingleObject<'a, B: 'a>
-    where B: BlankNodePtr<'a>
-{
-    IRI(IRI<'a>),
-    BlankNode(B),
-    Literal(Literal<'a>),
-}
-
 #[derive(Debug,PartialEq,Eq,Clone)]
 pub enum IRI<'a> {
     IRI(&'a str),
@@ -41,8 +13,18 @@ pub enum RDFLiteralType<'a> {
 #[derive(Debug,PartialEq,Eq)]
 pub struct Literal<'a> {
     pub lexical: &'a str,
-    pub datatype: IRI<'a>,
+    pub datatype: Datatype<'a>,
     pub language: Option<&'a str>,
+}
+#[derive(Debug,PartialEq,Eq)]
+pub enum Datatype<'a> {
+    IRI(IRI<'a>),
+    RDFLangString,
+    XSDBoolean,
+    XSDDecimal,
+    XSDDouble,
+    XSDInteger,
+    XSDString,
 }
 
 #[derive(Debug,PartialEq,Eq)]

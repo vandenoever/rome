@@ -46,6 +46,22 @@ impl<'g, SPO, OPS> fmt::Debug for BlankNodePtr<'g, SPO, OPS>
         write!(f, "_:{}", self.node_id)
     }
 }
+impl<'g, SPO: 'g, OPS: 'g> Into<graph::BlankNodeOrIRI<'g, BlankNodePtr<'g, SPO, OPS>, IRIPtr<'g, SPO, OPS>>> for BlankNodePtr<'g, SPO, OPS>
+    where SPO: CompactTriple<u32>,
+          OPS: CompactTriple<u32>
+{
+    fn into(self) -> graph::BlankNodeOrIRI<'g, BlankNodePtr<'g, SPO, OPS>, IRIPtr<'g, SPO, OPS>> {
+        graph::BlankNodeOrIRI::BlankNode(self, PhantomData)
+    }
+}
+impl<'g, SPO: 'g, OPS: 'g> Into<graph::Resource<'g, BlankNodePtr<'g, SPO, OPS>, IRIPtr<'g, SPO, OPS>, LiteralPtr<'g, SPO, OPS>>> for BlankNodePtr<'g, SPO, OPS>
+    where SPO: CompactTriple<u32>,
+          OPS: CompactTriple<u32>
+{
+    fn into(self) -> graph::Resource<'g, BlankNodePtr<'g, SPO, OPS>, IRIPtr<'g, SPO, OPS>, LiteralPtr<'g, SPO, OPS>> {
+        graph::Resource::BlankNode(self, PhantomData)
+    }
+}
 #[derive (Clone)]
 pub struct IRIPtr<'g, SPO: 'g, OPS: 'g>
     where SPO: CompactTriple<u32>,
@@ -103,6 +119,22 @@ impl<'g, SPO, OPS> fmt::Debug for IRIPtr<'g, SPO, OPS>
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use graph::IRIPtr;
         write!(f, "<{}>", self.as_str())
+    }
+}
+impl<'g, SPO: 'g, OPS: 'g> Into<graph::BlankNodeOrIRI<'g, BlankNodePtr<'g, SPO, OPS>, IRIPtr<'g, SPO, OPS>>> for IRIPtr<'g, SPO, OPS>
+    where SPO: CompactTriple<u32>,
+          OPS: CompactTriple<u32>
+{
+    fn into(self) -> graph::BlankNodeOrIRI<'g, BlankNodePtr<'g, SPO, OPS>, IRIPtr<'g, SPO, OPS>> {
+        graph::BlankNodeOrIRI::IRI(self)
+    }
+}
+impl<'g, SPO: 'g, OPS: 'g> Into<graph::Resource<'g, BlankNodePtr<'g, SPO, OPS>, IRIPtr<'g, SPO, OPS>, LiteralPtr<'g, SPO, OPS>>> for IRIPtr<'g, SPO, OPS>
+    where SPO: CompactTriple<u32>,
+          OPS: CompactTriple<u32>
+{
+    fn into(self) -> graph::Resource<'g, BlankNodePtr<'g, SPO, OPS>, IRIPtr<'g, SPO, OPS>, LiteralPtr<'g, SPO, OPS>> {
+        graph::Resource::IRI(self)
     }
 }
 #[derive (Clone)]
@@ -175,6 +207,14 @@ impl<'g, SPO, OPS> fmt::Debug for LiteralPtr<'g, SPO, OPS>
             None => write!(f, "\"{}\"^^<{}>", self.as_str(), self.datatype()),
             Some(lang) => write!(f, "\"{}\"@{}", self.as_str(), lang),
         }
+    }
+}
+impl<'g, SPO: 'g, OPS: 'g> Into<graph::Resource<'g, BlankNodePtr<'g, SPO, OPS>, IRIPtr<'g, SPO, OPS>, LiteralPtr<'g, SPO, OPS>>> for LiteralPtr<'g, SPO, OPS>
+    where SPO: CompactTriple<u32>,
+          OPS: CompactTriple<u32>
+{
+    fn into(self) -> graph::Resource<'g, BlankNodePtr<'g, SPO, OPS>, IRIPtr<'g, SPO, OPS>, LiteralPtr<'g, SPO, OPS>> {
+        graph::Resource::Literal(self)
     }
 }
 

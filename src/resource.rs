@@ -400,8 +400,7 @@ mod tests {
 
     #[test]
     fn instantiate_ontology_classes() {
-        let bnc = tel::BlankNodeCreator::new();
-        let creator = tel::GraphCreator::with_capacity(1000, &bnc);
+        let creator = tel::GraphCreator::with_capacity(1000);
         let graph: tel::Graph64 = creator.collect();
         let ontology = adapter(&graph);
         for class in IRI::<Class<_>>::iter(&ontology) {

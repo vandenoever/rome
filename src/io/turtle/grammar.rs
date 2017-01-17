@@ -251,21 +251,21 @@ named!(rdfliteral<&str,Literal>, do_parse!(
             Some(RDFLiteralType::LangTag(langtag)) => {
                 Literal {
                     lexical: string,
-                    datatype: IRI::IRI(constants::RDF_LANG_STRING),
+                    datatype: Datatype::RDFLangString,
                     language: Some(langtag)
                 }
             },
             Some(RDFLiteralType::DataType(datatype)) => {
                 Literal {
                     lexical: string,
-                    datatype: datatype,
+                    datatype: Datatype::IRI(datatype),
                     language: None
                 }
             },
             None => {
                 Literal {
                     lexical: string,
-                    datatype: IRI::IRI(constants::XSD_STRING),
+                    datatype: Datatype::XSDString,
                     language: None
                 }
             }
@@ -284,7 +284,7 @@ named!(boolean<&str,Literal>, do_parse!(
     b: alt!(tag_s!("true") | tag_s!("false")) >>
     (Literal {
         lexical: b,
-        datatype: IRI::IRI(constants::XSD_BOOLEAN),
+        datatype: Datatype::XSDBoolean,
         language: None
     })
 ));
@@ -378,7 +378,7 @@ named!(integer<&str,Literal>, map!(recognize!(tuple!(
     (|integer|{
         Literal {
             lexical: integer,
-            datatype: IRI::IRI(constants::XSD_INTEGER),
+            datatype: Datatype::XSDInteger,
             language: None
         }
     })
@@ -390,7 +390,7 @@ named!(decimal<&str,Literal>, map!(recognize!(tuple!(
     (|decimal|{
         Literal {
             lexical: decimal,
-            datatype: IRI::IRI(constants::XSD_DECIMAL),
+            datatype: Datatype::XSDDecimal,
             language: None
         }
     })
@@ -406,7 +406,7 @@ named!(double<&str,Literal>, map!(recognize!(tuple!(
     (|double|{
         Literal {
             lexical: double,
-            datatype: IRI::IRI(constants::XSD_DOUBLE),
+            datatype: Datatype::XSDDouble,
             language: None
         }
     })
@@ -654,7 +654,7 @@ fn test_langtag() {
 fn test_rdfliteral() {
     let r = Literal {
         lexical: "",
-        datatype: IRI::IRI(constants::XSD_STRING),
+        datatype: Datatype::XSDString,
         language: None,
     };
     assert_eq!(rdfliteral("'' "), Done(&" "[..], r));
@@ -663,7 +663,7 @@ fn test_rdfliteral() {
 fn literal_true<'a>() -> Literal<'a> {
     Literal {
         lexical: "true",
-        datatype: IRI::IRI(constants::XSD_BOOLEAN),
+        datatype: Datatype::XSDBoolean,
         language: None,
     }
 }
@@ -671,7 +671,7 @@ fn literal_true<'a>() -> Literal<'a> {
 fn literal_false<'a>() -> Literal<'a> {
     Literal {
         lexical: "false",
-        datatype: IRI::IRI(constants::XSD_BOOLEAN),
+        datatype: Datatype::XSDBoolean,
         language: None,
     }
 }
@@ -679,7 +679,7 @@ fn literal_false<'a>() -> Literal<'a> {
 fn literal_11<'a>() -> Literal<'a> {
     Literal {
         lexical: "11",
-        datatype: IRI::IRI(constants::XSD_INTEGER),
+        datatype: Datatype::XSDInteger,
         language: None,
     }
 }
@@ -687,7 +687,7 @@ fn literal_11<'a>() -> Literal<'a> {
 fn literal_d11<'a>() -> Literal<'a> {
     Literal {
         lexical: "11.1",
-        datatype: IRI::IRI(constants::XSD_DECIMAL),
+        datatype: Datatype::XSDDecimal,
         language: None,
     }
 }
@@ -697,11 +697,11 @@ fn test_integer() {
     assert_eq!(literal("11 "), Done(&" "[..], literal_11()));
     assert_eq!(literal("+1 "), Done(&" "[..], Literal{
             lexical: "+1",
-            datatype: IRI::IRI(constants::XSD_INTEGER),
+            datatype: Datatype::XSDInteger,
             language: None}));
     assert_eq!(integer("-1 "), Done(&" "[..], Literal{
      lexical: "-1",
-     datatype: IRI::IRI(constants::XSD_INTEGER),
+     datatype: Datatype::XSDInteger,
      language: None}));
 }
 
@@ -710,15 +710,15 @@ fn test_decimal() {
     assert_eq!(literal("11.1 "), Done(&" "[..], literal_d11()));
     assert_eq!(literal("+1.1 "), Done(&" "[..], Literal{
             lexical: "+1.1",
-            datatype: IRI::IRI(constants::XSD_DECIMAL),
+            datatype: Datatype::XSDDecimal,
             language: None}));
     assert_eq!(literal("-1.1 "), Done(&" "[..], Literal{
      lexical: "-1.1",
-     datatype: IRI::IRI(constants::XSD_DECIMAL),
+     datatype: Datatype::XSDDecimal,
      language: None}));
     assert_eq!(literal(".1 "), Done(&" "[..], Literal{
      lexical: ".1",
-     datatype: IRI::IRI(constants::XSD_DECIMAL),
+     datatype: Datatype::XSDDecimal,
      language: None}));
 }
 
@@ -739,7 +739,7 @@ fn test_object() {
     assert_eq!(object("_:b1 "), Done(&" "[..], Object::BlankNode(BlankNode::BlankNode("b1"))));
     let long = Object::Literal(Literal {
         lexical: "first long literal",
-        datatype: IRI::IRI(constants::XSD_STRING),
+        datatype: Datatype::XSDString,
         language: None,
     });
     assert_eq!(object("\"\"\"first long literal\"\"\" "), Done(&" "[..], long));
@@ -764,7 +764,7 @@ fn test_object_list() {
 fn test_predicated_objects() {
     let v = vec![Object::Literal(Literal{
             lexical: "1",
-            datatype: IRI::IRI(constants::XSD_INTEGER),
+            datatype: Datatype::XSDInteger,
             language: None})];
     let po = PredicatedObjects {
         verb: IRI::IRI("urn:123"),
@@ -777,7 +777,7 @@ fn test_predicated_objects() {
 fn test_triples() {
     let v = vec![Object::Literal(Literal{
             lexical: "1",
-            datatype: IRI::IRI(constants::XSD_INTEGER),
+            datatype: Datatype::XSDInteger,
             language: None})];
     let i = IRI::IRI("urn:123");
     let s = Subject::IRI(i.clone());

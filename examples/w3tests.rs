@@ -138,38 +138,37 @@ impl<'g> LiteralPtr<'g> for Literal {
     }
 }
 
-fn write_assertion<'a, 'g, W, B: 'g>(assertion: &'a Assertion,
-                                     blank_node_creator: &mut BlankNodeCreator<'g, B>,
-                                     output: &mut W)
-                                     -> rdfio::Result<()>
-    where W: GraphWriter<'g, B>,
-          B: BlankNodePtr<'g> + Clone
+fn write_assertion<'a, 'g, W: 'g>(assertion: &'a Assertion, output: &mut W) -> rdfio::Result<()>
+    where W: GraphWriter<'g>
 {
-    let assertion_blank_node = blank_node_creator.create_blank_node();
-    output.add_blank_iri(assertion_blank_node.clone(), RDF_TYPE, EARL_ASSERTION);
+    let rdf_type = output.create_iri(&RDF_TYPE);
+    let earl_assertion = output.create_iri(&EARL_ASSERTION);
+    let earl_test_result = output.create_iri(&EARL_TEST_RESULT);
+    let earl_test = output.create_iri(&EARL_TEST);
+    let earl_result = output.create_iri(&EARL_RESULT);
+    let earl_passed = output.create_iri(&EARL_PASSED);
+    let earl_failed = output.create_iri(&EARL_FAILED);
+    let earl_cant_tell = output.create_iri(&EARL_CANT_TELL);
+    let earl_outcome = output.create_iri(&EARL_OUTCOME);
+    let dc_date = output.create_iri(&DC_DATE);
+
+    let assertion_blank_node = output.create_blank_node();
+    output.add_blank_iri(&assertion_blank_node, &rdf_type, &earl_assertion);
     let date = format!("{}", assertion.date.rfc3339());
-    output.add_blank_literal(assertion_blank_node.clone(),
-                             DC_DATE,
-                             Literal {
-                                 value: date,
-                                 datatype: String::from(XSD_DATE_TIME),
-                                 language: None,
-                             });
-    let result_blank_node = blank_node_creator.create_blank_node();
-    output.add_blank_iri(result_blank_node.clone(), RDF_TYPE, EARL_TEST_RESULT);
-    output.add_blank_blank(assertion_blank_node.clone(),
-                           EARL_RESULT,
-                           result_blank_node.clone());
-    output.add_blank_blank(assertion_blank_node.clone(),
-                           EARL_RESULT,
-                           result_blank_node.clone());
+    let date_time = output.create_datatype(&XSD_DATE_TIME);
+    let literal = output.create_literal_datatype(&date, &date_time);
+    output.add_blank_literal(&assertion_blank_node, &dc_date, &literal);
+    let result_blank_node = output.create_blank_node();
+    output.add_blank_iri(&result_blank_node, &rdf_type, &earl_test_result);
+    output.add_blank_blank(&assertion_blank_node, &earl_result, &result_blank_node);
     let outcome = match assertion.result.outcome {
-        Outcome::Passed => EARL_PASSED,
-        Outcome::Failed => EARL_FAILED,
-        Outcome::CannotTell => EARL_CANT_TELL,
+        Outcome::Passed => &earl_passed,
+        Outcome::Failed => &earl_failed,
+        Outcome::CannotTell => &earl_cant_tell,
     };
-    output.add_blank_iri(result_blank_node, EARL_OUTCOME, outcome);
-    output.add_blank_iri(assertion_blank_node, EARL_TEST, assertion.test.as_str());
+    output.add_blank_iri(&result_blank_node, &earl_outcome, outcome);
+    let test = output.create_iri(&assertion.test.as_str());
+    output.add_blank_iri(&assertion_blank_node, &earl_test, &test);
     Ok(())
 }
 
@@ -187,11 +186,12 @@ fn read_file(path: &str) -> io::Result<String> {
 }
 
 fn load_graph(data: &str, base: &str) -> rdfio::Result<MyGraph> {
-    let mut blank_node_creator = tel::BlankNodeCreator::new();
-    let mut writer = tel::GraphCreator::with_capacity(65000, &blank_node_creator);
-    let mut triples = TurtleParser::new(data, base, &mut blank_node_creator)?;
-    while let Some(triple) = triples.next() {
-        writer.add_triple(&triple?);
+    let mut writer = tel::GraphCreator::with_capacity(65000);
+    {
+        let mut triples = TurtleParser::new(data, base, &mut writer)?;
+        while let Some(step) = triples.next() {
+            step?;
+        }
     }
     Ok(writer.collect().sort_blank_nodes())
 }
@@ -485,10 +485,9 @@ fn run_eval_negative_eval<'a>(test: &TestTurtleNegativeEval,
 }
 
 fn output_as_turtle(assertions: &Vec<Assertion>) -> rdfio::Result<()> {
-    let mut blank_node_creator = tel::BlankNodeCreator::new();
-    let mut writer = tel::GraphCreator::with_capacity(100000, &blank_node_creator);
+    let mut writer = tel::GraphCreator::with_capacity(100000);
     for a in assertions {
-        write_assertion(&a, &mut blank_node_creator, &mut writer)?;
+        write_assertion(&a, &mut writer)?;
     }
     let graph: MyGraph = writer.collect().sort_blank_nodes();
     let mut ns = Namespaces::new();

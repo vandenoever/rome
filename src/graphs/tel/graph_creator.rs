@@ -11,43 +11,6 @@ use super::triple::*;
 #[cfg(test)]
 use super::triple64::*;
 
-pub struct BlankNodeCreator<SPO, OPS>
-    where SPO: CompactTriple<u32>,
-          OPS: CompactTriple<u32>
-{
-    graph_id: u32,
-    highest_blank_node: u32,
-    phantom: PhantomData<(SPO, OPS)>,
-}
-
-impl<SPO, OPS> BlankNodeCreator<SPO, OPS>
-    where SPO: CompactTriple<u32>,
-          OPS: CompactTriple<u32>
-{
-    pub fn new() -> BlankNodeCreator<SPO, OPS> {
-        BlankNodeCreator {
-            graph_id: rand::random::<u32>(),
-            highest_blank_node: 0,
-            phantom: PhantomData,
-        }
-    }
-}
-
-impl<'g, SPO: 'g, OPS: 'g> graph::BlankNodeCreator<'g, BlankNodePtr<'g, SPO, OPS>>
-    for BlankNodeCreator<SPO, OPS>
-    where SPO: CompactTriple<u32>,
-          OPS: CompactTriple<u32>
-{
-    fn create_blank_node(&mut self) -> BlankNodePtr<'g, SPO, OPS> {
-        self.highest_blank_node += 1;
-        BlankNodePtr {
-            graph_id: self.graph_id,
-            node_id: self.highest_blank_node,
-            phantom: PhantomData,
-        }
-    }
-}
-
 pub struct GraphCreator<SPO, OPS>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>
@@ -56,10 +19,6 @@ pub struct GraphCreator<SPO, OPS>
     string_collector: StringCollector,
     datatype_lang_collector: StringCollector,
     triples: Vec<SPO>,
-    prev_subject_iri: Option<(String, StringId)>,
-    prev_predicate: Option<(String, StringId)>,
-    prev_datatype: Option<(String, StringId)>,
-    prev_lang: Option<(String, StringId)>,
     lang_string_datatype_id: StringId,
     highest_blank_node: u32,
     phantom: PhantomData<OPS>,
@@ -83,169 +42,57 @@ fn translate<T>(t: &mut T, translation: &Vec<StringId>, datatrans: &Vec<StringId
         }
     }
 }
-/// check if the new string is the same as the string from the previous triple
-/// if the string is the same, use the re-use the id
-fn check_prev(string: &str,
-              prev: &mut Option<(String, StringId)>,
-              string_collector: &mut StringCollector)
-              -> StringId {
-    let id;
-    if let Some((mut prev_string, prev_id)) = prev.take() {
-        if string == prev_string {
-            id = prev_id;
-        } else {
-            id = string_collector.add_string(string);
-            prev_string.clear();
-            prev_string.push_str(string);
-        }
-        *prev = Some((prev_string, id));
-    } else {
-        id = string_collector.add_string(string);
-        *prev = Some((String::from(string), id));
-    }
-    id
-}
 impl<SPO, OPS> GraphCreator<SPO, OPS>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>
 {
-    pub fn with_capacity(capacity: usize,
-                         blank_node_creator: &BlankNodeCreator<SPO, OPS>)
-                         -> GraphCreator<SPO, OPS> {
+    pub fn with_capacity(capacity: usize) -> GraphCreator<SPO, OPS> {
         let mut dlc = StringCollector::with_capacity(capacity);
         let lang_string_datatype_id = dlc.add_string(constants::RDF_LANG_STRING);
         GraphCreator {
-            graph_id: blank_node_creator.graph_id,
+            graph_id: rand::random::<u32>(),
             string_collector: StringCollector::with_capacity(capacity),
             datatype_lang_collector: dlc,
             triples: Vec::new(),
-            prev_subject_iri: None,
-            prev_predicate: None,
-            prev_datatype: None,
-            prev_lang: None,
             lang_string_datatype_id: lang_string_datatype_id,
             highest_blank_node: 0,
             phantom: PhantomData,
         }
     }
-    fn add_s_iri(&mut self, s: &str, p: &str, ot: TripleObjectType, o: u32, d: u32) {
-        let s = check_prev(s, &mut self.prev_subject_iri, &mut self.string_collector);
-        let p = check_prev(p, &mut self.prev_predicate, &mut self.string_collector);
+    fn add_s_iri(&mut self, s: StringId, p: StringId, ot: TripleObjectType, o: u32, d: u32) {
         let t = SPO::triple(true, s.id, p.id, ot, o, d);
         self.triples.push(t);
     }
-    fn add_iri_blank(&mut self, subject: &str, predicate: &str, object: u32) {
-        self.highest_blank_node = cmp::max(self.highest_blank_node, object);
-        self.add_s_iri(subject, predicate, TripleObjectType::BlankNode, object, 0);
+    fn add_iri_blank(&mut self, s: StringId, p: StringId, o: u32) {
+        self.highest_blank_node = cmp::max(self.highest_blank_node, o);
+        self.add_s_iri(s, p, TripleObjectType::BlankNode, o, 0);
     }
-    fn add_iri_iri(&mut self, subject: &str, predicate: &str, object: &str) {
-        let o = self.string_collector.add_string(object);
-        self.add_s_iri(subject, predicate, TripleObjectType::IRI, o.id, 0);
+    fn add_iri_iri(&mut self, s: StringId, p: StringId, o: StringId) {
+        self.add_s_iri(s, p, TripleObjectType::IRI, o.id, 0);
     }
-    fn add_iri_lit(&mut self, subject: &str, predicate: &str, object: &str, datatype: &str) {
-        let o = self.string_collector.add_string(object);
-        let d = check_prev(datatype,
-                           &mut self.prev_datatype,
-                           &mut self.datatype_lang_collector)
-            .id;
-        self.add_s_iri(subject, predicate, TripleObjectType::Literal, o.id, d);
+    fn add_iri_lit(&mut self, s: StringId, p: StringId, o: StringId, datatype: StringId) {
+        self.add_s_iri(s, p, TripleObjectType::Literal, o.id, datatype.id);
     }
-    fn add_iri_lit_lang(&mut self, subject: &str, predicate: &str, object: &str, lang: &str) {
-        let o = self.string_collector.add_string(object);
-        let l = check_prev(lang, &mut self.prev_lang, &mut self.datatype_lang_collector).id;
-        self.add_s_iri(subject, predicate, TripleObjectType::LiteralLang, o.id, l);
+    fn add_iri_lit_lang(&mut self, s: StringId, p: StringId, o: StringId, lang: StringId) {
+        self.add_s_iri(s, p, TripleObjectType::LiteralLang, o.id, lang.id);
     }
-    fn add_s_blank(&mut self, s: u32, p: &str, ot: TripleObjectType, o: u32, d: u32) {
+    fn add_s_blank(&mut self, s: u32, p: StringId, ot: TripleObjectType, o: u32, d: u32) {
         self.highest_blank_node = cmp::max(self.highest_blank_node, s);
-        let p = check_prev(p, &mut self.prev_predicate, &mut self.string_collector);
         let t = SPO::triple(false, s, p.id, ot, o, d);
         self.triples.push(t);
     }
-    fn add_blank_blank<'a>(&mut self, subject: u32, predicate: &'a str, object: u32) {
-        self.highest_blank_node = cmp::max(self.highest_blank_node, object);
-        self.add_s_blank(subject, predicate, TripleObjectType::BlankNode, object, 0);
+    fn add_blank_blank<'a>(&mut self, s: u32, p: StringId, o: u32) {
+        self.highest_blank_node = cmp::max(self.highest_blank_node, o);
+        self.add_s_blank(s, p, TripleObjectType::BlankNode, o, 0);
     }
-    fn add_blank_iri(&mut self, subject: u32, predicate: &str, object: &str) {
-        let o = self.string_collector.add_string(object);
-        self.add_s_blank(subject, predicate, TripleObjectType::IRI, o.id, 0);
+    fn add_blank_iri(&mut self, s: u32, p: StringId, o: StringId) {
+        self.add_s_blank(s, p, TripleObjectType::IRI, o.id, 0);
     }
-    fn add_blank_lit(&mut self, subject: u32, predicate: &str, object: &str, datatype: &str) {
-        let o = self.string_collector.add_string(object);
-        let d = check_prev(datatype,
-                           &mut self.prev_datatype,
-                           &mut self.datatype_lang_collector)
-            .id;
-        self.add_s_blank(subject, predicate, TripleObjectType::Literal, o.id, d);
+    fn add_blank_lit(&mut self, s: u32, p: StringId, o: StringId, datatype: StringId) {
+        self.add_s_blank(s, p, TripleObjectType::Literal, o.id, datatype.id);
     }
-    fn add_blank_lit_lang(&mut self, subject: u32, predicate: &str, object: &str, lang: &str) {
-        let o = self.string_collector.add_string(object);
-        let l = check_prev(lang, &mut self.prev_lang, &mut self.datatype_lang_collector).id;
-        self.add_s_blank(subject, predicate, TripleObjectType::LiteralLang, o.id, l);
-    }
-    fn add<'t, I, L>(&mut self,
-                     subject: graph::BlankNodeOrIRI<'t, BlankNodePtr<'t, SPO, OPS>, I>,
-                     predicate: I,
-                     object: graph::Resource<'t, BlankNodePtr<'t, SPO, OPS>, I, L>)
-        where I: graph::IRIPtr<'t>,
-              L: graph::LiteralPtr<'t>
-    {
-        match subject {
-            graph::BlankNodeOrIRI::BlankNode(subject, _) => {
-                self.check_blank_node(&subject);
-                match object {
-                    graph::Resource::BlankNode(object, _) => {
-                        self.check_blank_node(&object);
-                        self.add_blank_blank(subject.node_id, predicate.as_str(), object.node_id);
-                    }
-                    graph::Resource::IRI(object) => {
-                        self.add_blank_iri(subject.node_id, predicate.as_str(), object.as_str());
-                    }
-                    graph::Resource::Literal(object) => {
-                        match object.language() {
-                            None => {
-                                self.add_blank_lit(subject.node_id,
-                                                   predicate.as_str(),
-                                                   object.as_str(),
-                                                   object.datatype());
-                            }
-                            Some(lang) => {
-                                self.add_blank_lit_lang(subject.node_id,
-                                                        predicate.as_str(),
-                                                        object.as_str(),
-                                                        lang);
-                            }
-                        }
-                    }
-                }
-            }
-            graph::BlankNodeOrIRI::IRI(subject) => {
-                match object {
-                    graph::Resource::BlankNode(object, _) => {
-                        self.check_blank_node(&object);
-                        self.add_iri_blank(subject.as_str(), predicate.as_str(), object.node_id);
-                    }
-                    graph::Resource::IRI(object) => {
-                        self.add_iri_iri(subject.as_str(), predicate.as_str(), object.as_str());
-                    }
-                    graph::Resource::Literal(object) => {
-                        match object.language() {
-                            None => {
-                                self.add_iri_lit(subject.as_str(),
-                                                 predicate.as_str(),
-                                                 object.as_str(),
-                                                 object.datatype());
-                            }
-                            Some(lang) => {
-                                self.add_iri_lit_lang(subject.as_str(),
-                                                      predicate.as_str(),
-                                                      object.as_str(),
-                                                      lang);
-                            }
-                        }
-                    }
-                }
-            }
-        }
+    fn add_blank_lit_lang(&mut self, s: u32, p: StringId, o: StringId, lang: StringId) {
+        self.add_s_blank(s, p, TripleObjectType::LiteralLang, o.id, lang.id);
     }
     fn check_blank_node(&self, blank_node: &BlankNodePtr<SPO, OPS>) {
         assert_eq!(self.graph_id,
@@ -271,18 +118,91 @@ fn create_ops<SPO, OPS>(spo: &[SPO]) -> Vec<OPS>
     ops
 }
 
-impl<'g, SPO: 'g, OPS: 'g> graph::GraphWriter<'g, BlankNodePtr<'g, SPO, OPS>>
-    for GraphCreator<SPO, OPS>
+#[derive(Clone)]
+pub struct CreateIRI {
+    iri: StringId,
+}
+pub struct CreateLiteral {
+    lexical: StringId,
+    datatype: StringId,
+    language: Option<StringId>,
+}
+#[derive(Clone)]
+pub struct CreateDatatype {
+    datatype: StringId,
+}
+pub struct CreateLanguage {
+    language: StringId,
+}
+
+impl<'g, SPO: 'g, OPS: 'g> graph::GraphWriter<'g> for GraphCreator<SPO, OPS>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>
 {
+    type BlankNode = BlankNodePtr<'g, SPO, OPS>;
+    type IRI = CreateIRI;
+    type Literal = CreateLiteral;
+    type Datatype = CreateDatatype;
+    type Language = CreateLanguage;
     type Graph = Graph<SPO, OPS>;
-    fn add_triple<T, I: 'g, L: 'g>(&mut self, triple: &T)
-        where T: graph::Triple<'g, BlankNodePtr<'g, SPO, OPS>, I, L>,
-              I: graph::IRIPtr<'g>,
-              L: graph::LiteralPtr<'g>
+    fn create_blank_node(&mut self) -> BlankNodePtr<'g, SPO, OPS> {
+        self.highest_blank_node += 1;
+        BlankNodePtr {
+            graph_id: self.graph_id,
+            node_id: self.highest_blank_node,
+            phantom: PhantomData,
+        }
+    }
+    fn create_iri<'a, I: 'a>(&mut self, i: &I) -> CreateIRI
+        where I: graph::IRIPtr<'a>
     {
-        self.add(triple.subject(), triple.predicate(), triple.object());
+        CreateIRI { iri: self.string_collector.add_string(i.as_str()) }
+    }
+    fn create_literal<'a, L: 'a>(&mut self, l: &L) -> CreateLiteral
+        where L: graph::LiteralPtr<'a>
+    {
+        match l.language() {
+            Some(language) => {
+                CreateLiteral {
+                    lexical: self.string_collector.add_string(l.as_str()),
+                    datatype: self.lang_string_datatype_id,
+                    language: Some(self.datatype_lang_collector.add_string(language)),
+                }
+            }
+            None => {
+                CreateLiteral {
+                    lexical: self.string_collector.add_string(l.as_str()),
+                    datatype: self.datatype_lang_collector.add_string(l.datatype()),
+                    language: None,
+                }
+            }
+        }
+    }
+    fn create_datatype(&mut self, datatype: &str) -> Self::Datatype {
+        CreateDatatype { datatype: self.datatype_lang_collector.add_string(datatype) }
+    }
+    fn create_language(&mut self, language: &str) -> Self::Language {
+        CreateLanguage { language: self.datatype_lang_collector.add_string(language) }
+    }
+    fn create_literal_datatype<'a>(&mut self,
+                                   value: &str,
+                                   datatype: &Self::Datatype)
+                                   -> Self::Literal {
+        CreateLiteral {
+            lexical: self.string_collector.add_string(value),
+            datatype: datatype.datatype,
+            language: None,
+        }
+    }
+    fn create_literal_language<'a>(&mut self,
+                                   value: &str,
+                                   language: &Self::Language)
+                                   -> Self::Literal {
+        CreateLiteral {
+            lexical: self.string_collector.add_string(value),
+            datatype: self.lang_string_datatype_id,
+            language: Some(language.language),
+        }
     }
 
     fn collect(mut self) -> Graph<SPO, OPS> {
@@ -310,87 +230,71 @@ impl<'g, SPO: 'g, OPS: 'g> graph::GraphWriter<'g, BlankNodePtr<'g, SPO, OPS>>
             },
         }
     }
-    fn add_blank_blank<'p, P>(&mut self,
-                              subject: BlankNodePtr<SPO, OPS>,
-                              predicate: P,
-                              object: BlankNodePtr<SPO, OPS>)
-        where P: graph::IRIPtr<'p>
-    {
+    fn add_blank_blank(&mut self,
+                       subject: &BlankNodePtr<SPO, OPS>,
+                       predicate: &CreateIRI,
+                       object: &BlankNodePtr<SPO, OPS>) {
         self.check_blank_node(&subject);
         self.check_blank_node(&object);
-        GraphCreator::add_blank_blank(self, subject.node_id, predicate.as_str(), object.node_id);
+        GraphCreator::add_blank_blank(self, subject.node_id, predicate.iri, object.node_id);
     }
-    fn add_blank_iri<'p, 'o, P, O>(&mut self,
-                                   subject: BlankNodePtr<SPO, OPS>,
-                                   predicate: P,
-                                   object: O)
-        where P: graph::IRIPtr<'p>,
-              O: graph::IRIPtr<'o>
-    {
+    fn add_blank_iri(&mut self,
+                     subject: &BlankNodePtr<SPO, OPS>,
+                     predicate: &CreateIRI,
+                     object: &CreateIRI) {
         self.check_blank_node(&subject);
-        GraphCreator::add_blank_iri(self, subject.node_id, predicate.as_str(), object.as_str());
+        GraphCreator::add_blank_iri(self, subject.node_id, predicate.iri, object.iri);
     }
-    fn add_blank_literal<'p, 'o, P, O>(&mut self,
-                                       subject: BlankNodePtr<SPO, OPS>,
-                                       predicate: P,
-                                       object: O)
-        where P: graph::IRIPtr<'p>,
-              O: graph::LiteralPtr<'o>
-    {
+    fn add_blank_literal(&mut self,
+                         subject: &BlankNodePtr<SPO, OPS>,
+                         predicate: &CreateIRI,
+                         object: &CreateLiteral) {
         self.check_blank_node(&subject);
-        match object.language() {
+        match object.language {
             Some(lang) => {
                 GraphCreator::add_blank_lit_lang(self,
                                                  subject.node_id,
-                                                 predicate.as_str(),
-                                                 object.as_str(),
+                                                 predicate.iri,
+                                                 object.lexical,
                                                  lang)
             }
             None => {
                 GraphCreator::add_blank_lit(self,
                                             subject.node_id,
-                                            predicate.as_str(),
-                                            object.as_str(),
-                                            object.datatype())
+                                            predicate.iri,
+                                            object.lexical,
+                                            object.datatype)
             }
         }
     }
-    fn add_iri_blank<'s, 'p, S, P>(&mut self,
-                                   subject: S,
-                                   predicate: P,
-                                   object: BlankNodePtr<SPO, OPS>)
-        where S: graph::IRIPtr<'s>,
-              P: graph::IRIPtr<'p>
-    {
+    fn add_iri_blank(&mut self,
+                     subject: &CreateIRI,
+                     predicate: &CreateIRI,
+                     object: &BlankNodePtr<SPO, OPS>) {
         self.check_blank_node(&object);
-        GraphCreator::add_iri_blank(self, subject.as_str(), predicate.as_str(), object.node_id);
+        GraphCreator::add_iri_blank(self, subject.iri, predicate.iri, object.node_id);
     }
-    fn add_iri_iri<'s, 'p, 'o, S, P, O>(&mut self, subject: S, predicate: P, object: O)
-        where S: graph::IRIPtr<'s>,
-              P: graph::IRIPtr<'p>,
-              O: graph::IRIPtr<'o>
-    {
-        GraphCreator::add_iri_iri(self, subject.as_str(), predicate.as_str(), object.as_str());
+    fn add_iri_iri(&mut self, subject: &CreateIRI, predicate: &CreateIRI, object: &CreateIRI) {
+        GraphCreator::add_iri_iri(self, subject.iri, predicate.iri, object.iri);
     }
-    fn add_iri_literal<'s, 'p, 'o, S, P, O>(&mut self, subject: S, predicate: P, object: O)
-        where S: graph::IRIPtr<'s>,
-              P: graph::IRIPtr<'p>,
-              O: graph::LiteralPtr<'o>
-    {
-        match object.language() {
+    fn add_iri_literal(&mut self,
+                       subject: &CreateIRI,
+                       predicate: &CreateIRI,
+                       object: &CreateLiteral) {
+        match object.language {
             Some(lang) => {
                 GraphCreator::add_iri_lit_lang(self,
-                                               subject.as_str(),
-                                               predicate.as_str(),
-                                               object.as_str(),
+                                               subject.iri,
+                                               predicate.iri,
+                                               object.lexical,
                                                lang)
             }
             None => {
                 GraphCreator::add_iri_lit(self,
-                                          subject.as_str(),
-                                          predicate.as_str(),
-                                          object.as_str(),
-                                          object.datatype())
+                                          subject.iri,
+                                          predicate.iri,
+                                          object.lexical,
+                                          object.datatype)
             }
         }
     }
@@ -398,20 +302,19 @@ impl<'g, SPO: 'g, OPS: 'g> graph::GraphWriter<'g, BlankNodePtr<'g, SPO, OPS>>
 
 #[test]
 fn collect_empty() {
-    let bnc = BlankNodeCreator::new();
-    let creator: GraphCreator<Triple64SPO, Triple64OPS> = GraphCreator::with_capacity(0, &bnc);
+    let creator: GraphCreator<Triple64SPO, Triple64OPS> = GraphCreator::with_capacity(0);
     use graph::GraphWriter;
     creator.collect();
 }
 
 #[test]
 fn keep_blank_subject() {
-    let mut bnc = super::BlankNodeCreator::new();
-    let mut creator: GraphCreator<Triple64SPO, Triple64OPS> = GraphCreator::with_capacity(0, &bnc);
-    use graph::{BlankNodeCreator, GraphWriter, Graph, IRIPtr, Triple};
-    let blank1 = bnc.create_blank_node();
-    let blank2 = bnc.create_blank_node();
-    creator.add_blank_blank(blank1.node_id, "", blank2.node_id);
+    let mut creator: GraphCreator<Triple64SPO, Triple64OPS> = GraphCreator::with_capacity(0);
+    use graph::{GraphWriter, Graph, IRIPtr, Triple};
+    let blank1 = creator.create_blank_node();
+    let blank2 = creator.create_blank_node();
+    let iri = creator.create_iri(&"");
+    creator.add_blank_blank(blank1.node_id, iri.iri, blank2.node_id);
     let graph = creator.collect();
     let triple = graph.iter().next().unwrap();
     assert_eq!(triple.subject(),

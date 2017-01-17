@@ -37,11 +37,12 @@ fn read_file(path: &str) -> io::Result<String> {
 }
 
 fn load_graph(data: &str, base: &str) -> rdfio::Result<MyGraph> {
-    let mut blank_node_creator = tel::BlankNodeCreator::new();
-    let mut writer = tel::GraphCreator::with_capacity(65000, &blank_node_creator);
-    let mut triples = TurtleParser::new(data, base, &mut blank_node_creator)?;
-    while let Some(triple) = triples.next() {
-        writer.add_triple(&triple?);
+    let mut writer = tel::GraphCreator::with_capacity(65000);
+    {
+        let mut triples = TurtleParser::new(data, base, &mut writer)?;
+        while let Some(step) = triples.next() {
+            step?;
+        }
     }
     Ok(writer.collect().sort_blank_nodes())
 }
@@ -60,21 +61,21 @@ const RDF_TYPE: &'static str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
 fn infer(graph: &MyGraph) -> rdfio::Result<MyGraph> {
     // for every triple with rdfs:subClassOf infer that the subject and the
     // object are rdfs:Class instances
-    let blank_node_creator = tel::BlankNodeCreator::new();
-    let mut writer = tel::GraphCreator::with_capacity(65000, &blank_node_creator);
+    let mut writer = tel::GraphCreator::with_capacity(65000);
     for triple in graph.iter().filter(|triple| triple.predicate().as_str() == RDFS_SUB_CLASS_OF) {
-        writer.add_iri_iri(triple.subject().as_iri().unwrap().clone(),
-                           RDF_TYPE,
-                           RDFS_CLASS);
-        match triple.object() {
-            Resource::BlankNode(b, _) => {
-                writer.add_blank_iri(b, RDF_TYPE, RDFS_CLASS);
-            }
-            Resource::IRI(iri) => {
-                writer.add_iri_iri(iri, RDF_TYPE, RDFS_CLASS);
-            }
-            _ => {}
-        }
+        // writer.add_iri_iri(triple.subject().as_iri().unwrap().clone(),
+        // RDF_TYPE,
+        // RDFS_CLASS);
+        // match triple.object() {
+        // Resource::BlankNode(b, _) => {
+        // writer.add_blank_iri(b, RDF_TYPE, RDFS_CLASS);
+        // }
+        // Resource::IRI(iri) => {
+        // writer.add_iri_iri(iri, RDF_TYPE, RDFS_CLASS);
+        // }
+        // _ => {}
+        // }
+        //
     }
     Ok(writer.collect().sort_blank_nodes())
 }

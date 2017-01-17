@@ -1,67 +1,66 @@
-/*!
-Traits for RDF graphs.
-
-RDF graphs consist of triples: a subject, a predicate, and an object.
-Triples are also called statements: A triple says something about something.
-For example:
-
-```turtle
-@prefix nco: <http://www.semanticdesktop.org/ontologies/2007/03/22/nco#> .
-@prefix nfo: <http://www.semanticdesktop.org/ontologies/2007/03/22/nfo#> .
-@prefix :    <http://example.org/> .
-
-<hello_world.rs>  a                        nfo:SourceCode .
-<hello_world.rs>  nfo:programmingLanguage  "Rust"@en .
-<hello_world.rs>  nco:creator              :alice .
-:alice            nco:hasName              _:alice_name .
-_:alice_name      nco:nickname             "alist" .
-```
-
-This small graph states a few things about a resource `hello_world.rs`.
-`hello_world.rs` is a relative IRI. The first triple states that
-`hello_world.rs` is source code. The second statement says that it is written
-in Rust. The last three triple identify the creator by nickname.
-
-Basically a graph is a table with three columns: subject, predicate, object. In
-this example the subjects are, in short form, `<hello_world.rs>`, `:alice` and
-`_:alice_name`. The first two are IRIs. They expand to full IRIs when parsed:
-`file:///home/alice/src/hello/hello_world.rs` and `http://example.org/alice`.
-
-These IRIs uniquely identify a *resource*, in this case the file
-`hello_world.rs` and the person Alice.
-
-One of the subjects in the example, `_:alice_name` is not an IRI but a blank
-node. Blank nodes are used for subjects and objects for which no identifier is
-known or needed.
-
-The second column contains the predicates. Predicates are always IRIs.
-The predicate describes a relation between a subject and an object.
-
-The third column contains the objects. An object can be a blank node, an IRI or
-a literal. The value of a literal is written in quotes. A literal can have a
-a datatype or a language. In the example, the literal value `Rust` is
-english (`@en`).
-
-The format of RDF looks very verbose like this. The form of this example is
-[Turtle](https://www.w3.org/TR/turtle/).
-There are also binary formats for RDF graphs such as
-[HDT](http://www.rdfhdt.org/what-is-hdt/).
-
-http://www.w3.org/TR/rdf-concepts
-
-
-This module contains traits that correspond to concepts in RDF.
-
-BlankNodePtr, IRIPtr and LiteralPtr are pointers into the graph. Together they
-form a Triple. The subject of a triple can be a blank node or an IRI. This is
-modelled by the enum BlankNodeOrIRI. A predicate can only be an IRI. An object
-can take any kind of resource so the enum Resource encapsulates BlankNodePtr,
-IRIPtr and LiteralPtr.
-
-In this module, graphs are immutable, but an new graph can be created by
-extending another graph (TODO).
-
-*/
+//! Traits for RDF graphs.
+//!
+//! RDF graphs consist of triples: a subject, a predicate, and an object.
+//! Triples are also called statements: A triple says something about something.
+//! For example:
+//!
+//! ```turtle
+//! @prefix nco: <http://www.semanticdesktop.org/ontologies/2007/03/22/nco#> .
+//! @prefix nfo: <http://www.semanticdesktop.org/ontologies/2007/03/22/nfo#> .
+//! @prefix :    <http://example.org/> .
+//!
+//! <hello_world.rs>  a                        nfo:SourceCode .
+//! <hello_world.rs>  nfo:programmingLanguage  "Rust"@en .
+//! <hello_world.rs>  nco:creator              :alice .
+//! :alice            nco:hasName              _:alice_name .
+//! _:alice_name      nco:nickname             "alist" .
+//! ```
+//!
+//! This small graph states a few things about a resource `hello_world.rs`.
+//! `hello_world.rs` is a relative IRI. The first triple states that
+//! `hello_world.rs` is source code. The second statement says that it is written
+//! in Rust. The last three triple identify the creator by nickname.
+//!
+//! Basically a graph is a table with three columns: subject, predicate, object. In
+//! this example the subjects are, in short form, `<hello_world.rs>`, `:alice` and
+//! `_:alice_name`. The first two are IRIs. They expand to full IRIs when parsed:
+//! `file:///home/alice/src/hello/hello_world.rs` and `http://example.org/alice`.
+//!
+//! These IRIs uniquely identify a *resource*, in this case the file
+//! `hello_world.rs` and the person Alice.
+//!
+//! One of the subjects in the example, `_:alice_name` is not an IRI but a blank
+//! node. Blank nodes are used for subjects and objects for which no identifier is
+//! known or needed.
+//!
+//! The second column contains the predicates. Predicates are always IRIs.
+//! The predicate describes a relation between a subject and an object.
+//!
+//! The third column contains the objects. An object can be a blank node, an IRI or
+//! a literal. The value of a literal is written in quotes. A literal can have a
+//! a datatype or a language. In the example, the literal value `Rust` is
+//! english (`@en`).
+//!
+//! The format of RDF looks very verbose like this. The form of this example is
+//! [Turtle](https://www.w3.org/TR/turtle/).
+//! There are also binary formats for RDF graphs such as
+//! [HDT](http://www.rdfhdt.org/what-is-hdt/).
+//!
+//! http://www.w3.org/TR/rdf-concepts
+//!
+//!
+//! This module contains traits that correspond to concepts in RDF.
+//!
+//! BlankNodePtr, IRIPtr and LiteralPtr are pointers into the graph. Together they
+//! form a Triple. The subject of a triple can be a blank node or an IRI. This is
+//! modelled by the enum BlankNodeOrIRI. A predicate can only be an IRI. An object
+//! can take any kind of resource so the enum Resource encapsulates BlankNodePtr,
+//! IRIPtr and LiteralPtr.
+//!
+//! In this module, graphs are immutable, but an new graph can be created by
+//! extending another graph (TODO).
+//!
+//!
 
 use std::cmp::Ordering;
 use std::marker::PhantomData;
@@ -86,13 +85,13 @@ pub trait BlankNodePtr<'g> {
     /// # use rdfio::graphs::tel;
     /// # use rdfio::graph::*;
     /// #
-    /// # let mut blank_node_creator = tel::BlankNodeCreator::new();
-    /// # let mut creator = tel::GraphCreator::with_capacity(0, &blank_node_creator);
-    /// let blank_node = blank_node_creator.create_blank_node();
+    /// # let mut creator = tel::GraphCreator::with_capacity(0);
+    /// # let ok = creator.create_iri(&"ok");
+    /// let blank_node = creator.create_blank_node();
     /// let blank_node_or_iri = blank_node.to_blank_node_or_iri();
     /// assert_eq!(Some(&blank_node), blank_node_or_iri.as_blank_node());
     /// # let typed: BlankNodeOrIRI<_, &str> = blank_node_or_iri;
-    /// # creator.add_blank_blank(blank_node, "ok", blank_node);
+    /// # creator.add_blank_blank(&blank_node, &ok, &blank_node);
     /// # let graph: tel::Graph64 = creator.collect();
     /// ```
     fn to_blank_node_or_iri<I>(&self) -> BlankNodeOrIRI<'g, Self, I>
@@ -110,11 +109,13 @@ pub trait BlankNodePtr<'g> {
     /// # use rdfio::graphs::tel;
     /// # use rdfio::graph::*;
     /// #
-    /// # let mut blank_node_creator = tel::BlankNodeCreator::new();
-    /// # let mut creator = tel::GraphCreator::with_capacity(0, &blank_node_creator);
-    /// # creator.add_iri_literal("", "", "hello");
-    /// # let graph: tel::Graph64 = creator.collect();
+    /// # let mut creator = tel::GraphCreator::with_capacity(0);
+    /// # let iri = creator.create_iri(&"");
     /// # const XSD_STRING: &'static str = "http://www.w3.org/2001/XMLSchema#string";
+    /// # let xsd_string = creator.create_datatype(&XSD_STRING);
+    /// # let hello = creator.create_literal_datatype(&"hello", &xsd_string);
+    /// # creator.add_iri_literal(&iri, &iri, &hello);
+    /// # let graph: tel::Graph64 = creator.collect();
     /// let literal = graph.find_literal("hello", XSD_STRING, None).unwrap();
     /// let resource = literal.to_resource();
     /// assert_eq!(Some(&literal), resource.as_literal());
@@ -336,39 +337,99 @@ pub trait Triple<'g, B, I, L>
     fn object(&self) -> Resource<'g, B, I, L>;
 }
 
-pub trait BlankNodeCreator<'a, B: 'a>
-    where B: BlankNodePtr<'a>
+pub enum WriterBlankNodeOrIRI<'g, W>
+    where W: GraphWriter<'g>
 {
-    fn create_blank_node(&mut self) -> B;
+    BlankNode(W::BlankNode, PhantomData<&'g u8>),
+    IRI(W::IRI),
 }
-pub trait GraphWriter<'g, B: 'g>
-    where B: BlankNodePtr<'g>
+pub enum WriterResource<'g, W>
+    where W: GraphWriter<'g>
 {
+    BlankNode(W::BlankNode, PhantomData<&'g u8>),
+    IRI(W::IRI),
+    Literal(W::Literal),
+}
+
+pub trait GraphWriter<'g> {
+    type BlankNode: Clone;
+    type IRI: Clone;
+    type Literal;
+    type Datatype: Clone;
+    type Language;
     type Graph: Graph<'g>;
-    /// Add a triple.
-    ///
-    fn add_triple<T: 'g, I: 'g, L: 'g>(&mut self, triple: &T)
-        where T: Triple<'g, B, I, L>,
-              I: IRIPtr<'g>,
-              L: LiteralPtr<'g>;
-    fn add_blank_blank<'p, P>(&mut self, subject: B, predicate: P, object: B) where P: IRIPtr<'p>;
-    fn add_blank_iri<'p, 'o, P, O>(&mut self, subject: B, predicate: P, object: O)
-        where P: IRIPtr<'p>,
-              O: IRIPtr<'o>;
-    fn add_blank_literal<'p, 'o, P, O>(&mut self, subject: B, predicate: P, object: O)
-        where P: IRIPtr<'p>,
-              O: LiteralPtr<'o>;
-    fn add_iri_blank<'s, 'p, S, P>(&mut self, subject: S, predicate: P, object: B)
-        where S: IRIPtr<'s>,
-              P: IRIPtr<'p>;
-    fn add_iri_iri<'s, 'p, 'o, S, P, O>(&mut self, subject: S, predicate: P, object: O)
-        where S: IRIPtr<'s>,
-              P: IRIPtr<'p>,
-              O: IRIPtr<'o>;
-    fn add_iri_literal<'s, 'p, 'o, S, P, O>(&mut self, subject: S, predicate: P, object: O)
-        where S: IRIPtr<'s>,
-              P: IRIPtr<'p>,
-              O: LiteralPtr<'o>;
+
+    fn create_blank_node(&mut self) -> Self::BlankNode;
+    fn create_iri<'a, I: 'a>(&mut self, &I) -> Self::IRI where I: IRIPtr<'a>;
+    fn create_literal<'a, L: 'a>(&mut self, &L) -> Self::Literal where L: LiteralPtr<'a>;
+    fn create_datatype(&mut self, &str) -> Self::Datatype;
+    fn create_language(&mut self, &str) -> Self::Language;
+    fn create_literal_datatype<'a>(&mut self,
+                                   value: &str,
+                                   datatype: &Self::Datatype)
+                                   -> Self::Literal;
+    fn create_literal_language<'a>(&mut self,
+                                   value: &str,
+                                   language: &Self::Language)
+                                   -> Self::Literal;
+
+    fn add(&mut self,
+           subject: &WriterBlankNodeOrIRI<'g, Self>,
+           predicate: &Self::IRI,
+           object: &WriterResource<'g, Self>)
+        where Self: Sized
+    {
+        match subject {
+            &WriterBlankNodeOrIRI::BlankNode(ref subject, _) => {
+                match object {
+                    &WriterResource::BlankNode(ref object, _) => {
+                        self.add_blank_blank(subject, predicate, object);
+                    }
+                    &WriterResource::IRI(ref object) => {
+                        GraphWriter::add_blank_iri(self, subject, predicate, object);
+                    }
+                    &WriterResource::Literal(ref object) => {
+                        GraphWriter::add_blank_literal(self, subject, predicate, object);
+                    }
+                }
+            }
+            &WriterBlankNodeOrIRI::IRI(ref subject) => {
+                match object {
+                    &WriterResource::BlankNode(ref object, _) => {
+                        GraphWriter::add_iri_blank(self, subject, predicate, object);
+                    }
+                    &WriterResource::IRI(ref object) => {
+                        GraphWriter::add_iri_iri(self, subject, predicate, object);
+                    }
+                    &WriterResource::Literal(ref object) => {
+                        GraphWriter::add_iri_literal(self, subject, predicate, object);
+                    }
+                }
+            }
+        }
+    }
+
+    fn add_blank_blank(&mut self,
+                       subject: &Self::BlankNode,
+                       predicate: &Self::IRI,
+                       object: &Self::BlankNode);
+    fn add_blank_iri(&mut self,
+                     subject: &Self::BlankNode,
+                     predicate: &Self::IRI,
+                     object: &Self::IRI);
+    fn add_blank_literal(&mut self,
+                         subject: &Self::BlankNode,
+                         predicate: &Self::IRI,
+                         bject: &Self::Literal);
+    fn add_iri_blank(&mut self,
+                     subject: &Self::IRI,
+                     predicate: &Self::IRI,
+                     object: &Self::BlankNode);
+    fn add_iri_iri(&mut self, subject: &Self::IRI, predicate: &Self::IRI, object: &Self::IRI);
+    fn add_iri_literal(&mut self,
+                       subject: &Self::IRI,
+                       predicate: &Self::IRI,
+                       object: &Self::Literal);
     fn collect(self) -> Self::Graph;
 }
 
@@ -384,7 +445,11 @@ pub trait Graph<'g> {
     fn iter(&'g self) -> Self::SPOIter;
 
     fn find_iri<'a>(&'g self, iri: &'a str) -> Option<Self::IRIPtr>;
-    fn find_literal<'a>(&'g self, literal: &'a str, datatype: &'a str, language: Option<&'a str>) -> Option<Self::LiteralPtr>;
+    fn find_literal<'a>(&'g self,
+                        literal: &'a str,
+                        datatype: &'a str,
+                        language: Option<&'a str>)
+                        -> Option<Self::LiteralPtr>;
 
     fn iter_s_p(&'g self,
                 subject: BlankNodeOrIRI<'g, Self::BlankNodePtr, Self::IRIPtr>,
