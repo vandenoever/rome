@@ -474,6 +474,21 @@ pub mod $name {
                 None
             }
         }
+        fn find_literal<'a>(&'g self,
+                            literal: &'a str,
+                            datatype: &'a str,
+                            language: Option<&'a str>)
+                            -> Option<Self::LiteralPtr> {
+            let literals = ($( self.graphs.$n.find_literal(literal, datatype, language) ),+);
+            let any = $( literals.$n.is_some() )||+;
+            if any {
+                Some(Literal{
+                    literals: literals
+                })
+            } else {
+                None
+            }
+        }
         fn iter_s_p(&'g self,
                     subject: BlankNodeOrIRI<'g, Self::BlankNodePtr, Self::IRIPtr>,
                     predicate: Self::IRIPtr)

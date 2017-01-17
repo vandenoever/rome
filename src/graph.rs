@@ -1,15 +1,126 @@
+/*!
+Traits for RDF graphs.
+
+RDF graphs consist of triples: a subject, a predicate, and an object.
+Triples are also called statements: A triple says something about something.
+For example:
+
+```turtle
+@prefix nco: <http://www.semanticdesktop.org/ontologies/2007/03/22/nco#> .
+@prefix nfo: <http://www.semanticdesktop.org/ontologies/2007/03/22/nfo#> .
+@prefix :    <http://example.org/> .
+
+<hello_world.rs>  a                        nfo:SourceCode .
+<hello_world.rs>  nfo:programmingLanguage  "Rust"@en .
+<hello_world.rs>  nco:creator              :alice .
+:alice            nco:hasName              _:alice_name .
+_:alice_name      nco:nickname             "alist" .
+```
+
+This small graph states a few things about a resource `hello_world.rs`.
+`hello_world.rs` is a relative IRI. The first triple states that
+`hello_world.rs` is source code. The second statement says that it is written
+in Rust. The last three triple identify the creator by nickname.
+
+Basically a graph is a table with three columns: subject, predicate, object. In
+this example the subjects are, in short form, `<hello_world.rs>`, `:alice` and
+`_:alice_name`. The first two are IRIs. They expand to full IRIs when parsed:
+`file:///home/alice/src/hello/hello_world.rs` and `http://example.org/alice`.
+
+These IRIs uniquely identify a *resource*, in this case the file
+`hello_world.rs` and the person Alice.
+
+One of the subjects in the example, `_:alice_name` is not an IRI but a blank
+node. Blank nodes are used for subjects and objects for which no identifier is
+known or needed.
+
+The second column contains the predicates. Predicates are always IRIs.
+The predicate describes a relation between a subject and an object.
+
+The third column contains the objects. An object can be a blank node, an IRI or
+a literal. The value of a literal is written in quotes. A literal can have a
+a datatype or a language. In the example, the literal value `Rust` is
+english (`@en`).
+
+The format of RDF looks very verbose like this. The form of this example is
+[Turtle](https://www.w3.org/TR/turtle/).
+There are also binary formats for RDF graphs such as
+[HDT](http://www.rdfhdt.org/what-is-hdt/).
+
+http://www.w3.org/TR/rdf-concepts
+
+
+This module contains traits that correspond to concepts in RDF.
+
+BlankNodePtr, IRIPtr and LiteralPtr are pointers into the graph. Together they
+form a Triple. The subject of a triple can be a blank node or an IRI. This is
+modelled by the enum BlankNodeOrIRI. A predicate can only be an IRI. An object
+can take any kind of resource so the enum Resource encapsulates BlankNodePtr,
+IRIPtr and LiteralPtr.
+
+In this module, graphs are immutable, but an new graph can be created by
+extending another graph (TODO).
+
+*/
+
 use std::cmp::Ordering;
 use std::marker::PhantomData;
 use iter::sorted_iterator::SortedIterator;
 use constants;
 
+/// Instances of this trait point to a blank node in a graph.
+///
+/// Different graph implementations can represent blank nodes in a different
+/// way. The essense of the blank node is the same in all graphs and is capured
+/// by this trait.
+///
+/// Blank nodes are tied to their graph. Their lifetime `'g` is the same as the
+/// lifetime of the graph to which they belong.
 pub trait BlankNodePtr<'g> {
+    /// Convert this `BlankNodePtr` to a `BlankNodeOrIRI`.
+    ///
+    /// This is a convenience wrapper around the constructor for the enum
+    /// `BlankNodeOrIRI`.
+    ///
+    /// ```
+    /// # use rdfio::graphs::tel;
+    /// # use rdfio::graph::*;
+    /// #
+    /// # let mut blank_node_creator = tel::BlankNodeCreator::new();
+    /// # let mut creator = tel::GraphCreator::with_capacity(0, &blank_node_creator);
+    /// let blank_node = blank_node_creator.create_blank_node();
+    /// let blank_node_or_iri = blank_node.to_blank_node_or_iri();
+    /// assert_eq!(Some(&blank_node), blank_node_or_iri.as_blank_node());
+    /// # let typed: BlankNodeOrIRI<_, &str> = blank_node_or_iri;
+    /// # creator.add_blank_blank(blank_node, "ok", blank_node);
+    /// # let graph: tel::Graph64 = creator.collect();
+    /// ```
     fn to_blank_node_or_iri<I>(&self) -> BlankNodeOrIRI<'g, Self, I>
         where Self: Clone,
               I: IRIPtr<'g>
     {
         BlankNodeOrIRI::BlankNode(self.clone(), PhantomData)
     }
+    /// Convert this `BlankNodePtr` to a `Resource`.
+    ///
+    /// This is a convenience wrapper around the constructor for the enum
+    /// `Resource`.
+    ///
+    /// ```
+    /// # use rdfio::graphs::tel;
+    /// # use rdfio::graph::*;
+    /// #
+    /// # let mut blank_node_creator = tel::BlankNodeCreator::new();
+    /// # let mut creator = tel::GraphCreator::with_capacity(0, &blank_node_creator);
+    /// # creator.add_iri_literal("", "", "hello");
+    /// # let graph: tel::Graph64 = creator.collect();
+    /// # const XSD_STRING: &'static str = "http://www.w3.org/2001/XMLSchema#string";
+    /// let literal = graph.find_literal("hello", XSD_STRING, None).unwrap();
+    /// let resource = literal.to_resource();
+    /// assert_eq!(Some(&literal), resource.as_literal());
+    /// # let resource_option = graph.iter().next().map(|t|t.object());
+    /// # resource_option.or(Some(resource));
+    /// ```
     fn to_resource<I, L>(&self) -> Resource<'g, Self, I, L>
         where Self: Clone,
               I: IRIPtr<'g>,
@@ -18,7 +129,12 @@ pub trait BlankNodePtr<'g> {
         Resource::BlankNode(self.clone(), PhantomData)
     }
 }
+/// A trait for a pointers to IRI in graphs.
+///
+/// Like blank nodes and literals, IRIs are tied to the graph to which they
+/// belong.
 pub trait IRIPtr<'g> {
+    /// Get a string representation of the IRI.
     fn as_str(&self) -> &str;
     fn to_blank_node_or_iri<B>(&self) -> BlankNodeOrIRI<'g, B, Self>
         where Self: Clone,
@@ -268,6 +384,7 @@ pub trait Graph<'g> {
     fn iter(&'g self) -> Self::SPOIter;
 
     fn find_iri<'a>(&'g self, iri: &'a str) -> Option<Self::IRIPtr>;
+    fn find_literal<'a>(&'g self, literal: &'a str, datatype: &'a str, language: Option<&'a str>) -> Option<Self::LiteralPtr>;
 
     fn iter_s_p(&'g self,
                 subject: BlankNodeOrIRI<'g, Self::BlankNodePtr, Self::IRIPtr>,

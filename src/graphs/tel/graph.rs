@@ -414,6 +414,36 @@ impl<'g, SPO: 'g, OPS: 'g> graph::Graph<'g> for Graph<SPO, OPS>
             }
         })
     }
+    fn find_literal<'a>(&'g self,
+                        literal: &'a str,
+                        datatype: &'a str,
+                        language: Option<&'a str>)
+                        -> Option<Self::LiteralPtr> {
+        if let Some(l) = self.d.strings.find(literal) {
+            match language.and_then(|l| self.d.datatype_or_lang.find(l)) {
+                Some(lang) => {
+                    Some(LiteralPtr {
+                        graph: &self.d,
+                        lexical: l.id,
+                        datatype: self.d.lang_string_datatype_id,
+                        language: Some(lang.id),
+                    })
+                }
+                None => {
+                    self.d.datatype_or_lang.find(datatype).map(|d| {
+                        LiteralPtr {
+                            graph: &self.d,
+                            lexical: l.id,
+                            datatype: d.id,
+                            language: None,
+                        }
+                    })
+                }
+            }
+        } else {
+            None
+        }
+    }
     fn iter_s_p(&'g self,
                 subject: BlankNodeOrIRI<'g, SPO, OPS>,
                 predicate: IRIPtr<'g, SPO, OPS>)
