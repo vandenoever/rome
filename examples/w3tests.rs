@@ -138,37 +138,119 @@ impl<'g> LiteralPtr<'g> for Literal {
     }
 }
 
-fn write_assertion<'a, 'g, W: 'g>(assertion: &'a Assertion, output: &mut W) -> rdfio::Result<()>
+struct Cache<'g, W: 'g>
     where W: GraphWriter<'g>
 {
-    let rdf_type = output.create_iri(&RDF_TYPE);
-    let earl_assertion = output.create_iri(&EARL_ASSERTION);
-    let earl_test_result = output.create_iri(&EARL_TEST_RESULT);
-    let earl_test = output.create_iri(&EARL_TEST);
-    let earl_result = output.create_iri(&EARL_RESULT);
-    let earl_passed = output.create_iri(&EARL_PASSED);
-    let earl_failed = output.create_iri(&EARL_FAILED);
-    let earl_cant_tell = output.create_iri(&EARL_CANT_TELL);
-    let earl_outcome = output.create_iri(&EARL_OUTCOME);
-    let dc_date = output.create_iri(&DC_DATE);
+    rdf_type: Option<W::IRI>,
+    earl_assertion: Option<W::IRI>,
+    earl_test_result: Option<W::IRI>,
+    earl_test: Option<W::IRI>,
+    earl_result: Option<W::IRI>,
+    earl_passed: Option<W::IRI>,
+    earl_failed: Option<W::IRI>,
+    earl_cant_tell: Option<W::IRI>,
+    earl_outcome: Option<W::IRI>,
+    dc_date: Option<W::IRI>,
+    xsd_date_time: Option<W::Datatype>,
+}
 
-    let assertion_blank_node = output.create_blank_node();
-    output.add_blank_iri(&assertion_blank_node, &rdf_type, &earl_assertion);
+impl<'g, W: 'g> Cache<'g, W>
+    where W: GraphWriter<'g>
+{
+    fn new() -> Cache<'g, W> {
+        Cache {
+            rdf_type: None,
+            earl_assertion: None,
+            earl_test_result: None,
+            earl_test: None,
+            earl_result: None,
+            earl_passed: None,
+            earl_failed: None,
+            earl_cant_tell: None,
+            earl_outcome: None,
+            dc_date: None,
+            xsd_date_time: None,
+        }
+    }
+    fn get<'a>(o: &'a mut Option<W::IRI>, w: &mut W, iri: &str) -> W::IRI {
+        if o.is_none() {
+            *o = Some(w.create_iri(&iri));
+        }
+        o.clone().unwrap()
+    }
+    fn rdf_type(&mut self, w: &mut W) -> W::IRI {
+        Cache::get(&mut self.rdf_type, w, &RDF_TYPE)
+    }
+    fn earl_assertion(&mut self, w: &mut W) -> W::IRI {
+        Cache::get(&mut self.earl_assertion, w, &EARL_ASSERTION)
+    }
+    fn earl_test_result(&mut self, w: &mut W) -> W::IRI {
+        Cache::get(&mut self.earl_test_result, w, &EARL_TEST_RESULT)
+    }
+    fn earl_test(&mut self, w: &mut W) -> W::IRI {
+        Cache::get(&mut self.earl_test, w, &EARL_TEST)
+    }
+    fn earl_result(&mut self, w: &mut W) -> W::IRI {
+        Cache::get(&mut self.earl_result, w, &EARL_RESULT)
+    }
+    fn earl_passed(&mut self, w: &mut W) -> W::IRI {
+        Cache::get(&mut self.earl_passed, w, &EARL_PASSED)
+    }
+    fn earl_failed(&mut self, w: &mut W) -> W::IRI {
+        Cache::get(&mut self.earl_failed, w, &EARL_FAILED)
+    }
+    fn earl_cant_tell(&mut self, w: &mut W) -> W::IRI {
+        Cache::get(&mut self.earl_cant_tell, w, &EARL_CANT_TELL)
+    }
+    fn earl_outcome(&mut self, w: &mut W) -> W::IRI {
+        Cache::get(&mut self.earl_outcome, w, &EARL_OUTCOME)
+    }
+    fn dc_date(&mut self, w: &mut W) -> W::IRI {
+        Cache::get(&mut self.dc_date, w, &DC_DATE)
+    }
+    fn xsd_date_time(&mut self, w: &mut W) -> W::Datatype {
+        if self.xsd_date_time.is_none() {
+            self.xsd_date_time = Some(w.create_datatype(&XSD_DATE_TIME));
+        }
+        self.xsd_date_time.clone().unwrap()
+    }
+}
+
+
+fn write_assertion<'a, 'g, W: 'g>(assertion: &'a Assertion,
+                                  w: &mut W,
+                                  cache: &mut Cache<'g, W>)
+                                  -> rdfio::Result<()>
+    where W: GraphWriter<'g>
+{
+    let rdf_type = cache.rdf_type(w);
+    let earl_assertion = cache.earl_assertion(w);
+    let earl_test_result = cache.earl_test_result(w);
+    let earl_result = cache.earl_result(w);
+    let earl_passed = cache.earl_passed(w);
+    let earl_failed = cache.earl_failed(w);
+    let earl_cant_tell = cache.earl_cant_tell(w);
+    let earl_outcome = cache.earl_outcome(w);
+    let earl_test = cache.earl_test(w);
+    let dc_date = cache.dc_date(w);
+
+    let assertion_blank_node = w.create_blank_node();
+    w.add_blank_iri(&assertion_blank_node, &rdf_type, &earl_assertion);
     let date = format!("{}", assertion.date.rfc3339());
-    let date_time = output.create_datatype(&XSD_DATE_TIME);
-    let literal = output.create_literal_datatype(&date, &date_time);
-    output.add_blank_literal(&assertion_blank_node, &dc_date, &literal);
-    let result_blank_node = output.create_blank_node();
-    output.add_blank_iri(&result_blank_node, &rdf_type, &earl_test_result);
-    output.add_blank_blank(&assertion_blank_node, &earl_result, &result_blank_node);
+    let date_time = cache.xsd_date_time(w);
+    let literal = w.create_literal_datatype(&date, &date_time);
+    w.add_blank_literal(&assertion_blank_node, &dc_date, &literal);
+    let result_blank_node = w.create_blank_node();
+    w.add_blank_iri(&result_blank_node, &rdf_type, &earl_test_result);
+    w.add_blank_blank(&assertion_blank_node, &earl_result, &result_blank_node);
     let outcome = match assertion.result.outcome {
         Outcome::Passed => &earl_passed,
         Outcome::Failed => &earl_failed,
         Outcome::CannotTell => &earl_cant_tell,
     };
-    output.add_blank_iri(&result_blank_node, &earl_outcome, outcome);
-    let test = output.create_iri(&assertion.test.as_str());
-    output.add_blank_iri(&assertion_blank_node, &earl_test, &test);
+    w.add_blank_iri(&result_blank_node, &earl_outcome, outcome);
+    let test = w.create_iri(&assertion.test.as_str());
+    w.add_blank_iri(&assertion_blank_node, &earl_test, &test);
     Ok(())
 }
 
@@ -486,8 +568,9 @@ fn run_eval_negative_eval<'a>(test: &TestTurtleNegativeEval,
 
 fn output_as_turtle(assertions: &Vec<Assertion>) -> rdfio::Result<()> {
     let mut writer = tel::GraphCreator::with_capacity(100000);
+    let mut cache = Cache::new();
     for a in assertions {
-        write_assertion(&a, &mut writer)?;
+        write_assertion(&a, &mut writer, &mut cache)?;
     }
     let graph: MyGraph = writer.collect().sort_blank_nodes();
     let mut ns = Namespaces::new();

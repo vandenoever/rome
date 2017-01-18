@@ -223,6 +223,18 @@ impl<'g, B, I> BlankNodeOrIRI<'g, B, I>
     where B: BlankNodePtr<'g> + Clone,
           I: IRIPtr<'g> + Clone
 {
+    pub fn is_blank_node(&self) -> bool {
+        match self {
+            &BlankNodeOrIRI::BlankNode(_, _) => true,
+            _ => false,
+        }
+    }
+    pub fn is_iri(&self) -> bool {
+        match self {
+            &BlankNodeOrIRI::IRI(_) => true,
+            _ => false,
+        }
+    }
     pub fn as_blank_node(&self) -> Option<&B> {
         match self {
             &BlankNodeOrIRI::BlankNode(ref b, _) => Some(b),
@@ -295,6 +307,24 @@ impl<'g, B, I, L> Resource<'g, B, I, L>
           I: IRIPtr<'g>,
           L: LiteralPtr<'g>
 {
+    pub fn is_blank_node(&self) -> bool {
+        match self {
+            &Resource::BlankNode(_, _) => true,
+            _ => false,
+        }
+    }
+    pub fn is_iri(&self) -> bool {
+        match self {
+            &Resource::IRI(_) => true,
+            _ => false,
+        }
+    }
+    pub fn is_literal(&self) -> bool {
+        match self {
+            &Resource::Literal(_) => true,
+            _ => false,
+        }
+    }
     pub fn as_blank_node(&self) -> Option<&B> {
         match self {
             &Resource::BlankNode(ref b, _) => Some(b),
@@ -349,6 +379,48 @@ pub enum WriterResource<'g, W>
     BlankNode(W::BlankNode, PhantomData<&'g u8>),
     IRI(W::IRI),
     Literal(W::Literal),
+}
+
+/// translate from one graph to another
+/// useful for inferencing
+/// there can be a general implemenation as wel as an optimized one that's
+/// used when extending a graph by inferencing from its own content
+pub trait ResourceTranslator<'g> {
+    type Graph: Graph<'g>;
+    type GraphWriter: GraphWriter<'g>;
+    fn translate_blank_node(&mut self, w: &mut Self::GraphWriter, blank_node: &<Self::Graph as Graph<'g>>::BlankNodePtr) -> <Self::GraphWriter as GraphWriter<'g>>::BlankNode;
+    fn translate_blank_node_or_iri(&mut self,
+                                   w: &mut Self::GraphWriter,
+                                   blank_node_or_iri: &BlankNodeOrIRI<'g,
+                                                                      <Self::Graph as Graph<'g>>::BlankNodePtr,
+                                                                      <Self::Graph as Graph<'g>>::IRIPtr>
+                                  ) -> WriterBlankNodeOrIRI<'g, Self::GraphWriter>
+        where Self: 'g
+    {
+        match blank_node_or_iri {
+            &BlankNodeOrIRI::BlankNode(ref b, p) => {
+                WriterBlankNodeOrIRI::BlankNode(self.translate_blank_node(w, b), p)
+            }
+            &BlankNodeOrIRI::IRI(ref i) => WriterBlankNodeOrIRI::IRI(w.create_iri(i)),
+        }
+    }
+    fn translate_resource(&mut self,
+                          w: &mut Self::GraphWriter,
+                          resource: &Resource<'g,
+                                              <Self::Graph as Graph<'g>>::BlankNodePtr,
+                                              <Self::Graph as Graph<'g>>::IRIPtr,
+                                              <Self::Graph as Graph<'g>>::LiteralPtr>
+                         ) -> WriterResource<'g, Self::GraphWriter>
+        where Self: 'g
+    {
+        match resource {
+            &Resource::BlankNode(ref b, p) => {
+                WriterResource::BlankNode(self.translate_blank_node(w, b), p)
+            }
+            &Resource::IRI(ref i) => WriterResource::IRI(w.create_iri(i)),
+            &Resource::Literal(ref l) => WriterResource::Literal(w.create_literal(l)),
+        }
+    }
 }
 
 pub trait GraphWriter<'g> {

@@ -11,7 +11,8 @@ use std::collections::BTreeMap;
 use std::collections::HashSet;
 use rdfio::graphs::tel;
 use rdfio::io::TurtleParser;
-use rdfio::graph::{Graph, GraphWriter, Triple, IRIPtr, LiteralPtr};
+use rdfio::graph::{Graph, GraphWriter, Triple, ResourceTranslator, IRIPtr, LiteralPtr,
+                   WriterResource};
 use rdfio::namespaces::Namespaces;
 use rdfio::resource::{ResourceBase, IRI, ObjectIter};
 use rdfio::ontology::classes::rdf::Property;
@@ -149,38 +150,80 @@ fn closure<'g>(class: &Class<'g, MyGraph>) -> ObjectIter<'g, Class<'g, MyGraph>>
     class.sub_class_of()
 }
 
+struct Translator<'g> {
+    blank_nodes: BTreeMap<<MyGraph as Graph<'g>>::BlankNodePtr,
+                          <tel::GraphCreator<tel::Triple128SPO,
+                           tel::Triple128OPS> as GraphWriter<'g>>::BlankNode>
+}
+
+impl<'g> Translator<'g> {
+    fn new() -> Translator<'g> {
+        Translator { blank_nodes: BTreeMap::new() }
+    }
+}
+
+impl<'g> ResourceTranslator<'g> for Translator<'g> {
+    type Graph = MyGraph;
+    type GraphWriter = tel::GraphCreator<tel::Triple128SPO, tel::Triple128OPS>;
+    fn translate_blank_node(&mut self,
+                            w: &mut Self::GraphWriter,
+                            blank_node: &<Self::Graph as Graph<'g>>::BlankNodePtr
+        ) -> <Self::GraphWriter as GraphWriter<'g>>::BlankNode {
+        if let Some(blank_node) = self.blank_nodes.get(blank_node) {
+            return blank_node.clone();
+        }
+        let new_blank_node = w.create_blank_node();
+        self.blank_nodes.insert(blank_node.clone(), new_blank_node.clone());
+        new_blank_node
+    }
+}
+
 fn infer(graph: &MyGraph) -> rdfio::Result<MyGraph> {
     // for every triple with rdfs:subClassOf infer that the subject and the
     // object are rdfs:Class instances
-    let mut writer = tel::GraphCreator::with_capacity(65000);
-    let rdf_type = graph.find_iri(RDF_TYPE).unwrap();
-    // let rdfs_class = graph.find_iri(RDFS_CLASS).unwrap().into();
-    for triple in graph.iter().filter(|triple| triple.predicate().as_str() == RDFS_SUB_CLASS_OF) {
-        // writer.add_same_type_triple(&triple.subject(), &rdf_type, &rdfs_class);
-        // if let Some(subject) = triple.object().to_blank_node_or_iri() {
-        // writer.add_same_type_triple(&subject, &rdf_type, &rdfs_class);
-        // }
-        //
+    let oa: ontology_adapter::OntologyAdapter<MyGraph> = ontology::adapter(graph);
+    let mut w = tel::GraphCreator::with_capacity(65000);
+    let mut translator = Translator::new();
+    let rdf_type = w.create_iri(&RDF_TYPE);
+    let rdfs_class = WriterResource::IRI(w.create_iri(&RDFS_CLASS));
+    let rdfs_sub_class_of = graph.find_iri(RDFS_SUB_CLASS_OF).unwrap();
+    for triple in graph.iter()
+        .filter(|triple| !triple.object().is_literal() && triple.predicate() == rdfs_sub_class_of) {
+        let class = translator.translate_blank_node_or_iri(&mut w, &triple.subject());
+        w.add(&class, &rdf_type, &rdfs_class);
+        let class = translator.translate_blank_node_or_iri(&mut w,
+                                                            &triple.object()
+                                                                .to_blank_node_or_iri()
+                                                                .unwrap());
+        w.add(&class, &rdf_type, &rdfs_class);
     }
-    // for triple in graph.iter() {
-    // writer.add_triple(&triple);
-    // }
-    // {
-    // make subClassOf entailment concrete
-    // let oa: ontology_adapter::OntologyAdapter<MyGraph> = ontology::adapter(graph);
-    // for class in Class::iter(&oa) {
-    // let i = TransitiveIterator::new(class.sub_class_of(),
-    //                                |class: &Class<MyGraph>| class.sub_class_of());
-    // let i = TransitiveIterator::new(class.sub_class_of(), closure);
-    // for parent in i {
-    // writer.add_iri_iri(class.this().as_iri().unwrap().clone(),
-    // RDFS_SUB_CLASS_OF,
-    // parent.this().as_iri().unwrap().clone());
-    // }
-    // }
-    // }
+    // copy all triples
+    for triple in graph.iter() {
+        let subject = translator.translate_blank_node_or_iri(&mut w, &triple.subject());
+        let predicate = w.create_iri(&triple.predicate());
+        let object = translator.translate_resource(&mut w, &triple.object());
+        w.add(&subject, &predicate, &object);
+    }
+    {
+        // make subClassOf entailment concrete
+        let rdfs_sub_class_of = w.create_iri(&RDFS_SUB_CLASS_OF);
+        for class in Class::iter(&oa) {
+            // let i = TransitiveIterator::new(class.sub_class_of(),
+            //                                |class: &Class<MyGraph>| class.sub_class_of());
+            let i = TransitiveIterator::new(class.sub_class_of(), closure);
+            let c1 = translator.translate_blank_node_or_iri(&mut w,
+                                                            &class.this()
+                                                                .to_blank_node_or_iri()
+                                                                .unwrap());
+            for parent in i {
+                let o = parent.this().as_iri().unwrap();
+                let iri = w.create_iri(o);
+                w.add(&c1, &rdfs_sub_class_of, &WriterResource::IRI(iri));
+            }
+        }
+    }
 
-    Ok(writer.collect().sort_blank_nodes())
+    Ok(w.collect().sort_blank_nodes())
 }
 
 fn write_mod(o: &Output, iris: &Vec<String>) -> rdfio::Result<()> {
