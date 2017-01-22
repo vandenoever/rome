@@ -1,5 +1,5 @@
-use std::ops::Index;
 use std::cmp::Ordering;
+use std::ops::Index;
 
 struct StringRef {
     start: u32,

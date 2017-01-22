@@ -1,6 +1,10 @@
-use std::iter::Peekable;
 use iter::sorted_iterator::SortedIterator;
+use std::iter::Peekable;
 
+/// Iterator that merges other iterators.
+///
+/// Each unique value in the merged iterators is returned only once.
+/// The input iterators must be sorted.
 pub struct MergeIterator<I>
     where I: SortedIterator,
           I::Item: Ord
@@ -12,12 +16,15 @@ impl<I> MergeIterator<I>
     where I: SortedIterator,
           I::Item: Ord
 {
+    /// Create a new MergeIterator.
     pub fn new() -> MergeIterator<I> {
         MergeIterator { iters: Vec::new() }
     }
+    /// Create a new MergeIterator that expects `capacity` iterators.
     pub fn with_capacity(capacity: usize) -> MergeIterator<I> {
         MergeIterator { iters: Vec::with_capacity(capacity) }
     }
+    /// Add another iterator to the MergeIterator.
     pub fn push(&mut self, i: I) {
         self.iters.push(i.peekable())
     }

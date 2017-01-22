@@ -1,9 +1,9 @@
-use super::grammar_structs::*;
-use super::grammar_helper::*;
+use constants;
+use nom::{Needed, ErrorKind};
 use nom::IResult;
 use nom::IResult::Done;
-use nom::{Needed, ErrorKind};
-use constants;
+use super::grammar_helper::*;
+use super::grammar_structs::*;
 
 /// Take one character if it fits the function
 macro_rules! one_if (

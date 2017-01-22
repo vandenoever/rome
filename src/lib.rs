@@ -1,3 +1,9 @@
+#![warn(missing_docs)]
+/// A crate for working with RDF
+/// By implementing graph::Graph, one can make any data source available as RDF.
+/// Ontology wrappers can be generated from RDF Schema.
+///
+/// This crate is in early development.
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]

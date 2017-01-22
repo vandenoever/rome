@@ -1,13 +1,13 @@
-use std::collections::btree_map::Entry;
-use std::collections::btree_set;
-use std::collections::BTreeMap;
-use std::collections::BTreeSet;
-use rand;
 use graph;
-use graph::Triple;
-use std::rc::Rc;
 #[cfg(test)]
 use graph::{Graph, WritableGraph};
+use graph::Triple;
+use rand;
+use std::collections::BTreeMap;
+use std::collections::BTreeSet;
+use std::collections::btree_map::Entry;
+use std::collections::btree_set;
+use std::rc::Rc;
 
 pub type BlankNode = (usize, usize);
 

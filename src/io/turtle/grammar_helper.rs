@@ -1,9 +1,9 @@
-use nom::IResult;
+use error::{Error, Result};
 use nom::ErrorKind;
+use nom::IResult;
 use nom::Needed;
 use std::char;
 use std::str::Chars;
-use error::{Error, Result};
 
 pub fn string_literal(str: &str,
                       ql: usize,

@@ -1,5 +1,5 @@
-use std::marker::PhantomData;
 use iter::sorted_iterator::*;
+use std::marker::PhantomData;
 use super::compact_triple::*;
 use super::graph::*;
 use super::triple::*;

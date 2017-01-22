@@ -62,10 +62,10 @@
 //!
 //!
 
+use constants;
+use iter::sorted_iterator::SortedIterator;
 use std::cmp::Ordering;
 use std::marker::PhantomData;
-use iter::sorted_iterator::SortedIterator;
-use constants;
 
 /// Instances of this trait point to a blank node in a graph.
 ///
@@ -137,12 +137,16 @@ pub trait BlankNodePtr<'g> {
 pub trait IRIPtr<'g> {
     /// Get a string representation of the IRI.
     fn as_str(&self) -> &str;
+    /// Wrap the IRI in a BlankNodeOrIRI
+    /// This is useful when using it as a subject in a triple.
     fn to_blank_node_or_iri<B>(&self) -> BlankNodeOrIRI<'g, B, Self>
         where Self: Clone,
               B: BlankNodePtr<'g>
     {
         BlankNodeOrIRI::IRI(self.clone())
     }
+    /// Wrap the IRI in a Resource
+    /// This is useful when using it as an object in a triple.
     fn to_resource<B, L>(&self) -> Resource<'g, B, Self, L>
         where Self: Clone,
               B: BlankNodePtr<'g>,
@@ -167,15 +171,32 @@ impl<'g> Ord for IRIPtr<'g> {
         self.as_str().cmp(other.as_str())
     }
 }
+/// A trait for a pointers to datatypes of literals in graphs.
+///
+/// Like literals, DatatypePtrs are tied to the graph to which they
+/// belong. A datatype is an IRI, but a graph may use different pointers for
+/// datatypes and IRIs.
 pub trait DatatypePtr<'g> {
+    /// Get the datatype as a string.
     fn as_str(&self) -> &str;
 }
+/// A trait for a pointers to literals in graphs.
+///
+/// The lifetime of iterals is tied to the graph to which they belong.
+/// A literal always has a datatype. It has an optional language.
 pub trait LiteralPtr<'g> {
+    /// The type of pointer for the datatype of the literal.
     type DatatypePtr: DatatypePtr<'g> + PartialEq;
+    /// Get the value of the literal (without datattype or language)
     fn as_str(&self) -> &str;
+    /// Get the datatype of the literal.
     fn datatype(&self) -> Self::DatatypePtr;
+    /// Get the datatype of the literal as a string.
     fn datatype_str(&self) -> &str;
+    /// Get the language of the literal.
     fn language(&self) -> Option<&str>;
+    /// Wrap the literal in a Resource.
+    /// This is convenient when passing the literal as an object in a triple.
     fn to_resource<B, I>(&self) -> Resource<'g, B, I, Self>
         where Self: Clone,
               B: BlankNodePtr<'g>,
@@ -185,42 +206,50 @@ pub trait LiteralPtr<'g> {
     }
 }
 
+/// An enum that contains a blank node or an IRI
 #[derive(PartialEq,Eq,PartialOrd,Ord,Clone,Debug)]
 pub enum BlankNodeOrIRI<'g, B: 'g, I: 'g>
     where B: BlankNodePtr<'g>,
           I: IRIPtr<'g>
 {
+    /// This is a blank node.
     BlankNode(B, PhantomData<&'g u8>),
+    /// This is an IRI.
     IRI(I),
 }
 impl<'g, B, I> BlankNodeOrIRI<'g, B, I>
     where B: BlankNodePtr<'g> + Clone,
           I: IRIPtr<'g> + Clone
 {
+    /// Is the BlankNodeOrIRI a blank node?
     pub fn is_blank_node(&self) -> bool {
         match self {
             &BlankNodeOrIRI::BlankNode(_, _) => true,
             _ => false,
         }
     }
+    /// Is the BlankNodeOrIRI an IRI?
     pub fn is_iri(&self) -> bool {
         match self {
             &BlankNodeOrIRI::IRI(_) => true,
             _ => false,
         }
     }
+    /// Cast BlankNodeOrIRI to a blank node, if applicable
     pub fn as_blank_node(&self) -> Option<&B> {
         match self {
             &BlankNodeOrIRI::BlankNode(ref b, _) => Some(b),
             _ => None,
         }
     }
+    /// Cast BlankNodeOrIRI to an IRI, if applicable
     pub fn as_iri(&self) -> Option<&I> {
         match self {
             &BlankNodeOrIRI::IRI(ref i) => Some(i),
             _ => None,
         }
     }
+    /// Cast BlankNodeOrIRI to a Resource
     pub fn to_resource<L>(&self) -> Resource<'g, B, I, L>
         where Self: Clone,
               L: LiteralPtr<'g>
@@ -231,49 +260,20 @@ impl<'g, B, I> BlankNodeOrIRI<'g, B, I>
         }
     }
 }
-#[derive(PartialEq,Eq,PartialOrd,Ord,Clone,Debug)]
-pub enum IRIOrLiteral<'g, I: 'g, L: 'g>
-    where I: IRIPtr<'g>,
-          L: LiteralPtr<'g>
-{
-    IRI(I, PhantomData<&'g u8>),
-    Literal(L),
-}
-impl<'g, I, L> IRIOrLiteral<'g, I, L>
-    where I: IRIPtr<'g>,
-          L: LiteralPtr<'g>
-{
-    pub fn as_iri(&self) -> Option<&I> {
-        match self {
-            &IRIOrLiteral::IRI(ref t, _) => Some(t),
-            _ => None,
-        }
-    }
-    pub fn as_literal(&self) -> Option<&L> {
-        match self {
-            &IRIOrLiteral::Literal(ref t) => Some(t),
-            _ => None,
-        }
-    }
-    pub fn to_resource<B>(&self) -> Resource<'g, B, I, L>
-        where B: BlankNodePtr<'g>,
-              I: Clone,
-              L: Clone
-    {
-        match self {
-            &IRIOrLiteral::IRI(ref b, _) => Resource::IRI(b.clone()),
-            &IRIOrLiteral::Literal(ref l) => Resource::Literal(l.clone()),
-        }
-    }
-}
+/// A Resource is a blank node, an IRI or a literal.
+///
+/// Resources are used in the object position of a triple.
 #[derive(PartialEq,Eq,PartialOrd,Ord,Clone,Debug)]
 pub enum Resource<'g, B: 'g, I: 'g, L: 'g>
     where B: BlankNodePtr<'g>,
           I: IRIPtr<'g>,
           L: LiteralPtr<'g>
 {
+    /// This is a blank node.
     BlankNode(B, PhantomData<&'g u8>),
+    /// This is an IRI.
     IRI(I),
+    /// This is a literal.
     Literal(L),
 }
 impl<'g, B, I, L> Resource<'g, B, I, L>
@@ -281,42 +281,49 @@ impl<'g, B, I, L> Resource<'g, B, I, L>
           I: IRIPtr<'g>,
           L: LiteralPtr<'g>
 {
+    /// Is this a blank node?
     pub fn is_blank_node(&self) -> bool {
         match self {
             &Resource::BlankNode(_, _) => true,
             _ => false,
         }
     }
+    /// Is this an IRI?
     pub fn is_iri(&self) -> bool {
         match self {
             &Resource::IRI(_) => true,
             _ => false,
         }
     }
+    /// Is this a literal?
     pub fn is_literal(&self) -> bool {
         match self {
             &Resource::Literal(_) => true,
             _ => false,
         }
     }
+    /// Cast Resource to a blank node, if applicable
     pub fn as_blank_node(&self) -> Option<&B> {
         match self {
             &Resource::BlankNode(ref b, _) => Some(b),
             _ => None,
         }
     }
+    /// Cast Resource to an IRI, if applicable
     pub fn as_iri(&self) -> Option<&I> {
         match self {
             &Resource::IRI(ref t) => Some(t),
             _ => None,
         }
     }
+    /// Cast Resource to a literal, if applicable
     pub fn as_literal(&self) -> Option<&L> {
         match self {
             &Resource::Literal(ref t) => Some(t),
             _ => None,
         }
     }
+    /// Cast Resource to a BlankNodeOrIRI, if applicable
     pub fn to_blank_node_or_iri(&self) -> Option<BlankNodeOrIRI<'g, B, I>>
         where B: Clone,
               I: Clone
@@ -331,27 +338,40 @@ impl<'g, B, I, L> Resource<'g, B, I, L>
     }
 }
 
+/// Triples are fundamental to RDF.
+///
+/// Each triple has a subject, a predicate and an object.
 pub trait Triple<'g, B, I, L>
     where B: BlankNodePtr<'g>,
           I: IRIPtr<'g>,
           L: LiteralPtr<'g>
 {
+    /// Get the subject of this triple.
     fn subject(&self) -> BlankNodeOrIRI<'g, B, I>;
+    /// Get the predicate of this triple.
     fn predicate(&self) -> I;
+    /// Get the object of this triple.
     fn object(&self) -> Resource<'g, B, I, L>;
 }
 
+/// WriterBlankNodeOrIRI is like BlankNodeOrIRI but for writing graphs.
 pub enum WriterBlankNodeOrIRI<'g, W>
     where W: GraphWriter<'g>
 {
+    /// This is a blank node.
     BlankNode(W::BlankNode, PhantomData<&'g u8>),
+    /// This is an IRI.
     IRI(W::IRI),
 }
+/// WriterResource is like Resource but for writing graphs.
 pub enum WriterResource<'g, W>
     where W: GraphWriter<'g>
 {
+    /// This is a blank node.
     BlankNode(W::BlankNode, PhantomData<&'g u8>),
+    /// This is an IRI.
     IRI(W::IRI),
+    /// This is a literal.
     Literal(W::Literal),
 }
 
@@ -360,9 +380,16 @@ pub enum WriterResource<'g, W>
 /// there can be a general implemenation as wel as an optimized one that's
 /// used when extending a graph by inferencing from its own content
 pub trait ResourceTranslator<'g> {
+    /// The source graph from which this translator translates.
     type Graph: Graph<'g>;
+    /// The type of the writer into which this translator translates.
     type GraphWriter: GraphWriter<'g>;
-    fn translate_blank_node(&mut self, w: &mut Self::GraphWriter, blank_node: &<Self::Graph as Graph<'g>>::BlankNodePtr) -> <Self::GraphWriter as GraphWriter<'g>>::BlankNode;
+    /// Translate a blank node from the source graph to the graph writer.
+    fn translate_blank_node(&mut self,
+                            w: &mut Self::GraphWriter,
+                            blank_node: &<Self::Graph as Graph<'g>>::BlankNodePtr
+                           ) -> <Self::GraphWriter as GraphWriter<'g>>::BlankNode;
+    /// Translate a blank node or iri from the source graph to the graph writer.
     fn translate_blank_node_or_iri(&mut self,
                                    w: &mut Self::GraphWriter,
                                    blank_node_or_iri: &BlankNodeOrIRI<'g,
@@ -378,6 +405,7 @@ pub trait ResourceTranslator<'g> {
             &BlankNodeOrIRI::IRI(ref i) => WriterBlankNodeOrIRI::IRI(w.create_iri(i)),
         }
     }
+    /// Translate a Resource from the source graph to the graph writer.
     fn translate_resource(&mut self,
                           w: &mut Self::GraphWriter,
                           resource: &Resource<'g,
@@ -397,28 +425,43 @@ pub trait ResourceTranslator<'g> {
     }
 }
 
+/// Trait for writing into a graph.
 pub trait GraphWriter<'g> {
+    /// The blank node type that is accepted by this writer.
     type BlankNode: Clone;
+    /// The IRI type that is accepted by this writer.
     type IRI: Clone;
+    /// The literal type that is accepted by this writer.
     type Literal;
+    /// The datatype type that is accepted by this writer.
     type Datatype: Clone;
+    /// The language type that is accepted by this writer.
     type Language;
+    /// The type of the graph into which this writer writes.
     type Graph: Graph<'g>;
 
+    /// Create a new blank node for the graph.
     fn create_blank_node(&mut self) -> Self::BlankNode;
+    /// Create a new IRI from an existing IRI for the graph.
     fn create_iri<'a, I: 'a>(&mut self, &I) -> Self::IRI where I: IRIPtr<'a>;
+    /// Create a new literal from an existing literal for the graph.
     fn create_literal<'a, L: 'a>(&mut self, &L) -> Self::Literal where L: LiteralPtr<'a>;
+    /// Create a new datatype for the graph.
     fn create_datatype(&mut self, &str) -> Self::Datatype;
+    /// Create a new language for the graph.
     fn create_language(&mut self, &str) -> Self::Language;
+    /// Create a new literal with the given datatype for the graph.
     fn create_literal_datatype<'a>(&mut self,
                                    value: &str,
                                    datatype: &Self::Datatype)
                                    -> Self::Literal;
+    /// Create a new literal with the given language for the graph.
     fn create_literal_language<'a>(&mut self,
                                    value: &str,
                                    language: &Self::Language)
                                    -> Self::Literal;
 
+    /// Add a new triple to the graph.
     fn add(&mut self,
            subject: &WriterBlankNodeOrIRI<'g, Self>,
            predicate: &Self::IRI,
@@ -455,61 +498,85 @@ pub trait GraphWriter<'g> {
         }
     }
 
+    /// Add a new triple with blank node as subject and object to the graph.
     fn add_blank_blank(&mut self,
                        subject: &Self::BlankNode,
                        predicate: &Self::IRI,
                        object: &Self::BlankNode);
+    /// Add a new triple with a blank node as subject and an IRI as object to the graph.
     fn add_blank_iri(&mut self,
                      subject: &Self::BlankNode,
                      predicate: &Self::IRI,
                      object: &Self::IRI);
+    /// Add a new triple with a blank node as subject and a literal as object to the graph.
     fn add_blank_literal(&mut self,
                          subject: &Self::BlankNode,
                          predicate: &Self::IRI,
                          bject: &Self::Literal);
+    /// Add a new triple with an IRI as subject and a blank node as object to the graph.
     fn add_iri_blank(&mut self,
                      subject: &Self::IRI,
                      predicate: &Self::IRI,
                      object: &Self::BlankNode);
+    /// Add a new triple with an IRI as subject and an IRI as object to the graph.
     fn add_iri_iri(&mut self, subject: &Self::IRI, predicate: &Self::IRI, object: &Self::IRI);
+    /// Add a new triple with an IRI as subject and a literal as object to the graph.
     fn add_iri_literal(&mut self,
                        subject: &Self::IRI,
                        predicate: &Self::IRI,
                        object: &Self::Literal);
+    /// Close the GraphWriter and return the resulting graph.
     fn collect(self) -> Self::Graph;
 }
 
+/// An RDF graph.
+///
+/// An RDF graph contains triples (subject, predicate, object).
+/// The triples can be filered and iterated over.
+/// This trait can be used to make data accessible as RDF.
 pub trait Graph<'g> {
+    /// The blank node type of this graph.
     type BlankNodePtr: BlankNodePtr<'g> + Ord + Clone;
+    /// The IRI type of this graph.
     type IRIPtr: IRIPtr<'g> + Ord + Clone;
+    /// The literal type of this graph.
     type LiteralPtr: LiteralPtr<'g> + Ord + Clone;
+    /// The implementation of triples that is ordered by subject, predicate, object.
     type SPOTriple: Triple<'g, Self::BlankNodePtr, Self::IRIPtr, Self::LiteralPtr> + Ord + Clone;
+    /// Iterator for iterating over all triples.
     type SPOIter: SortedIterator<Item = Self::SPOTriple>;
+    /// Iterator for iterating over a range for triples sorted by subject, predicate, object.
     type SPORangeIter: SortedIterator<Item = Self::SPOTriple>;
+    /// The implementation of triples that is ordered by object, predicate, subject.
     type OPSTriple: Triple<'g, Self::BlankNodePtr, Self::IRIPtr, Self::LiteralPtr> + Ord + Clone;
+    /// Iterator for iterating over a range for triples sorted by object, predicate, subject.
     type OPSRangeIter: SortedIterator<Item = Self::OPSTriple>;
+    /// Iterate over all triples sorted by subject, predicate, object.
     fn iter(&'g self) -> Self::SPOIter;
-
+    /// Find the DatatypePtr for the given datatype.
     fn find_datatype<'a>(&'g self, datatype: &'a str) -> Option<<Self::LiteralPtr as LiteralPtr<'g>>::DatatypePtr>;
+    /// Find the IRIPtr for the given IRI.
     fn find_iri<'a>(&'g self, iri: &'a str) -> Option<Self::IRIPtr>;
+    /// Find the LiteralPtr for the given literal.
     fn find_literal<'a>(&'g self,
                         literal: &'a str,
                         datatype: &'a str,
                         language: Option<&'a str>)
                         -> Option<Self::LiteralPtr>;
-
+    /// Iterate over the triples that have the given subject and predicate.
     fn iter_s_p(&'g self,
                 subject: BlankNodeOrIRI<'g, Self::BlankNodePtr, Self::IRIPtr>,
                 predicate: Self::IRIPtr)
                 -> Self::SPORangeIter;
+    /// Iterate over the triples that have the given object and predicate.
     fn iter_o_p(&'g self,
                 object: Resource<'g, Self::BlankNodePtr, Self::IRIPtr, Self::LiteralPtr>,
                 predicate: Self::IRIPtr)
                 -> Self::OPSRangeIter;
 
-    /// iterator that returns no results
+    /// Iterator that returns no results.
     fn empty_spo_range(&'g self) -> Self::SPORangeIter;
-    /// iterator that returns no results
+    /// Iterator that returns no results.
     fn empty_ops_range(&'g self) -> Self::OPSRangeIter;
 }
 

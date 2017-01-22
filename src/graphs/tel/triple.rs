@@ -1,7 +1,7 @@
-use std::cmp;
-use std::marker::PhantomData;
-use std::fmt;
 use graph;
+use std::cmp;
+use std::fmt;
+use std::marker::PhantomData;
 use super::compact_triple::*;
 use super::graph::*;
 use super::string_collector::*;

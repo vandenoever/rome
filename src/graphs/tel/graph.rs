@@ -1,10 +1,10 @@
+use graph;
 use std::cmp;
 use std::marker::PhantomData;
-use graph;
 use super::compact_triple::*;
+use super::iter::*;
 use super::string_collector::*;
 use super::triple::*;
-use super::iter::*;
 
 pub struct GraphData<SPO, OPS>
     where SPO: CompactTriple<u32>,

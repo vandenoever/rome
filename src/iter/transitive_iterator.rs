@@ -1,10 +1,10 @@
+use iter::SortedIterator;
 use std::collections::BTreeMap;
 use std::iter::Peekable;
-use iter::SortedIterator;
 
-/// iterator that is a collection of iterators
-/// for each iterated item, another iterator is created that is also iterated
-/// this is needed for iterating through transitive properties
+/// Iterator that is a collection of iterators.
+/// For each iterated item, another iterator is created that is also iterated.
+/// This is needed for iterating through transitive properties.
 pub struct TransitiveIterator<I, J, F>
     where I: SortedIterator,
           I::Item: Ord + Clone,
@@ -23,6 +23,7 @@ impl<I, J, F> TransitiveIterator<I, J, F>
           J::Item: Ord + Clone,
           F: Fn(&J::Item) -> J
 {
+    /// Create a new TransitiveIterator.
     pub fn new(iter: I, f: F) -> TransitiveIterator<I, J, F> {
         TransitiveIterator {
             iter: iter.peekable(),

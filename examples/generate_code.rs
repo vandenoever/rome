@@ -2,25 +2,25 @@
 ///
 
 extern crate rome;
+use rome::graph::{Graph, GraphWriter, Triple, ResourceTranslator, IRIPtr, LiteralPtr,
+                  WriterResource};
+use rome::graphs::tel;
+use rome::io::TurtleParser;
+use rome::iter::TransitiveIterator;
+use rome::namespaces::Namespaces;
+use rome::ontology;
+use rome::ontology::classes::rdf::Property;
+use rome::ontology::classes::rdfs::Class;
+use rome::ontology::properties::rdfs::{Comment, Domain, Range, SubClassOf};
+use rome::ontology_adapter;
+use rome::resource::{ResourceBase, IRI, ObjectIter};
+use std::collections::BTreeMap;
+use std::collections::HashSet;
 use std::env::args;
 use std::fs;
 use std::io;
 use std::io::{Read, Write};
 use std::path::PathBuf;
-use std::collections::BTreeMap;
-use std::collections::HashSet;
-use rome::graphs::tel;
-use rome::io::TurtleParser;
-use rome::graph::{Graph, GraphWriter, Triple, ResourceTranslator, IRIPtr, LiteralPtr,
-                  WriterResource};
-use rome::namespaces::Namespaces;
-use rome::resource::{ResourceBase, IRI, ObjectIter};
-use rome::ontology::classes::rdf::Property;
-use rome::ontology::classes::rdfs::Class;
-use rome::ontology::properties::rdfs::{Comment, Domain, Range, SubClassOf};
-use rome::ontology;
-use rome::ontology_adapter;
-use rome::iter::TransitiveIterator;
 
 type MyGraph = tel::Graph128;
 type OA<'g> = ontology_adapter::OntologyAdapter<'g, MyGraph>;
@@ -229,7 +229,9 @@ fn infer(graph: &MyGraph) -> rome::Result<MyGraph> {
 fn write_mod(o: &Output, iris: &Vec<String>) -> rome::Result<()> {
     let path = o.output_dir.join("mod.rs");
     let mut mod_rs = fs::File::create(path)?;
+    mod_rs.write_all(b"/// Ontology classes\n")?;
     mod_rs.write_all(b"pub mod classes;\n")?;
+    mod_rs.write_all(b"/// Ontology properties\n")?;
     mod_rs.write_all(b"pub mod properties;\n")?;
     if o.internal {
         mod_rs.write_all(b"use graph;\n")?;
@@ -238,6 +240,7 @@ fn write_mod(o: &Output, iris: &Vec<String>) -> rome::Result<()> {
         mod_rs.write_all(b"use rome::graph;\n")?;
         mod_rs.write_all(b"use rome::ontology_adapter;\n")?;
     }
+    mod_rs.write_all(b"/// Adapter to access RDF data in graph via the ontology\n")?;
     mod_rs.write_all(b"pub fn adapter<'g, G>(graph: &'g G) -> ontology_adapter::OntologyAdapter<'g, G>
     where G: graph::Graph<'g>
 {
@@ -379,7 +382,9 @@ fn write_files(o: &Output, writers: &Writers, folder: &str, classes: bool) -> ro
             let mut file = fs::File::create(path)?;
             file.write_all(uses.as_bytes())?;
             file.write_all(content)?;
-            mod_rs.write_all(b"pub mod ")?;
+            mod_rs.write_all(b"/// ontology namespace ")?;
+            mod_rs.write_all(prefix)?;
+            mod_rs.write_all(b"\npub mod ")?;
             mod_rs.write_all(prefix)?;
             mod_rs.write_all(b";\n")?;
         }

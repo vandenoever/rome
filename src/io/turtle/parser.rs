@@ -1,14 +1,14 @@
-use super::grammar_structs::*;
-use super::grammar::{statement, tws};
-use super::grammar_helper::*;
-use std::marker::PhantomData;
-use std::collections::HashMap;
-use nom::IResult;
 use constants::*;
+use error::{Error, Result};
 use graph;
 use namespaces::*;
-use error::{Error, Result};
+use nom::IResult;
 use regex::Regex;
+use std::collections::HashMap;
+use std::marker::PhantomData;
+use super::grammar::{statement, tws};
+use super::grammar_helper::*;
+use super::grammar_structs::*;
 
 struct StatementIterator<'a> {
     src: &'a str,

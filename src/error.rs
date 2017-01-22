@@ -1,8 +1,8 @@
+use nom;
+use std::fmt;
 use std::io;
 use std::result;
-use std::fmt;
 use std::string;
-use nom;
 pub type Result<T> = result::Result<T, Error>;
 
 #[derive (Debug)]

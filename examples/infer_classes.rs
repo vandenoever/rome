@@ -4,16 +4,16 @@
 /// using rdf:subClassOf.
 
 extern crate rome;
+use rome::graph::{Graph, GraphWriter, Triple, WriterResource, ResourceTranslator};
+use rome::graphs::tel;
+use rome::io::{TurtleParser, write_turtle};
+use rome::namespaces::Namespaces;
+use std::collections::BTreeMap;
 use std::env::args;
 use std::fs;
 use std::io;
 use std::io::{Read, Write};
 use std::path::Path;
-use std::collections::BTreeMap;
-use rome::io::{TurtleParser, write_turtle};
-use rome::graph::{Graph, GraphWriter, Triple, WriterResource, ResourceTranslator};
-use rome::graphs::tel;
-use rome::namespaces::Namespaces;
 
 type MyGraph = tel::Graph64;
 

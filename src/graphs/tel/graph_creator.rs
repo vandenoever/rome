@@ -1,12 +1,12 @@
+use constants;
+use graph;
+use rand;
 use std::cmp;
 use std::marker::PhantomData;
 use std::mem;
-use rand;
-use graph;
-use constants;
 use super::compact_triple::*;
-use super::string_collector::*;
 use super::graph::*;
+use super::string_collector::*;
 use super::triple::*;
 #[cfg(test)]
 use super::triple64::*;

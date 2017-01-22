@@ -1,8 +1,8 @@
-use std::io::{Result, Write};
-use std::fmt::Display;
-use std::marker::PhantomData;
-use graph::*;
 use constants;
+use graph::*;
+use std::fmt::Display;
+use std::io::{Result, Write};
+use std::marker::PhantomData;
 
 struct NTriplesWriter<'a, 'g, W: 'a, G: 'g>
     where W: Write,
@@ -15,7 +15,10 @@ struct NTriplesWriter<'a, 'g, W: 'a, G: 'g>
 }
 
 /// write an RDF 1.1 N-Triples file in canonical form
-pub fn write_ntriples<'g, G: 'g, T: 'g, I, W>(triples: I, graph: &'g G, writer: &mut W) -> Result<()>
+pub fn write_ntriples<'g, G: 'g, T: 'g, I, W>(triples: I,
+                                              graph: &'g G,
+                                              writer: &mut W)
+                                              -> Result<()>
     where T: Triple<'g, G::BlankNodePtr, G::IRIPtr, G::LiteralPtr>,
           G: Graph<'g>,
           <G as Graph<'g>>::BlankNodePtr: Display,

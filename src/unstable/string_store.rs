@@ -1,8 +1,9 @@
-use std::rc::Rc;
-use std::collections::BTreeMap;
-use std::cmp::Ord;
+
 use std::borrow::Borrow;
+use std::cmp::Ord;
+use std::collections::BTreeMap;
 use std::default::Default;
+use std::rc::Rc;
 
 pub struct StringStoreItem<T>
     where T: Default

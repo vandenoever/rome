@@ -1,16 +1,16 @@
 extern crate rome;
 extern crate time;
+use rome::graph;
+use rome::graph::*;
+use rome::graphs::tel;
+use rome::io::{TurtleParser, write_turtle, write_ntriples};
+use rome::namespaces::Namespaces;
 use std::env::args;
 use std::fs;
 use std::io;
 use std::io::{Read, Write};
 use std::path::Path;
 use std::rc::Rc;
-use rome::graph;
-use rome::graph::*;
-use rome::graphs::tel;
-use rome::io::{TurtleParser, write_turtle, write_ntriples};
-use rome::namespaces::Namespaces;
 
 type MyGraph = tel::Graph64;
 type MyIter<'g> = <MyGraph as Graph<'g>>::SPORangeIter;

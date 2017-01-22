@@ -1,12 +1,12 @@
-use std::collections::btree_map::Entry;
-use std::collections::btree_set;
+use rand;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
-use std::rc::Rc;
-use rand;
-use string_store::*;
+use std::collections::btree_map::Entry;
+use std::collections::btree_set;
 use std::iter::FromIterator;
 use std::marker::PhantomData;
+use std::rc::Rc;
+use string_store::*;
 
 /// Graph implementation that allows for multiple indexes
 /// All data is stored in vectors.

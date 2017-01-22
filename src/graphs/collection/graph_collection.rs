@@ -1,6 +1,6 @@
+use graph::*;
 use std::cmp;
 use std::iter::Peekable;
-use graph::*;
 
 pub enum Object {
     BlankNode,
@@ -44,7 +44,8 @@ fn compare_object<'g, B: 'g, I: 'g, L: 'g>(a: &TripleCmpWrap,
         Resource::Literal(l) => a.cmp_object_literal(l.as_str(), l.datatype_str(), l.language()),
     }
 }
-// sort by subject, predicate, object
+#[doc(hidden)]
+/// sort by subject, predicate, object
 pub fn compare_spo<'g, B: 'g, I: 'g, L: 'g, T: 'g>(a: &TripleCmpWrap, b: &T) -> cmp::Ordering
     where B: BlankNodePtr<'g>,
           I: IRIPtr<'g>,
@@ -60,7 +61,8 @@ pub fn compare_spo<'g, B: 'g, I: 'g, L: 'g, T: 'g>(a: &TripleCmpWrap, b: &T) -> 
     }
     cmp
 }
-// sort by object, predicate, subject
+#[doc(hidden)]
+/// sort by object, predicate, subject
 pub fn compare_ops<'g, B: 'g, I: 'g, L: 'g, T: 'g>(a: &TripleCmpWrap, b: &T) -> cmp::Ordering
     where B: BlankNodePtr<'g>,
           I: IRIPtr<'g>,
@@ -76,9 +78,10 @@ pub fn compare_ops<'g, B: 'g, I: 'g, L: 'g, T: 'g>(a: &TripleCmpWrap, b: &T) -> 
     }
     cmp
 }
-// get the triple that is equal to the given triple and if needed,
-// advance the iterator
-// the iterator is forwarded one position at most
+#[doc(hidden)]
+/// get the triple that is equal to the given triple and if needed,
+/// advance the iterator
+/// the iterator is forwarded one position at most
 pub fn get_equal_spo<'g, K: 'g, T: 'g, B: 'g, I: 'g, L: 'g>(iter: &mut Peekable<K>,
                                                             t: &TripleCmpWrap<'g>,
                                                             n: &mut u8,
@@ -100,6 +103,7 @@ pub fn get_equal_spo<'g, K: 'g, T: 'g, B: 'g, I: 'g, L: 'g>(iter: &mut Peekable<
     };
     if equal { iter.next() } else { None }
 }
+#[doc(hidden)]
 // get the triple that is equal to the given triple and if needed,
 // advance the iterator
 // the iterator is forwarded one position at most
@@ -463,6 +467,7 @@ pub mod $name {
         phantom: PhantomData<&'g u8>
     }
     impl<'g> GraphCollection<'g> {
+        /// Create a new graph collection.
         pub fn new(graphs: Graphs<'g>) -> GraphCollection<'g> {
             GraphCollection {
                 graphs: graphs,

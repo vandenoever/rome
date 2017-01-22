@@ -1,8 +1,8 @@
-use std::io::{Result, Write};
-use std::fmt::Display;
+use constants;
 use graph::*;
 use namespaces::*;
-use constants;
+use std::fmt::Display;
+use std::io::{Result, Write};
 
 struct TurtleWriter<'a, 'g, W: 'a, G: 'g>
     where W: Write,
@@ -16,6 +16,7 @@ struct TurtleWriter<'a, 'g, W: 'a, G: 'g>
     open_statement: bool,
 }
 
+/// Write out triples as turtle.
 pub fn write_turtle<'g, G: 'g, T: 'g, I, W>(namespaces: &Namespaces,
                                             triples: I,
                                             graph: &'g G,

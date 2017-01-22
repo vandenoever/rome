@@ -1,5 +1,5 @@
-use std::collections::BTreeSet;
 use std::cmp::Ordering;
+use std::collections::BTreeSet;
 use std::hash::{Hash, Hasher};
 use std::mem;
 use unsafe_key::UnsafeKey;

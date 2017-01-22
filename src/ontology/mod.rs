@@ -1,7 +1,10 @@
+/// Ontology classes
 pub mod classes;
+/// Ontology properties
 pub mod properties;
 use graph;
 use ontology_adapter;
+/// Adapter to access RDF data in graph via the ontology
 pub fn adapter<'g, G>(graph: &'g G) -> ontology_adapter::OntologyAdapter<'g, G>
     where G: graph::Graph<'g>
 {

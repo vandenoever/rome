@@ -26,16 +26,20 @@ g_resource{() =>
     (graph::Resource<'g, g!(BlankNodePtr), g!(IRIPtr), g!(LiteralPtr)>)
 }
 
-
+/// Base trait for all ontology traits.
 pub trait ResourceBase<'g>: Clone + Ord {
+    /// Type of the graph that on which this resource is mapped.
     type Graph: graph::Graph<'g>;
+    #[doc(hidden)]
     type SubjectIter: Iterator<Item = Self> + iter::SortedIterator;
     /// Wrap a [`Resource`][graph] with an ontology class.
     /// And link a [`ResourceBase`][resource]
     fn new(this: resource!(), graph: &'g adapter!()) -> Self;
     /// Iterate over all instances of this class
     fn iter(graph: &'g adapter!()) -> Self::SubjectIter;
+    /// The Resource that underlies this wrapper.
     fn this(&self) -> &resource!();
+    /// The adapter that wraps the graph.
     fn adapter(&self) -> &'g adapter!();
     /// iterate over all the objects for this subject and the given predicate
     fn iter_objects<O>(&self, predicate: Option<&rb!(IRIPtr)>) -> ObjectIter<'g,O>
@@ -55,6 +59,7 @@ pub trait ResourceBase<'g>: Clone + Ord {
             iter: iter,
         }
     }
+    /// Return this resource as an IRI, if it is an IRI.
     fn iri(&self) -> Option<IRI<'g, Self>> {
         match self.this() {
             &graph::Resource::IRI(_) => Some(IRI {
@@ -66,8 +71,8 @@ pub trait ResourceBase<'g>: Clone + Ord {
     }
 }
 
-// a wrapper around 'ResourceBase' that guarantees that the resource
-// is an iri and not a blank node or a literal
+/// A wrapper around 'ResourceBase' that guarantees that the resource
+/// is an IRI and not a blank node or a literal.
 pub struct IRI<'g, R: 'g>
     where R: ResourceBase<'g>
 {
@@ -78,12 +83,14 @@ pub struct IRI<'g, R: 'g>
 impl<'g, R> IRI<'g, R>
     where R: ResourceBase<'g>
 {
+    /// Access the IRI that underlies this instance.
     pub fn this(&self) -> &rb!(IRIPtr) {
         match self.resource.this().as_iri() {
             Some(iri) => iri,
             _ => panic!("unreachable")
         }
     }
+    /// Access the IRI that underlies this instance as a string.
     pub fn as_str(&self) -> &str {
         use graph::IRIPtr;
         match self.resource.this() {
@@ -165,6 +172,7 @@ impl<'g, R: 'g> ResourceBase<'g> for IRI<'g, R>
     }
 }
 
+/// Iterate over all objects for the given subject and predicate.
 pub struct ObjectIter<'g, R: 'g>
     where R: ResourceBase<'g>
 {
@@ -186,6 +194,7 @@ impl<'g, R> Iterator for ObjectIter<'g, R>
 
 impl<'g, R> iter::SortedIterator for ObjectIter<'g, R> where R: ResourceBase<'g> {}
 
+/// Iterate over all subjects for the given object and predicate.
 pub struct SubjectIter<'g, R: 'g>
     where R: ResourceBase<'g>
 {
@@ -211,6 +220,8 @@ impl<'g, R> Iterator for SubjectIter<'g, R>
 
 impl<'g, R> iter::SortedIterator for SubjectIter<'g, R> where R: ResourceBase<'g> {}
 
+/// Iterate over all subjects that are an IRI for the given object and predicate.
+/// In other words: no blank nodes are returned.
 pub struct IRISubjectIter<'g, R>
     where R: ResourceBase<'g>
 {
