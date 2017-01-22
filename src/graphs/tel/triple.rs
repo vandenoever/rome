@@ -138,6 +138,35 @@ impl<'g, SPO: 'g, OPS: 'g> Into<graph::Resource<'g, BlankNodePtr<'g, SPO, OPS>, 
     }
 }
 #[derive (Clone)]
+pub struct DatatypePtr<'g, SPO: 'g, OPS: 'g>
+    where SPO: CompactTriple<u32>,
+          OPS: CompactTriple<u32>
+{
+    pub graph: &'g GraphData<SPO, OPS>,
+    pub datatype: u32,
+}
+impl<'g, SPO, OPS> PartialEq for DatatypePtr<'g, SPO, OPS>
+    where SPO: CompactTriple<u32>,
+          OPS: CompactTriple<u32>
+{
+    fn eq(&self, other: &Self) -> bool {
+        if self.graph.graph_id == other.graph.graph_id {
+            self.datatype == other.datatype
+        } else {
+            use graph::DatatypePtr;
+            self.as_str() == other.as_str()
+        }
+    }
+}
+impl<'g, SPO: 'g, OPS: 'g> graph::DatatypePtr<'g> for DatatypePtr<'g, SPO, OPS>
+    where SPO: CompactTriple<u32>,
+          OPS: CompactTriple<u32>
+{
+    fn as_str(&self) -> &str {
+        self.graph.datatype_or_lang.get(StringId { id: self.datatype })
+    }
+}
+#[derive (Clone)]
 pub struct LiteralPtr<'g, SPO: 'g, OPS: 'g>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>
@@ -157,7 +186,7 @@ impl<'g, SPO, OPS> PartialEq for LiteralPtr<'g, SPO, OPS>
             self.language == other.language
         } else {
             use graph::LiteralPtr;
-            self.as_str() == other.as_str() && self.datatype() == other.datatype() &&
+            self.as_str() == other.as_str() && self.datatype_str() == other.datatype_str() &&
             self.language() == other.language()
         }
     }
@@ -187,10 +216,17 @@ impl<'g, SPO, OPS> graph::LiteralPtr<'g> for LiteralPtr<'g, SPO, OPS>
     where SPO: CompactTriple<u32>,
           OPS: CompactTriple<u32>
 {
+    type DatatypePtr = DatatypePtr<'g, SPO, OPS>;
     fn as_str(&self) -> &str {
         self.graph.strings.get(StringId { id: self.lexical })
     }
-    fn datatype(&self) -> &str {
+    fn datatype(&self) -> DatatypePtr<'g, SPO, OPS> {
+        DatatypePtr {
+            graph: self.graph,
+            datatype: self.datatype,
+        }
+    }
+    fn datatype_str(&self) -> &str {
         self.graph.datatype_or_lang.get(StringId { id: self.datatype })
     }
     fn language(&self) -> Option<&str> {
@@ -204,7 +240,7 @@ impl<'g, SPO, OPS> fmt::Debug for LiteralPtr<'g, SPO, OPS>
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use graph::LiteralPtr;
         match self.language() {
-            None => write!(f, "\"{}\"^^<{}>", self.as_str(), self.datatype()),
+            None => write!(f, "\"{}\"^^<{}>", self.as_str(), self.datatype_str()),
             Some(lang) => write!(f, "\"{}\"@{}", self.as_str(), lang),
         }
     }

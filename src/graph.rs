@@ -167,9 +167,14 @@ impl<'g> Ord for IRIPtr<'g> {
         self.as_str().cmp(other.as_str())
     }
 }
-pub trait LiteralPtr<'g> {
+pub trait DatatypePtr<'g> {
     fn as_str(&self) -> &str;
-    fn datatype(&self) -> &str;
+}
+pub trait LiteralPtr<'g> {
+    type DatatypePtr: DatatypePtr<'g> + PartialEq;
+    fn as_str(&self) -> &str;
+    fn datatype(&self) -> Self::DatatypePtr;
+    fn datatype_str(&self) -> &str;
     fn language(&self) -> Option<&str>;
     fn to_resource<B, I>(&self) -> Resource<'g, B, I, Self>
         where Self: Clone,
@@ -177,37 +182,6 @@ pub trait LiteralPtr<'g> {
               I: IRIPtr<'g>
     {
         Resource::Literal(self.clone())
-    }
-}
-impl<'g> PartialEq for LiteralPtr<'g> {
-    fn eq(&self, other: &LiteralPtr<'g>) -> bool {
-        self.as_str() == other.as_str() && self.datatype() == other.datatype() &&
-        self.language() == other.language()
-    }
-}
-impl<'g> Eq for LiteralPtr<'g> {}
-impl<'g> PartialOrd for LiteralPtr<'g> {
-    fn partial_cmp(&self, other: &LiteralPtr<'g>) -> Option<Ordering> {
-        let mut cmp = self.as_str().cmp(&other.as_str());
-        if cmp == Ordering::Equal {
-            cmp = self.datatype().cmp(&other.datatype())
-        }
-        if cmp == Ordering::Equal {
-            cmp = self.language().cmp(&other.language())
-        }
-        Some(cmp)
-    }
-}
-impl<'g> Ord for LiteralPtr<'g> {
-    fn cmp(&self, other: &LiteralPtr<'g>) -> Ordering {
-        let mut cmp = self.as_str().cmp(&other.as_str());
-        if cmp == Ordering::Equal {
-            cmp = self.datatype().cmp(&other.datatype())
-        }
-        if cmp == Ordering::Equal {
-            cmp = self.language().cmp(&other.language())
-        }
-        cmp
     }
 }
 
@@ -516,6 +490,7 @@ pub trait Graph<'g> {
     type OPSRangeIter: SortedIterator<Item = Self::OPSTriple>;
     fn iter(&'g self) -> Self::SPOIter;
 
+    fn find_datatype<'a>(&'g self, datatype: &'a str) -> Option<<Self::LiteralPtr as LiteralPtr<'g>>::DatatypePtr>;
     fn find_iri<'a>(&'g self, iri: &'a str) -> Option<Self::IRIPtr>;
     fn find_literal<'a>(&'g self,
                         literal: &'a str,
@@ -548,11 +523,20 @@ impl<'g> IRIPtr<'g> for String {
         self.as_str()
     }
 }
-impl<'g> LiteralPtr<'g> for &'g str {
+impl<'g> DatatypePtr<'g> for &'g str {
     fn as_str(&self) -> &str {
         *self
     }
-    fn datatype(&self) -> &str {
+}
+impl<'g> LiteralPtr<'g> for &'g str {
+    type DatatypePtr = &'g str;
+    fn as_str(&self) -> &str {
+        *self
+    }
+    fn datatype(&self) -> &'g str {
+        constants::XSD_STRING
+    }
+    fn datatype_str(&self) -> &str {
         constants::XSD_STRING
     }
     fn language(&self) -> Option<&str> {
@@ -560,10 +544,14 @@ impl<'g> LiteralPtr<'g> for &'g str {
     }
 }
 impl<'g> LiteralPtr<'g> for String {
+    type DatatypePtr = &'g str;
     fn as_str(&self) -> &str {
         self.as_str()
     }
-    fn datatype(&self) -> &str {
+    fn datatype(&self) -> &'g str {
+        constants::XSD_STRING
+    }
+    fn datatype_str(&self) -> &str {
         constants::XSD_STRING
     }
     fn language(&self) -> Option<&str> {

@@ -51,7 +51,7 @@ fn load_graph(data: &str, base: &str) -> rdfio::Result<MyGraph> {
 fn output_as_turtle(graph: &MyGraph) -> rdfio::Result<()> {
     let mut ns = Namespaces::new();
     ns.set(b"rdfs", "http://www.w3.org/2000/01/rdf-schema#");
-    write_turtle(&ns, graph.iter(), &mut ::std::io::stdout())?;
+    write_turtle(&ns, graph.iter(), graph, &mut ::std::io::stdout())?;
     Ok(())
 }
 

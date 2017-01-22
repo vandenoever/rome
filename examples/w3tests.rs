@@ -117,6 +117,15 @@ struct TestResult {
     date: String,
     info: String,
 }
+#[derive(PartialEq)]
+struct Datatype {
+    datatype: String,
+}
+impl<'g> DatatypePtr<'g> for Datatype {
+    fn as_str(&self) -> &str {
+        &self.datatype
+    }
+}
 #[derive(Debug,Clone,Ord,PartialOrd,Eq,PartialEq)]
 struct Literal {
     value: String,
@@ -124,10 +133,16 @@ struct Literal {
     language: Option<String>,
 }
 impl<'g> LiteralPtr<'g> for Literal {
+    type DatatypePtr = Datatype;
     fn as_str(&self) -> &str {
         &self.value
     }
-    fn datatype(&self) -> &str {
+    fn datatype(&self) -> Datatype {
+        Datatype {
+            datatype: self.datatype.clone()
+        }
+    }
+    fn datatype_str(&self) -> &str {
         &self.datatype
     }
     fn language(&self) -> Option<&str> {
@@ -522,7 +537,7 @@ fn run_eval(test: &TestTurtleEval, base: &str, base_dir: &str) -> rdfio::Result<
 }
 fn graph_to_ntriples(graph: &MyGraph) -> rdfio::Result<String> {
     let mut bytes = Vec::new();
-    write_ntriples(graph.iter(), &mut bytes)?;
+    write_ntriples(graph.iter(), graph, &mut bytes)?;
     let string = String::from_utf8(bytes)?;
     Ok(string)
 }
@@ -578,7 +593,7 @@ fn output_as_turtle(assertions: &Vec<Assertion>) -> rdfio::Result<()> {
     ns.set(b"earl", "http://www.w3.org/ns/earl#");
     ns.set(b"xsd", "http://www.w3.org/2001/XMLSchema#");
     ns.set(b"test", "http://www.w3.org/2013/TurtleTests/manifest.ttl#");
-    write_turtle(&ns, graph.iter(), &mut ::std::io::stdout())?;
+    write_turtle(&ns, graph.iter(), &graph, &mut ::std::io::stdout())?;
     Ok(())
 }
 

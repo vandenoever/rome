@@ -444,6 +444,14 @@ impl<'g, SPO: 'g, OPS: 'g> graph::Graph<'g> for Graph<SPO, OPS>
             None
         }
     }
+    fn find_datatype<'a>(&'g self, datatype: &'a str) -> Option<DatatypePtr<'g, SPO, OPS>> {
+        self.d.datatype_or_lang.find(datatype).map(|d| {
+            DatatypePtr {
+                graph: &self.d,
+                datatype: d.id,
+            }
+        })
+    }
     fn iter_s_p(&'g self,
                 subject: BlankNodeOrIRI<'g, SPO, OPS>,
                 predicate: IRIPtr<'g, SPO, OPS>)

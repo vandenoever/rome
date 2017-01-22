@@ -1,28 +1,32 @@
 use std::io::{Result, Write};
 use std::fmt::Display;
+use std::marker::PhantomData;
 use graph::*;
+use constants;
 
-struct NTriplesWriter<'a, W: 'a>
-    where W: Write
+struct NTriplesWriter<'a, 'g, W: 'a, G: 'g>
+    where W: Write,
+          G: Graph<'g>
 {
     buffer: Vec<u8>,
     writer: &'a mut W,
+    xsd_string: Option<<<G as Graph<'g>>::LiteralPtr as LiteralPtr<'g>>::DatatypePtr>,
+    phantom: PhantomData<&'g u8>,
 }
 
 /// write an RDF 1.1 N-Triples file in canonical form
-pub fn write_ntriples<'g, T: 'g, I, W, T1: 'g, T2: 'g, T3: 'g>(triples: I,
-                                                               writer: &mut W)
-                                                               -> Result<()>
-    where T: Triple<'g, T1, T2, T3>,
+pub fn write_ntriples<'g, G: 'g, T: 'g, I, W>(triples: I, graph: &'g G, writer: &mut W) -> Result<()>
+    where T: Triple<'g, G::BlankNodePtr, G::IRIPtr, G::LiteralPtr>,
+          G: Graph<'g>,
+          <G as Graph<'g>>::BlankNodePtr: Display,
           I: Iterator<Item = T>,
-          W: Write,
-          T1: BlankNodePtr<'g> + Display,
-          T2: IRIPtr<'g>,
-          T3: LiteralPtr<'g>
+          W: Write
 {
-    let mut writer = NTriplesWriter {
+    let mut writer = NTriplesWriter::<_, G> {
         buffer: Vec::new(),
         writer: writer,
+        xsd_string: graph.find_datatype(constants::XSD_STRING),
+        phantom: PhantomData,
     };
     for triple in triples {
         writer.write_ntriple(&triple)?;
@@ -30,8 +34,10 @@ pub fn write_ntriples<'g, T: 'g, I, W, T1: 'g, T2: 'g, T3: 'g>(triples: I,
     Ok(())
 }
 
-impl<'a, W: 'a> NTriplesWriter<'a, W>
-    where W: Write
+impl<'a, 'g, W: 'a, G: 'g> NTriplesWriter<'a, 'g, W, G>
+    where W: Write,
+          G: Graph<'g>,
+          <G as Graph<'g>>::BlankNodePtr: Display
 {
     fn write_iri(&mut self, iri: &str) -> Result<()> {
         self.writer.write_all(b"<")?;
@@ -46,9 +52,7 @@ impl<'a, W: 'a> NTriplesWriter<'a, W>
         self.writer.write_all(&self.buffer[..])?;
         self.writer.write_all(b">")
     }
-    fn write_blank_node<'g, B>(&mut self, blank_node: B) -> Result<()>
-        where B: BlankNodePtr<'g> + Display
-    {
+    fn write_blank_node(&mut self, blank_node: G::BlankNodePtr) -> Result<()> {
         self.writer.write_all(b"_:")?;
         write!(self.writer, "{}", blank_node)?;
         Ok(())
@@ -63,25 +67,22 @@ impl<'a, W: 'a> NTriplesWriter<'a, W>
         }
         self.writer.write_all(&self.buffer[..])
     }
-    fn write_literal<'g, L>(&mut self, literal: L) -> Result<()>
-        where L: LiteralPtr<'g>
-    {
+    fn write_literal(&mut self, literal: G::LiteralPtr) -> Result<()> {
         self.writer.write_all(b"\"")?;
         self.write_literal_value(literal.as_str())?;
         self.writer.write_all(b"\"")?;
         if let Some(langtag) = literal.language() {
             self.writer.write_all(b"@")?;
             self.writer.write_all(langtag.as_bytes())?;
-        } else if literal.datatype() != "http://www.w3.org/2001/XMLSchema#string" {
+        } else if Some(literal.datatype()) != self.xsd_string {
             self.writer.write_all(b"^^")?;
-            self.write_iri(literal.datatype())?;
+            self.write_iri(literal.datatype_str())?;
         }
         Ok(())
     }
-    fn write_subject<'g, B, I>(&mut self, subject: BlankNodeOrIRI<'g, B, I>) -> Result<()>
-        where B: BlankNodePtr<'g> + Display,
-              I: IRIPtr<'g>
-    {
+    fn write_subject(&mut self,
+                     subject: BlankNodeOrIRI<'g, G::BlankNodePtr, G::IRIPtr>)
+                     -> Result<()> {
         match subject {
             BlankNodeOrIRI::BlankNode(blank_node, _) => self.write_blank_node(blank_node),
             BlankNodeOrIRI::IRI(iri) => self.write_iri(iri.as_str()),
@@ -90,22 +91,17 @@ impl<'a, W: 'a> NTriplesWriter<'a, W>
     fn write_predicate<'b>(&mut self, predicate: &'b str) -> Result<()> {
         self.write_iri(predicate)
     }
-    fn write_object<'g, B, I, L>(&mut self, object: Resource<'g, B, I, L>) -> Result<()>
-        where B: BlankNodePtr<'g> + Display,
-              I: IRIPtr<'g>,
-              L: LiteralPtr<'g>
-    {
+    fn write_object(&mut self,
+                    object: Resource<'g, G::BlankNodePtr, G::IRIPtr, G::LiteralPtr>)
+                    -> Result<()> {
         match object {
             Resource::BlankNode(blank_node, _) => self.write_blank_node(blank_node),
             Resource::IRI(iri) => self.write_iri(iri.as_str()),
             Resource::Literal(literal) => self.write_literal(literal),
         }
     }
-    fn write_ntriple<'g, T: 'g, B: 'g, I: 'g, L: 'g>(&mut self, triple: &T) -> Result<()>
-        where T: Triple<'g, B, I, L>,
-              B: BlankNodePtr<'g> + Display,
-              I: IRIPtr<'g>,
-              L: LiteralPtr<'g>
+    fn write_ntriple<T: 'g>(&mut self, triple: &T) -> Result<()>
+        where T: Triple<'g, G::BlankNodePtr, G::IRIPtr, G::LiteralPtr>
     {
         self.write_subject(triple.subject())?;
         self.writer.write_all(b" ")?;

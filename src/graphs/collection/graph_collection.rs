@@ -41,7 +41,7 @@ fn compare_object<'g, B: 'g, I: 'g, L: 'g>(a: &TripleCmpWrap,
     match b {
         Resource::BlankNode(_, _) => cmp::Ordering::Less,
         Resource::IRI(i) => a.cmp_object_iri(i.as_str()),
-        Resource::Literal(l) => a.cmp_object_literal(l.as_str(), l.datatype(), l.language()),
+        Resource::Literal(l) => a.cmp_object_literal(l.as_str(), l.datatype_str(), l.language()),
     }
 }
 // sort by subject, predicate, object
@@ -167,7 +167,7 @@ impl_triple_cmp_wrap_spo_ops {
                     Resource::Literal(l) => {
                         let mut cmp = l.as_str().cmp(o);
                         if cmp == cmp::Ordering::Equal {
-                            cmp = l.datatype().cmp(datatype);
+                            cmp = l.datatype_str().cmp(datatype);
                         }
                         if cmp == cmp::Ordering::Equal {
                             cmp = l.language().cmp(&language);
@@ -271,6 +271,7 @@ pub mod $name {
     type Graphs<'g> = ($($graph_type,)+);
     type BlankNodes<'g> = ($(Option<<$graph_type as Graph<'g>>::BlankNodePtr>,)+);
     type IRIs<'g> = ($(Option<<$graph_type as Graph<'g>>::IRIPtr>,)+);
+    type Datatypes<'g> = ($(Option<<<$graph_type as Graph<'g>>::LiteralPtr as LiteralPtr<'g>>::DatatypePtr>,)+);
     type Literals<'g> = ($(Option<<$graph_type as Graph<'g>>::LiteralPtr>,)+);
     type SPOTriples<'g> = ($(Option<<$graph_type as Graph<'g>>::SPOTriple>,)+);
     type SPOIters<'g> = ($(Peekable<<$graph_type as Graph<'g>>::SPOIter>,)+);
@@ -316,11 +317,26 @@ pub mod $name {
             panic!("unreachable")
         }
     }
+    #[derive(Clone,PartialEq)]
+    pub struct Datatype<'g> {
+        datatypes: Datatypes<'g>
+    }
+    impl<'g> DatatypePtr<'g> for Datatype<'g> {
+        fn as_str(&self) -> &str {
+            $(
+                if let Some(ref v) = self.datatypes.$n {
+                    return v.as_str();
+                }
+            )+
+            panic!("unreachable")
+        }
+    }
     #[derive(Clone,PartialEq,Eq,PartialOrd,Ord)]
     pub struct Literal<'g> {
         literals: Literals<'g>,
     }
     impl<'g> LiteralPtr<'g> for Literal<'g> {
+        type DatatypePtr = Datatype<'g>;
         fn as_str(&self) -> &str {
             $(
                 if let Some(ref v) = self.literals.$n {
@@ -329,10 +345,15 @@ pub mod $name {
             )+
             panic!("unreachable")
         }
-        fn datatype(&self) -> &str {
+        fn datatype(&self) -> Self::DatatypePtr {
+            Datatype {
+                datatypes: ($( self.literals.$n.as_ref().map(|l|l.datatype()), )+)
+            }
+        }
+        fn datatype_str(&self) -> &str {
             $(
                 if let Some(ref v) = self.literals.$n {
-                    return v.datatype();
+                    return v.datatype_str();
                 }
             )+
             panic!("unreachable")
@@ -484,6 +505,19 @@ pub mod $name {
             if any {
                 Some(Literal{
                     literals: literals
+                })
+            } else {
+                None
+            }
+        }
+        fn find_datatype<'a>(&'g self,
+                            datatype: &'a str)
+                            -> Option<Datatype> {
+            let datatypes = ($( self.graphs.$n.find_datatype(datatype) ),+);
+            let any = $( datatypes.$n.is_some() )||+;
+            if any {
+                Some(Datatype{
+                    datatypes: datatypes
                 })
             } else {
                 None

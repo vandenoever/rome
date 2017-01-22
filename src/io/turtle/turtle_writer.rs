@@ -4,33 +4,34 @@ use graph::*;
 use namespaces::*;
 use constants;
 
-struct TurtleWriter<'a, 'g, W: 'a, B: 'g, I: 'g>
+struct TurtleWriter<'a, 'g, W: 'a, G: 'g>
     where W: Write,
-          B: BlankNodePtr<'g> + Eq,
-          I: IRIPtr<'g> + Eq
+          G: Graph<'g>
 {
     buffer: Vec<u8>,
     base: String,
     writer: &'a mut W,
-    last_subject: Option<BlankNodeOrIRI<'g, B, I>>,
+    xsd_string: Option<<<G as Graph<'g>>::LiteralPtr as LiteralPtr<'g>>::DatatypePtr>,
+    last_subject: Option<BlankNodeOrIRI<'g, <G as Graph<'g>>::BlankNodePtr, <G as Graph<'g>>::IRIPtr>>,
     open_statement: bool,
 }
 
-pub fn write_turtle<'g, T, I, W, T1: 'g, T2: 'g, T3: 'g>(namespaces: &Namespaces,
-                                                         triples: I,
-                                                         writer: &mut W)
-                                                         -> Result<()>
-    where T: Triple<'g, T1, T2, T3>,
+pub fn write_turtle<'g, G: 'g, T: 'g, I, W>(namespaces: &Namespaces,
+                                            triples: I,
+                                            graph: &'g G,
+                                            writer: &mut W)
+                                            -> Result<()>
+    where T: Triple<'g, G::BlankNodePtr, G::IRIPtr, G::LiteralPtr>,
+          G: Graph<'g>,
+          <G as Graph<'g>>::BlankNodePtr: Display,
           I: Iterator<Item = T>,
-          W: Write,
-          T1: BlankNodePtr<'g> + Eq + Clone + Display,
-          T2: IRIPtr<'g> + Eq + Clone,
-          T3: LiteralPtr<'g>
+          W: Write
 {
-    let mut writer = TurtleWriter {
+    let mut writer = TurtleWriter::<_, G> {
         buffer: Vec::new(),
         base: String::new(),
         writer: writer,
+        xsd_string: graph.find_datatype(constants::XSD_STRING),
         last_subject: None,
         open_statement: false,
     };
@@ -44,10 +45,10 @@ pub fn write_turtle<'g, T, I, W, T1: 'g, T2: 'g, T3: 'g>(namespaces: &Namespaces
     writer.writer.write_all(b" .\n")
 }
 
-impl<'a, 'g, W: 'a, B, I> TurtleWriter<'a, 'g, W, B, I>
+impl<'a, 'g, W: 'a, G: 'g> TurtleWriter<'a, 'g, W, G>
     where W: Write,
-          B: BlankNodePtr<'g> + Eq + Clone + Display,
-          I: IRIPtr<'g> + Eq + Clone
+          G: Graph<'g>,
+          <G as Graph<'g>>::BlankNodePtr: Display
 {
     fn write_prefix(&mut self, ns: &Namespace) -> Result<()> {
         self.writer.write_all(b"@prefix ")?;
@@ -87,7 +88,7 @@ impl<'a, 'g, W: 'a, B, I> TurtleWriter<'a, 'g, W, B, I>
         self.writer.write_all(&self.buffer[..])?;
         self.writer.write_all(b">")
     }
-    fn write_blank_node(&mut self, blank_node: B) -> Result<()> {
+    fn write_blank_node(&mut self, blank_node: G::BlankNodePtr) -> Result<()> {
         self.writer.write_all(b"_:")?;
         write!(self.writer, "{}", blank_node)?;
         Ok(())
@@ -102,23 +103,21 @@ impl<'a, 'g, W: 'a, B, I> TurtleWriter<'a, 'g, W, B, I>
         }
         self.writer.write_all(&self.buffer[..])
     }
-    fn write_literal<L>(&mut self, literal: L, namespaces: &Namespaces) -> Result<()>
-        where L: LiteralPtr<'g>
-    {
+    fn write_literal(&mut self, literal: G::LiteralPtr, namespaces: &Namespaces) -> Result<()> {
         self.writer.write_all(b"\"")?;
         self.write_literal_value(literal.as_str())?;
         self.writer.write_all(b"\"")?;
         if let Some(ref langtag) = literal.language() {
             self.writer.write_all(b"@")?;
             self.writer.write_all(langtag.as_bytes())?;
-        } else if literal.datatype() != "http://www.w3.org/2001/XMLSchema#string" {
+        } else if Some(literal.datatype()) != self.xsd_string {
             self.writer.write_all(b"^^")?;
-            self.write_iri(literal.datatype(), namespaces)?;
+            self.write_iri(literal.datatype_str(), namespaces)?;
         }
         Ok(())
     }
     fn write_subject(&mut self,
-                     subject: BlankNodeOrIRI<'g, B, I>,
+                     subject: BlankNodeOrIRI<'g, G::BlankNodePtr, G::IRIPtr>,
                      namespaces: &Namespaces)
                      -> Result<()> {
         match subject {
@@ -129,21 +128,18 @@ impl<'a, 'g, W: 'a, B, I> TurtleWriter<'a, 'g, W, B, I>
     fn write_predicate(&mut self, predicate: &str, namespaces: &Namespaces) -> Result<()> {
         self.write_iri(predicate, namespaces)
     }
-    fn write_object<L>(&mut self,
-                       object: Resource<'g, B, I, L>,
-                       namespaces: &Namespaces)
-                       -> Result<()>
-        where L: LiteralPtr<'g>
-    {
+    fn write_object(&mut self,
+                    object: Resource<'g, G::BlankNodePtr, G::IRIPtr, G::LiteralPtr>,
+                    namespaces: &Namespaces)
+                    -> Result<()> {
         match object {
             Resource::BlankNode(blank_node, _) => self.write_blank_node(blank_node),
             Resource::IRI(iri) => self.write_iri(iri.as_str(), namespaces),
             Resource::Literal(literal) => self.write_literal(literal, namespaces),
         }
     }
-    fn write_triple<T, L: 'g>(&mut self, triple: &T, namespaces: &Namespaces) -> Result<()>
-        where T: Triple<'g, B, I, L>,
-              L: LiteralPtr<'g>
+    fn write_triple<T>(&mut self, triple: &T, namespaces: &Namespaces) -> Result<()>
+        where T: Triple<'g, G::BlankNodePtr, G::IRIPtr, G::LiteralPtr>
     {
         let subject = triple.subject();
         if self.last_subject == Some(subject.clone()) {

@@ -172,7 +172,7 @@ impl<'g, SPO: 'g, OPS: 'g> graph::GraphWriter<'g> for GraphCreator<SPO, OPS>
             None => {
                 CreateLiteral {
                     lexical: self.string_collector.add_string(l.as_str()),
-                    datatype: self.datatype_lang_collector.add_string(l.datatype()),
+                    datatype: self.datatype_lang_collector.add_string(l.datatype_str()),
                     language: None,
                 }
             }
