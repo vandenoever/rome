@@ -1,7 +1,7 @@
 /// Generate rust code from a set of ontologies
 ///
 
-extern crate rdfio;
+extern crate rome;
 use std::env::args;
 use std::fs;
 use std::io;
@@ -9,18 +9,18 @@ use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::collections::BTreeMap;
 use std::collections::HashSet;
-use rdfio::graphs::tel;
-use rdfio::io::TurtleParser;
-use rdfio::graph::{Graph, GraphWriter, Triple, ResourceTranslator, IRIPtr, LiteralPtr,
-                   WriterResource};
-use rdfio::namespaces::Namespaces;
-use rdfio::resource::{ResourceBase, IRI, ObjectIter};
-use rdfio::ontology::classes::rdf::Property;
-use rdfio::ontology::classes::rdfs::Class;
-use rdfio::ontology::properties::rdfs::{Comment, Domain, Range, SubClassOf};
-use rdfio::ontology;
-use rdfio::ontology_adapter;
-use rdfio::iter::TransitiveIterator;
+use rome::graphs::tel;
+use rome::io::TurtleParser;
+use rome::graph::{Graph, GraphWriter, Triple, ResourceTranslator, IRIPtr, LiteralPtr,
+                  WriterResource};
+use rome::namespaces::Namespaces;
+use rome::resource::{ResourceBase, IRI, ObjectIter};
+use rome::ontology::classes::rdf::Property;
+use rome::ontology::classes::rdfs::Class;
+use rome::ontology::properties::rdfs::{Comment, Domain, Range, SubClassOf};
+use rome::ontology;
+use rome::ontology_adapter;
+use rome::iter::TransitiveIterator;
 
 type MyGraph = tel::Graph128;
 type OA<'g> = ontology_adapter::OntologyAdapter<'g, MyGraph>;
@@ -93,7 +93,7 @@ fn write_impl_property<'g, G, W>(class: &IRI<'g, Class<'g, G>>,
                                  prefixes: &Namespaces,
                                  done: &mut HashSet<String>,
                                  writer: &mut W)
-                                 -> rdfio::Result<()>
+                                 -> rome::Result<()>
     where W: Write,
           G: Graph<'g>
 {
@@ -126,7 +126,7 @@ fn write_impl_properties<'g, W>(class: &IRI<'g, Class<'g, MyGraph>>,
                                 d: &OntoData<'g>,
                                 done: &mut HashSet<String>,
                                 writer: &mut W)
-                                -> rdfio::Result<()>
+                                -> rome::Result<()>
     where W: Write
 {
     for property in d.properties.iter() {
@@ -178,7 +178,7 @@ impl<'g> ResourceTranslator<'g> for Translator<'g> {
     }
 }
 
-fn infer(graph: &MyGraph) -> rdfio::Result<MyGraph> {
+fn infer(graph: &MyGraph) -> rome::Result<MyGraph> {
     // for every triple with rdfs:subClassOf infer that the subject and the
     // object are rdfs:Class instances
     let oa: ontology_adapter::OntologyAdapter<MyGraph> = ontology::adapter(graph);
@@ -192,9 +192,9 @@ fn infer(graph: &MyGraph) -> rdfio::Result<MyGraph> {
         let class = translator.translate_blank_node_or_iri(&mut w, &triple.subject());
         w.add(&class, &rdf_type, &rdfs_class);
         let class = translator.translate_blank_node_or_iri(&mut w,
-                                                            &triple.object()
-                                                                .to_blank_node_or_iri()
-                                                                .unwrap());
+                                                           &triple.object()
+                                                               .to_blank_node_or_iri()
+                                                               .unwrap());
         w.add(&class, &rdf_type, &rdfs_class);
     }
     // copy all triples
@@ -226,7 +226,7 @@ fn infer(graph: &MyGraph) -> rdfio::Result<MyGraph> {
     Ok(w.collect().sort_blank_nodes())
 }
 
-fn write_mod(o: &Output, iris: &Vec<String>) -> rdfio::Result<()> {
+fn write_mod(o: &Output, iris: &Vec<String>) -> rome::Result<()> {
     let path = o.output_dir.join("mod.rs");
     let mut mod_rs = fs::File::create(path)?;
     mod_rs.write_all(b"pub mod classes;\n")?;
@@ -235,8 +235,8 @@ fn write_mod(o: &Output, iris: &Vec<String>) -> rdfio::Result<()> {
         mod_rs.write_all(b"use graph;\n")?;
         mod_rs.write_all(b"use ontology_adapter;\n")?;
     } else {
-        mod_rs.write_all(b"use rdfio::graph;\n")?;
-        mod_rs.write_all(b"use rdfio::ontology_adapter;\n")?;
+        mod_rs.write_all(b"use rome::graph;\n")?;
+        mod_rs.write_all(b"use rome::ontology_adapter;\n")?;
     }
     mod_rs.write_all(b"pub fn adapter<'g, G>(graph: &'g G) -> ontology_adapter::OntologyAdapter<'g, G>
     where G: graph::Graph<'g>
@@ -250,7 +250,7 @@ fn write_mod(o: &Output, iris: &Vec<String>) -> rdfio::Result<()> {
     Ok(())
 }
 
-fn load_files(inputs: &Vec<String>) -> rdfio::Result<(Namespaces, MyGraph)> {
+fn load_files(inputs: &Vec<String>) -> rome::Result<(Namespaces, MyGraph)> {
     let mut writer = tel::GraphCreator::with_capacity(65000);
     let mut prefixes = Namespaces::new();
     for input in inputs {
@@ -270,10 +270,10 @@ fn load_files(inputs: &Vec<String>) -> rdfio::Result<(Namespaces, MyGraph)> {
     Ok((prefixes, graph))
 }
 
-fn write_comment<'g, W, C>(r: &C, writer: &mut W) -> rdfio::Result<()>
+fn write_comment<'g, W, C>(r: &C, writer: &mut W) -> rome::Result<()>
     where W: Write,
           C: 'g + Comment<'g>,
-          <C as rdfio::resource::ResourceBase<'g>>::Graph: 'g
+          <C as rome::resource::ResourceBase<'g>>::Graph: 'g
 {
     for comment in r.comment() {
         if let Some(l) = comment.this().as_literal() {
@@ -284,7 +284,7 @@ fn write_comment<'g, W, C>(r: &C, writer: &mut W) -> rdfio::Result<()>
     Ok(())
 }
 
-fn generate_classes(d: &OntoData, iris: &mut Vec<String>) -> rdfio::Result<()> {
+fn generate_classes(d: &OntoData, iris: &mut Vec<String>) -> rome::Result<()> {
     let mut outputs = BTreeMap::new();
     for ns in d.prefixes.iter() {
         outputs.insert(Vec::from(ns.prefix()), Vec::new());
@@ -310,7 +310,7 @@ fn generate_classes(d: &OntoData, iris: &mut Vec<String>) -> rdfio::Result<()> {
     }
     write_files(&d.o, &outputs, "classes", true)
 }
-fn generate_properties(d: &OntoData, iris: &mut Vec<String>) -> rdfio::Result<()> {
+fn generate_properties(d: &OntoData, iris: &mut Vec<String>) -> rome::Result<()> {
     let mut outputs = BTreeMap::new();
     for ns in d.prefixes.iter() {
         outputs.insert(Vec::from(ns.prefix()), Vec::new());
@@ -353,17 +353,17 @@ fn uses(o: &Output, classes: bool) -> String {
             uses.push_str("use ontology_adapter;\n");
         }
     } else {
-        uses.push_str("use rdfio::graph;\n");
-        uses.push_str("use rdfio::resource;\n");
+        uses.push_str("use rome::graph;\n");
+        uses.push_str("use rome::resource;\n");
         if classes {
-            uses.push_str("use rdfio::ontology_adapter;\n");
+            uses.push_str("use rome::ontology_adapter;\n");
         }
     }
     uses.push_str(&format!("use {};\n", o.mod_name));
     uses
 }
 
-fn write_files(o: &Output, writers: &Writers, folder: &str, classes: bool) -> rdfio::Result<()> {
+fn write_files(o: &Output, writers: &Writers, folder: &str, classes: bool) -> rome::Result<()> {
     let uses = uses(o, classes);
     let dir_path = o.output_dir.join(folder);
     if !fs::metadata(&dir_path)?.is_dir() {
@@ -391,7 +391,7 @@ fn generate(output_dir: PathBuf,
             mod_name: String,
             internal: bool,
             inputs: &Vec<String>)
-            -> rdfio::Result<()> {
+            -> rome::Result<()> {
     let (prefixes, graph) = load_files(inputs)?;
     let oa = ontology::adapter(&graph);
     let mut iris = Vec::new();

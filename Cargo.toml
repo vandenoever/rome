@@ -1,16 +1,21 @@
 [package]
-name = "rdfio"
+name = "rome"
 version = "0.1.0"
 authors = ["Jos van den Oever <jos@vandenoever.info>"]
+license = "AGPL-3.0"
+description = "An RDF library in pure Rust"
+homepage = "https://github.com/vandenoever/rome"
+repository = "https://github.com/vandenoever/rome"
+documentation = "https://github.com/vandenoever/rome"
 
 [dependencies]
-# library
+# for the library
 lazy_static = "*"
 nom = "*"
 rand = "*"
 regex = "*"
 
-# examples
+# for the examples
 time = "*"
 
 [features]

@@ -82,8 +82,8 @@ pub trait BlankNodePtr<'g> {
     /// `BlankNodeOrIRI`.
     ///
     /// ```
-    /// # use rdfio::graphs::tel;
-    /// # use rdfio::graph::*;
+    /// # use rome::graphs::tel;
+    /// # use rome::graph::*;
     /// #
     /// # let mut creator = tel::GraphCreator::with_capacity(0);
     /// # let ok = creator.create_iri(&"ok");
@@ -106,8 +106,8 @@ pub trait BlankNodePtr<'g> {
     /// `Resource`.
     ///
     /// ```
-    /// # use rdfio::graphs::tel;
-    /// # use rdfio::graph::*;
+    /// # use rome::graphs::tel;
+    /// # use rome::graph::*;
     /// #
     /// # let mut creator = tel::GraphCreator::with_capacity(0);
     /// # let iri = creator.create_iri(&"");

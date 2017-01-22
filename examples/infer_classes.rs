@@ -3,17 +3,17 @@
 /// The program reads a Turtle or N-Triples file and infers Class instances by
 /// using rdf:subClassOf.
 
-extern crate rdfio;
+extern crate rome;
 use std::env::args;
 use std::fs;
 use std::io;
 use std::io::{Read, Write};
 use std::path::Path;
 use std::collections::BTreeMap;
-use rdfio::io::{TurtleParser, write_turtle};
-use rdfio::graph::{Graph, GraphWriter, Triple, WriterResource, ResourceTranslator};
-use rdfio::graphs::tel;
-use rdfio::namespaces::Namespaces;
+use rome::io::{TurtleParser, write_turtle};
+use rome::graph::{Graph, GraphWriter, Triple, WriterResource, ResourceTranslator};
+use rome::graphs::tel;
+use rome::namespaces::Namespaces;
 
 type MyGraph = tel::Graph64;
 
@@ -37,7 +37,7 @@ fn read_file(path: &str) -> io::Result<String> {
     Ok(s)
 }
 
-fn load_graph(data: &str, base: &str) -> rdfio::Result<MyGraph> {
+fn load_graph(data: &str, base: &str) -> rome::Result<MyGraph> {
     let mut writer = tel::GraphCreator::with_capacity(65000);
     {
         let mut triples = TurtleParser::new(data, base, &mut writer)?;
@@ -48,7 +48,7 @@ fn load_graph(data: &str, base: &str) -> rdfio::Result<MyGraph> {
     Ok(writer.collect().sort_blank_nodes())
 }
 
-fn output_as_turtle(graph: &MyGraph) -> rdfio::Result<()> {
+fn output_as_turtle(graph: &MyGraph) -> rome::Result<()> {
     let mut ns = Namespaces::new();
     ns.set(b"rdfs", "http://www.w3.org/2000/01/rdf-schema#");
     write_turtle(&ns, graph.iter(), graph, &mut ::std::io::stdout())?;
@@ -87,7 +87,7 @@ impl<'g> ResourceTranslator<'g> for Translator<'g> {
     }
 }
 
-fn infer(graph: &MyGraph) -> rdfio::Result<MyGraph> {
+fn infer(graph: &MyGraph) -> rome::Result<MyGraph> {
     // for every triple with rdfs:subClassOf infer that the subject and the
     // object are rdfs:Class instances
     let mut w = tel::GraphCreator::with_capacity(65000);
@@ -108,7 +108,7 @@ fn infer(graph: &MyGraph) -> rdfio::Result<MyGraph> {
     Ok(w.collect().sort_blank_nodes())
 }
 
-fn run(path: &str, base: &str) -> rdfio::Result<()> {
+fn run(path: &str, base: &str) -> rome::Result<()> {
     let data = read_file(path)?;
     let graph = load_graph(data.as_str(), base)?;
     let result = infer(&graph)?;

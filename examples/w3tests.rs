@@ -1,4 +1,4 @@
-extern crate rdfio;
+extern crate rome;
 extern crate time;
 use std::env::args;
 use std::fs;
@@ -6,11 +6,11 @@ use std::io;
 use std::io::{Read, Write};
 use std::path::Path;
 use std::rc::Rc;
-use rdfio::graph;
-use rdfio::graph::*;
-use rdfio::graphs::tel;
-use rdfio::io::{TurtleParser, write_turtle, write_ntriples};
-use rdfio::namespaces::Namespaces;
+use rome::graph;
+use rome::graph::*;
+use rome::graphs::tel;
+use rome::io::{TurtleParser, write_turtle, write_ntriples};
+use rome::namespaces::Namespaces;
 
 type MyGraph = tel::Graph64;
 type MyIter<'g> = <MyGraph as Graph<'g>>::SPORangeIter;
@@ -138,9 +138,7 @@ impl<'g> LiteralPtr<'g> for Literal {
         &self.value
     }
     fn datatype(&self) -> Datatype {
-        Datatype {
-            datatype: self.datatype.clone()
-        }
+        Datatype { datatype: self.datatype.clone() }
     }
     fn datatype_str(&self) -> &str {
         &self.datatype
@@ -235,7 +233,7 @@ impl<'g, W: 'g> Cache<'g, W>
 fn write_assertion<'a, 'g, W: 'g>(assertion: &'a Assertion,
                                   w: &mut W,
                                   cache: &mut Cache<'g, W>)
-                                  -> rdfio::Result<()>
+                                  -> rome::Result<()>
     where W: GraphWriter<'g>
 {
     let rdf_type = cache.rdf_type(w);
@@ -282,7 +280,7 @@ fn read_file(path: &str) -> io::Result<String> {
     Ok(s)
 }
 
-fn load_graph(data: &str, base: &str) -> rdfio::Result<MyGraph> {
+fn load_graph(data: &str, base: &str) -> rome::Result<MyGraph> {
     let mut writer = tel::GraphCreator::with_capacity(65000);
     {
         let mut triples = TurtleParser::new(data, base, &mut writer)?;
@@ -424,7 +422,7 @@ fn subject_to_string(subject: &MyBlankNodeOrIRI) -> Rc<String> {
     }
 }
 
-fn run_tests(graph: &MyGraph, base: &str, base_dir: &str) -> rdfio::Result<Vec<Assertion>> {
+fn run_tests(graph: &MyGraph, base: &str, base_dir: &str) -> rome::Result<Vec<Assertion>> {
     let mut assertions = Vec::new();
     for t in
         graph.iter_object_iri_predicate("http://www.w3.org/ns/rdftest#TestTurtleEval", RDF_TYPE) {
@@ -465,7 +463,7 @@ fn change_base(iri: &str, old_base: &str, new_base: &str) -> String {
     n
 }
 
-fn fail(test: &Rc<String>, input_file: &String, info: String) -> rdfio::Result<Assertion> {
+fn fail(test: &Rc<String>, input_file: &String, info: String) -> rome::Result<Assertion> {
     Ok(Assertion {
         test: test.clone(),
         input_file: input_file.clone(),
@@ -478,7 +476,7 @@ fn fail(test: &Rc<String>, input_file: &String, info: String) -> rdfio::Result<A
     })
 }
 
-fn pass(test: &Rc<String>, input_file: &String) -> rdfio::Result<Assertion> {
+fn pass(test: &Rc<String>, input_file: &String) -> rome::Result<Assertion> {
     Ok(Assertion {
         test: test.clone(),
         input_file: input_file.clone(),
@@ -491,7 +489,7 @@ fn pass(test: &Rc<String>, input_file: &String) -> rdfio::Result<Assertion> {
     })
 }
 
-fn run_eval(test: &TestTurtleEval, base: &str, base_dir: &str) -> rdfio::Result<Assertion> {
+fn run_eval(test: &TestTurtleEval, base: &str, base_dir: &str) -> rome::Result<Assertion> {
     let ttl_path = change_base(test.action.as_str(), base, base_dir);
     let nt_path = change_base(test.result.as_str(), base, base_dir);
     let ttl = read_file(&ttl_path)?;
@@ -535,7 +533,7 @@ fn run_eval(test: &TestTurtleEval, base: &str, base_dir: &str) -> rdfio::Result<
     }
     pass(&test.id, &ttl_path)
 }
-fn graph_to_ntriples(graph: &MyGraph) -> rdfio::Result<String> {
+fn graph_to_ntriples(graph: &MyGraph) -> rome::Result<String> {
     let mut bytes = Vec::new();
     write_ntriples(graph.iter(), graph, &mut bytes)?;
     let string = String::from_utf8(bytes)?;
@@ -544,7 +542,7 @@ fn graph_to_ntriples(graph: &MyGraph) -> rdfio::Result<String> {
 fn run_eval_positive_syntax<'a>(test: &TestTurtlePositiveSyntax,
                                 base: &str,
                                 base_dir: &str)
-                                -> rdfio::Result<Assertion> {
+                                -> rome::Result<Assertion> {
     let ttl_path = change_base(test.action.as_str(), base, base_dir);
     let ttl = read_file(&ttl_path)?;
     if let Err(err) = load_graph(ttl.as_str(), test.action.as_str()) {
@@ -557,7 +555,7 @@ fn run_eval_positive_syntax<'a>(test: &TestTurtlePositiveSyntax,
 fn run_eval_negative_syntax<'a>(test: &TestTurtleNegativeSyntax,
                                 base: &str,
                                 base_dir: &str)
-                                -> rdfio::Result<Assertion> {
+                                -> rome::Result<Assertion> {
     let ttl_path = change_base(test.action.as_str(), base, base_dir);
     let ttl = read_file(&ttl_path)?;
     if let Ok(graph) = load_graph(ttl.as_str(), test.action.as_str()) {
@@ -570,7 +568,7 @@ fn run_eval_negative_syntax<'a>(test: &TestTurtleNegativeSyntax,
 fn run_eval_negative_eval<'a>(test: &TestTurtleNegativeEval,
                               base: &str,
                               base_dir: &str)
-                              -> rdfio::Result<Assertion> {
+                              -> rome::Result<Assertion> {
     let ttl_path = change_base(test.action.as_str(), base, base_dir);
     let ttl = read_file(&ttl_path)?;
     if let Ok(graph) = load_graph(ttl.as_str(), test.action.as_str()) {
@@ -581,7 +579,7 @@ fn run_eval_negative_eval<'a>(test: &TestTurtleNegativeEval,
     pass(&test.id, &ttl_path)
 }
 
-fn output_as_turtle(assertions: &Vec<Assertion>) -> rdfio::Result<()> {
+fn output_as_turtle(assertions: &Vec<Assertion>) -> rome::Result<()> {
     let mut writer = tel::GraphCreator::with_capacity(100000);
     let mut cache = Cache::new();
     for a in assertions {
@@ -597,7 +595,7 @@ fn output_as_turtle(assertions: &Vec<Assertion>) -> rdfio::Result<()> {
     Ok(())
 }
 
-fn run(manifest_path: &str, output_turtle: bool) -> rdfio::Result<()> {
+fn run(manifest_path: &str, output_turtle: bool) -> rome::Result<()> {
     // read the manifest file
     let path = Path::new(manifest_path);
     let mut dir = String::from(path.parent().unwrap().to_str().unwrap());
