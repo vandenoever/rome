@@ -10,13 +10,13 @@ documentation = "https://github.com/vandenoever/rome"
 
 [dependencies]
 # for the library
-lazy_static = "*"
-nom = "*"
-rand = "*"
-regex = "*"
+lazy_static = "0.2.2"
+nom = "^2"
+rand = "0.3.15"
+regex = "0.2.1"
 
 # for the examples
-time = "*"
+time = "0.1.36"
 
 [features]
 default = []
