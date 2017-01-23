@@ -1,3 +1,4 @@
+//! Iterator that is a collection of iterators.
 use iter::SortedIterator;
 use std::collections::BTreeMap;
 use std::iter::Peekable;

@@ -39,6 +39,7 @@ macro_rules! triple64_helper{(
     $subject_type_offset:expr,
     $object_type_offset:expr) => {
 
+/// Compact triple used in tel::Graph.
 #[derive(PartialEq,Eq,Hash,PartialOrd,Ord,Clone,Copy,Debug)]
 pub struct $name {
     value: u64,

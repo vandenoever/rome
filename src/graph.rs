@@ -1,4 +1,4 @@
-//! Traits for RDF graphs.
+//! The main module of this crate. It has traits for RDF graphs.
 //!
 //! RDF graphs consist of triples: a subject, a predicate, and an object.
 //! Triples are also called statements: A triple says something about something.
@@ -63,7 +63,7 @@
 //!
 
 use constants;
-use iter::sorted_iterator::SortedIterator;
+use iter::SortedIterator;
 use std::cmp::Ordering;
 use std::marker::PhantomData;
 

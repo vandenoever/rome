@@ -1,4 +1,4 @@
-use iter::sorted_iterator::*;
+use iter::SortedIterator;
 use std::marker::PhantomData;
 use super::compact_triple::*;
 use super::graph::*;

@@ -1,15 +1,24 @@
+//! The error and result types for this crate.
+
 use nom;
 use std::fmt;
 use std::io;
 use std::result;
 use std::string;
+
+/// The result type for this crate.
 pub type Result<T> = result::Result<T, Error>;
 
+/// The error type for this crate.
 #[derive (Debug)]
 pub enum Error {
+    /// This error was caused by an IO error.
     IOError(io::Error),
+    /// This error was caused by the nom parser.
     NomError(nom::ErrorKind),
+    /// A custom error from `&'static str`.
     Custom(&'static str),
+    /// A custom error from `String`.
     String(String),
 }
 

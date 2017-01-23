@@ -1,3 +1,4 @@
+//! OntologyAdapter allows accessing of a graph via an ontology.
 use graph::*;
 
 /// OntologyAdapter allows accessing of a graph via an ontology.

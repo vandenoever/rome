@@ -1,3 +1,4 @@
+//! Helper traits used in generated ontology code.
 use graph;
 use graph::Triple;
 use ontology_adapter;
@@ -198,7 +199,9 @@ impl<'g, R> iter::SortedIterator for ObjectIter<'g, R> where R: ResourceBase<'g>
 pub struct SubjectIter<'g, R: 'g>
     where R: ResourceBase<'g>
 {
+    #[doc(hidden)]
     pub adapter: &'g ontology_adapter::OntologyAdapter<'g, R::Graph>,
+    #[doc(hidden)]
     pub iter: <R::Graph as graph::Graph<'g>>::OPSRangeIter,
 }
 

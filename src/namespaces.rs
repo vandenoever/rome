@@ -1,3 +1,4 @@
+//! Code for dealing with namespaces in RDF files.
 use std::slice::Iter;
 
 /// Namespaces object maps prefixes to namespaces.
