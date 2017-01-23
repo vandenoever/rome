@@ -2,7 +2,7 @@
 
 **Rome** is an **RDF library** written in safe Rust.
 
-[https://www.vandenoever.info/rust/rome/](Documentation)
+[Documentation](https://www.vandenoever.info/rust/rome/)
 
 # Features
 
