@@ -2,9 +2,11 @@
 
 **Rome** is an **RDF library** written in safe Rust.
 
+[https://www.vandenoever.info/rust/rome/](Documentation)
+
 # Features
 
-- Access any data in uniform way as RDF by implementing a Graph.
+- Access any data in a uniform way as RDF by implementing a Graph.
 - Read/write Turtle and N-Triple files.
 - Iterate over triples in graphs.
 - Wrap a graph in code generated from an ontology.

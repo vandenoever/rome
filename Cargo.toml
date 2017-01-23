@@ -1,12 +1,12 @@
 [package]
 name = "rome"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Jos van den Oever <jos@vandenoever.info>"]
 license = "AGPL-3.0"
 description = "An RDF library in pure Rust"
 homepage = "https://github.com/vandenoever/rome"
 repository = "https://github.com/vandenoever/rome"
-documentation = "https://github.com/vandenoever/rome"
+documentation = "https://www.vandenoever.info/rust/rome/"
 
 [dependencies]
 # for the library
