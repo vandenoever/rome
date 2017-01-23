@@ -1,2 +1,8 @@
-target
-Cargo.lock
+TurtleTests/
+.project
+dev
+publish_docs.sh
+unblock.sh
+.gitignore
+.settings
+fix_env.sh
