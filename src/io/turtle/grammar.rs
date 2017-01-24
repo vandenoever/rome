@@ -280,7 +280,7 @@ named!(iri_ref_literal<&str,RDFLiteralType>, do_parse!(
 ));
 
 /// [133s] BooleanLiteral ::= 'true' | 'false'
-named!(boolean<&str,Literal>, do_parse!(
+named!(pub boolean<&str,Literal>, do_parse!(
     b: alt!(tag_s!("true") | tag_s!("false")) >>
     (Literal {
         lexical: b,
@@ -373,7 +373,7 @@ named!(langtag<&str,RDFLiteralType>, do_parse!(
 ));
 
 /// [19] INTEGER ::= [+-]? [0-9]+
-named!(integer<&str,Literal>, map!(recognize!(tuple!(
+named!(pub integer<&str,Literal>, map!(recognize!(tuple!(
     opt!(alt!(tag_s!("+") | tag_s!("-"))), digit)),
     (|integer|{
         Literal {
@@ -385,7 +385,7 @@ named!(integer<&str,Literal>, map!(recognize!(tuple!(
 ));
 
 /// [20] DECIMAL ::= [+-]? [0-9]* '.' [0-9]+
-named!(decimal<&str,Literal>, map!(recognize!(tuple!(
+named!(pub decimal<&str,Literal>, map!(recognize!(tuple!(
     opt!(alt!(tag_s!("+") | tag_s!("-"))), opt_digit, tag_s!("."), digit)),
     (|decimal|{
         Literal {
@@ -397,7 +397,7 @@ named!(decimal<&str,Literal>, map!(recognize!(tuple!(
 ));
 
 /// [21] DOUBLE ::= [+-]? ([0-9]+ '.' [0-9]* EXPONENT | '.' [0-9]+ EXPONENT | [0-9]+ EXPONENT)
-named!(double<&str,Literal>, map!(recognize!(tuple!(
+named!(pub double<&str,Literal>, map!(recognize!(tuple!(
     opt!(alt!(tag_s!("+") | tag_s!("-"))),
     alt!(
         recognize!(tuple!(digit,tag_s!("."), opt_digit, exponent)) |

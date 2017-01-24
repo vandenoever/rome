@@ -1,6 +1,9 @@
+use super::grammar::{boolean, decimal, integer, double};
+use super::grammar_structs::Literal;
 use constants;
 use graph::*;
 use namespaces::*;
+use nom::IResult;
 use std::fmt::Display;
 use std::io::{Result, Write};
 
@@ -11,7 +14,11 @@ struct TurtleWriter<'a, 'g, W: 'a, G: 'g>
     buffer: Vec<u8>,
     base: String,
     writer: &'a mut W,
-    xsd_string: Option<<<G as Graph<'g>>::LiteralPtr as LiteralPtr<'g>>::DatatypePtr>,
+    xsd_string: Option<<G::LiteralPtr as LiteralPtr<'g>>::DatatypePtr>,
+    xsd_boolean: Option<<G::LiteralPtr as LiteralPtr<'g>>::DatatypePtr>,
+    xsd_integer: Option<<G::LiteralPtr as LiteralPtr<'g>>::DatatypePtr>,
+    xsd_decimal: Option<<G::LiteralPtr as LiteralPtr<'g>>::DatatypePtr>,
+    xsd_double: Option<<G::LiteralPtr as LiteralPtr<'g>>::DatatypePtr>,
     last_subject: Option<BlankNodeOrIRI<'g, <G as Graph<'g>>::BlankNodePtr, <G as Graph<'g>>::IRIPtr>>,
     open_statement: bool,
 }
@@ -33,6 +40,10 @@ pub fn write_turtle<'g, G: 'g, T: 'g, I, W>(namespaces: &Namespaces,
         base: String::new(),
         writer: writer,
         xsd_string: graph.find_datatype(constants::XSD_STRING),
+        xsd_boolean: graph.find_datatype(constants::XSD_BOOLEAN),
+        xsd_integer: graph.find_datatype(constants::XSD_INTEGER),
+        xsd_decimal: graph.find_datatype(constants::XSD_DECIMAL),
+        xsd_double: graph.find_datatype(constants::XSD_DOUBLE),
         last_subject: None,
         open_statement: false,
     };
@@ -105,15 +116,35 @@ impl<'a, 'g, W: 'a, G: 'g> TurtleWriter<'a, 'g, W, G>
         self.writer.write_all(&self.buffer[..])
     }
     fn write_literal(&mut self, literal: G::LiteralPtr, namespaces: &Namespaces) -> Result<()> {
-        self.writer.write_all(b"\"")?;
-        self.write_literal_value(literal.as_str())?;
-        self.writer.write_all(b"\"")?;
-        if let Some(ref langtag) = literal.language() {
-            self.writer.write_all(b"@")?;
-            self.writer.write_all(langtag.as_bytes())?;
-        } else if Some(literal.datatype()) != self.xsd_string {
-            self.writer.write_all(b"^^")?;
-            self.write_iri(literal.datatype_str(), namespaces)?;
+        let d = Some(literal.datatype());
+        let v = literal.as_str();
+        // if the literal matches the unquoted production for its datatype,
+        // print without quotes
+        let mut unquoted = false;
+        for i in &[(&self.xsd_boolean, boolean as fn(&str) -> IResult<&str, Literal>),
+                   (&self.xsd_integer, integer),
+                   (&self.xsd_decimal, decimal),
+                   (&self.xsd_double, double)] {
+            if &d == i.0 {
+                if let IResult::Done("", _) = (i.1)(v) {
+                    unquoted = true;
+                    break;
+                }
+            }
+        }
+        if unquoted {
+            self.write_literal_value(literal.as_str())?;
+        } else {
+            self.writer.write_all(b"\"")?;
+            self.write_literal_value(literal.as_str())?;
+            self.writer.write_all(b"\"")?;
+            if let Some(ref langtag) = literal.language() {
+                self.writer.write_all(b"@")?;
+                self.writer.write_all(langtag.as_bytes())?;
+            } else if d != self.xsd_string {
+                self.writer.write_all(b"^^")?;
+                self.write_iri(literal.datatype_str(), namespaces)?;
+            }
         }
         Ok(())
     }
@@ -143,7 +174,7 @@ impl<'a, 'g, W: 'a, G: 'g> TurtleWriter<'a, 'g, W, G>
         where T: Triple<'g, G::BlankNodePtr, G::IRIPtr, G::LiteralPtr>
     {
         let subject = triple.subject();
-        if self.last_subject == Some(subject.clone()) {
+        if self.last_subject.as_ref() == Some(&subject) {
             self.writer.write_all(b" ;\n\t")?;
         } else {
             if self.open_statement {
