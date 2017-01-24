@@ -563,15 +563,23 @@ pub trait Graph<'g> {
                         datatype: &'a str,
                         language: Option<&'a str>)
                         -> Option<Self::LiteralPtr>;
+    /// Iterate over the triples that have the given subject.
+    fn iter_s(&'g self,
+              subject: &BlankNodeOrIRI<'g, Self::BlankNodePtr, Self::IRIPtr>)
+              -> Self::SPORangeIter;
     /// Iterate over the triples that have the given subject and predicate.
     fn iter_s_p(&'g self,
-                subject: BlankNodeOrIRI<'g, Self::BlankNodePtr, Self::IRIPtr>,
-                predicate: Self::IRIPtr)
+                subject: &BlankNodeOrIRI<'g, Self::BlankNodePtr, Self::IRIPtr>,
+                predicate: &Self::IRIPtr)
                 -> Self::SPORangeIter;
+    /// Iterate over the triples that have the given object.
+    fn iter_o(&'g self,
+              object: &Resource<'g, Self::BlankNodePtr, Self::IRIPtr, Self::LiteralPtr>)
+              -> Self::OPSRangeIter;
     /// Iterate over the triples that have the given object and predicate.
     fn iter_o_p(&'g self,
-                object: Resource<'g, Self::BlankNodePtr, Self::IRIPtr, Self::LiteralPtr>,
-                predicate: Self::IRIPtr)
+                object: &Resource<'g, Self::BlankNodePtr, Self::IRIPtr, Self::LiteralPtr>,
+                predicate: &Self::IRIPtr)
                 -> Self::OPSRangeIter;
 
     /// Iterator that returns no results.

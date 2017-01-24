@@ -576,25 +576,24 @@ pub mod $name {
                 None
             }
         }
-        fn iter_s_p(&'g self,
-                    subject: BlankNodeOrIRI<'g, Self::BlankNodePtr, Self::IRIPtr>,
-                    predicate: Self::IRIPtr)
+        fn iter_s(&'g self,
+                    subject: &BlankNodeOrIRI<'g, Self::BlankNodePtr, Self::IRIPtr>)
                     -> Self::SPORangeIter {
             let iters = match subject {
-                BlankNodeOrIRI::BlankNode(b, _) => { ($(
-                    match (b.nodes.$n, predicate.iris.$n) {
-                        (Some(b), Some(p)) => {
-                            self.graphs.$n.iter_s_p(BlankNodeOrIRI::BlankNode(b, PhantomData), p)
+                &BlankNodeOrIRI::BlankNode(ref b, _) => { ($(
+                    match b.nodes.$n {
+                        Some(b) => {
+                            self.graphs.$n.iter_s(&BlankNodeOrIRI::BlankNode(b, PhantomData))
                         },
                         _ => {
                             self.graphs.$n.empty_spo_range()
                         }
                     }.peekable()
                 ,)+) },
-                BlankNodeOrIRI::IRI(i) => { ($(
-                    match (i.iris.$n, predicate.iris.$n) {
-                        (Some(i), Some(p)) => {
-                            self.graphs.$n.iter_s_p(BlankNodeOrIRI::IRI(i), p)
+                &BlankNodeOrIRI::IRI(ref i) => { ($(
+                    match i.iris.$n {
+                        Some(ref i) => {
+                            self.graphs.$n.iter_s(&BlankNodeOrIRI::IRI(i.clone()))
                         },
                         _ => {
                             self.graphs.$n.empty_spo_range()
@@ -604,35 +603,100 @@ pub mod $name {
             };
             SPORangeIter { iters: iters }
         }
-        fn iter_o_p(&'g self,
-                    object: Resource<'g, Self::BlankNodePtr, Self::IRIPtr, Self::LiteralPtr>,
-                    predicate: Self::IRIPtr)
+        fn iter_s_p(&'g self,
+                    subject: &BlankNodeOrIRI<'g, Self::BlankNodePtr, Self::IRIPtr>,
+                    predicate: &Self::IRIPtr)
+                    -> Self::SPORangeIter {
+            let iters = match subject {
+                &BlankNodeOrIRI::BlankNode(ref b, _) => { ($(
+                    match (b.nodes.$n, &predicate.iris.$n) {
+                        (Some(b), &Some(ref p)) => {
+                            self.graphs.$n.iter_s_p(&BlankNodeOrIRI::BlankNode(b, PhantomData), p)
+                        },
+                        _ => {
+                            self.graphs.$n.empty_spo_range()
+                        }
+                    }.peekable()
+                ,)+) },
+                &BlankNodeOrIRI::IRI(ref i) => { ($(
+                    match (&i.iris.$n, &predicate.iris.$n) {
+                        (&Some(ref i), &Some(ref p)) => {
+                            self.graphs.$n.iter_s_p(&BlankNodeOrIRI::IRI(i.clone()), p)
+                        },
+                        _ => {
+                            self.graphs.$n.empty_spo_range()
+                        }
+                    }.peekable()
+                ,)+) }
+            };
+            SPORangeIter { iters: iters }
+        }
+        fn iter_o(&'g self,
+                    object: &Resource<'g, Self::BlankNodePtr, Self::IRIPtr, Self::LiteralPtr>)
                     -> Self::OPSRangeIter {
             let iters = match object {
-                Resource::BlankNode(b, _) => { ($(
-                    match (b.nodes.$n, predicate.iris.$n) {
-                        (Some(b), Some(p)) => {
-                            self.graphs.$n.iter_o_p(Resource::BlankNode(b, PhantomData), p)
+                &Resource::BlankNode(ref b, _) => { ($(
+                    match b.nodes.$n {
+                        Some(b) => {
+                            self.graphs.$n.iter_o(&Resource::BlankNode(b, PhantomData))
                         },
                         _ => {
                             self.graphs.$n.empty_ops_range()
                         }
                     }.peekable()
                 ,)+) },
-                Resource::IRI(i) => { ($(
-                    match (i.iris.$n, predicate.iris.$n) {
-                        (Some(i), Some(p)) => {
-                            self.graphs.$n.iter_o_p(Resource::IRI(i), p)
+                &Resource::IRI(ref i) => { ($(
+                    match i.iris.$n {
+                        Some(ref i) => {
+                            self.graphs.$n.iter_o(&Resource::IRI(i.clone()))
                         },
                         _ => {
                             self.graphs.$n.empty_ops_range()
                         }
                     }.peekable()
                 ,)+) },
-                Resource::Literal(l) => { ($(
-                    match (l.literals.$n, predicate.iris.$n) {
-                        (Some(l), Some(p)) => {
-                            self.graphs.$n.iter_o_p(Resource::Literal(l), p)
+                &Resource::Literal(ref l) => { ($(
+                    match l.literals.$n {
+                        Some(ref l) => {
+                            self.graphs.$n.iter_o(&Resource::Literal(l.clone()))
+                        },
+                        _ => {
+                            self.graphs.$n.empty_ops_range()
+                        }
+                    }.peekable()
+                ,)+) }
+            };
+            OPSRangeIter { iters: iters }
+        }
+        fn iter_o_p(&'g self,
+                    object: &Resource<'g, Self::BlankNodePtr, Self::IRIPtr, Self::LiteralPtr>,
+                    predicate: &Self::IRIPtr)
+                    -> Self::OPSRangeIter {
+            let iters = match object {
+                &Resource::BlankNode(ref b, _) => { ($(
+                    match (b.nodes.$n, &predicate.iris.$n) {
+                        (Some(b), &Some(ref p)) => {
+                            self.graphs.$n.iter_o_p(&Resource::BlankNode(b, PhantomData), p)
+                        },
+                        _ => {
+                            self.graphs.$n.empty_ops_range()
+                        }
+                    }.peekable()
+                ,)+) },
+                &Resource::IRI(ref i) => { ($(
+                    match (&i.iris.$n, &predicate.iris.$n) {
+                        (&Some(ref i), &Some(ref p)) => {
+                            self.graphs.$n.iter_o_p(&Resource::IRI(i.clone()), p)
+                        },
+                        _ => {
+                            self.graphs.$n.empty_ops_range()
+                        }
+                    }.peekable()
+                ,)+) },
+                &Resource::Literal(ref l) => { ($(
+                    match (&l.literals.$n, &predicate.iris.$n) {
+                        (&Some(ref l), &Some(ref p)) => {
+                            self.graphs.$n.iter_o_p(&Resource::Literal(l.clone()), p)
                         },
                         _ => {
                             self.graphs.$n.empty_ops_range()

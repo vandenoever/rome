@@ -340,7 +340,7 @@ fn to_approval<'g, B, I, L>(object: Resource<'g, B, I, L>) -> Result<Approval, S
 fn load_test_turtle_eval(graph: &MyGraph,
                          subject: MyBlankNodeOrIRI)
                          -> Result<TestTurtleEval, String> {
-    let mut i = graph.iter_subject(&subject);
+    let mut i = graph.iter_s(&subject);
     let (comment, prev) = read(None, &mut i, RDFS_COMMENT, to_string)?;
     let (action, prev) = read(prev, &mut i, MF_ACTION, to_string)?;
     let (name, prev) = read(prev, &mut i, MF_NAME, to_string)?;
@@ -358,7 +358,7 @@ fn load_test_turtle_eval(graph: &MyGraph,
 fn load_positive_syntax(graph: &MyGraph,
                         subject: MyBlankNodeOrIRI)
                         -> Result<TestTurtlePositiveSyntax, String> {
-    let mut i = graph.iter_subject(&subject);
+    let mut i = graph.iter_s(&subject);
     let (comment, prev) = read(None, &mut i, RDFS_COMMENT, to_string)?;
     let (action, prev) = read(prev, &mut i, MF_ACTION, to_string)?;
     let (name, prev) = read(prev, &mut i, MF_NAME, to_string)?;
@@ -374,7 +374,7 @@ fn load_positive_syntax(graph: &MyGraph,
 fn load_negative_syntax(graph: &MyGraph,
                         subject: MyBlankNodeOrIRI)
                         -> Result<TestTurtleNegativeSyntax, String> {
-    let mut i = graph.iter_subject(&subject);
+    let mut i = graph.iter_s(&subject);
     let (comment, prev) = read(None, &mut i, RDFS_COMMENT, to_string)?;
     let (action, prev) = read(prev, &mut i, MF_ACTION, to_string)?;
     let (name, prev) = read(prev, &mut i, MF_NAME, to_string)?;
@@ -390,7 +390,7 @@ fn load_negative_syntax(graph: &MyGraph,
 fn load_negative_eval(graph: &MyGraph,
                       subject: MyBlankNodeOrIRI)
                       -> Result<TestTurtleNegativeEval, String> {
-    let mut i = graph.iter_subject(&subject);
+    let mut i = graph.iter_s(&subject);
     let (comment, prev) = read(None, &mut i, RDFS_COMMENT, to_string)?;
     let (action, prev) = read(prev, &mut i, MF_ACTION, to_string)?;
     let (name, prev) = read(prev, &mut i, MF_NAME, to_string)?;
