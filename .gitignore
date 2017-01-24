@@ -6,3 +6,5 @@ unblock.sh
 .gitignore
 .settings
 fix_env.sh
+Cargo.lock
+target/
