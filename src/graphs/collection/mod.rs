@@ -324,6 +324,7 @@ pub mod $name {
     type IRIs<'g> = ($(Option<<$graph_type as Graph<'g>>::IRIPtr>,)+);
     type Datatypes<'g> = ($(Option<<<$graph_type as Graph<'g>>::LiteralPtr as LiteralPtr<'g>>::DatatypePtr>,)+);
     type Literals<'g> = ($(Option<<$graph_type as Graph<'g>>::LiteralPtr>,)+);
+    type SubjectIters<'g> = ($(Peekable<<$graph_type as Graph<'g>>::SubjectIter>,)+);
     type SPOTriples<'g> = ($(Option<<$graph_type as Graph<'g>>::SPOTriple>,)+);
     type SPOIters<'g> = ($(Peekable<<$graph_type as Graph<'g>>::SPOIter>,)+);
     type SPORangeIters<'g> = ($(Peekable<<$graph_type as Graph<'g>>::SPORangeIter>,)+);
@@ -418,6 +419,16 @@ pub mod $name {
             panic!("unreachable")
         }
     }
+    pub struct SubjectIter<'g> {
+        iters: SubjectIters<'g>
+    }
+    impl<'g> Iterator for SubjectIter<'g> {
+        type Item = BlankNodeOrIRI<'g, BlankNode<'g>, IRI<'g>>;
+         fn next(&mut self) -> Option<Self::Item> {
+             unimplemented!()
+         }
+    }
+    impl<'g> SortedIterator for SubjectIter<'g> {}
     pub struct SPOIter<'g> {
         iters: SPOIters<'g>
     }
@@ -527,6 +538,7 @@ pub mod $name {
         type BlankNodePtr = BlankNode<'g>;
         type IRIPtr = IRI<'g>;
         type LiteralPtr = Literal<'g>;
+        type SubjectIter = SubjectIter<'g>;
         type SPOTriple = SPOTriple<'g>;
         type SPOIter = SPOIter<'g>;
         type SPORangeIter = SPORangeIter<'g>;
@@ -574,6 +586,11 @@ pub mod $name {
                 })
             } else {
                 None
+            }
+        }
+        fn subjects(&'g self) -> SubjectIter<'g> {
+            SubjectIter {
+                iters: ($( self.graphs.$n.subjects().peekable(), )+)
             }
         }
         fn iter_s(&'g self,
