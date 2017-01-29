@@ -515,7 +515,7 @@ named!(pn_prefix<&str,&str>, recognize!(tuple!(
 
 /// [168s] PN_LOCAL ::= (PN_CHARS_U | ':' | [0-9] | PLX)
 ///           ((PN_CHARS | '.' | ':' | PLX)* (PN_CHARS | ':' | PLX))?
-named!(pn_local<&str,&str>, recognize!(tuple!(
+named!(pub pn_local<&str,&str>, recognize!(tuple!(
     alt!(one_if!(is_pn_local_start) | plx),
     pn_local2
 )));

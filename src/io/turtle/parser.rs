@@ -316,10 +316,6 @@ fn make_blank<'a, W: 'a>(blank_node: BlankNode<'a>, state: &mut ParserState<'a, 
     }
 }
 
-const RDF_FIRST: &'static str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#first";
-const RDF_REST: &'static str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest";
-const RDF_NIL: &'static str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil";
-
 fn s2o<'a, W>(s: graph::WriterBlankNodeOrIRI<'a, W>) -> graph::WriterResource<'a, W>
     where W: graph::GraphWriter<'a>
 {

@@ -1,4 +1,4 @@
-use super::grammar::{boolean, decimal, integer, double};
+use super::grammar::{boolean, decimal, integer, double, pn_local};
 use super::grammar_structs::Literal;
 use constants;
 use graph::*;
@@ -65,7 +65,7 @@ impl<'a, 'g, W: 'a, G: 'g> TurtleWriter<'a, 'g, W, G>
     fn write_prefix(&mut self, ns: &Namespace) -> Result<()> {
         self.writer.write_all(b"@prefix ")?;
         self.writer.write_all(ns.prefix())?;
-        self.writer.write_all(b": ")?;
+        self.writer.write_all(b":\t")?;
         self.write_full_iri(ns.namespace())?;
         self.writer.write_all(b" .\n")
     }
@@ -74,7 +74,13 @@ impl<'a, 'g, W: 'a, G: 'g> TurtleWriter<'a, 'g, W, G>
             self.writer.write_all(b"a")
         } else {
             match namespaces.find_prefix(iri) {
-                Some((prefix, iri)) => self.write_prefixed_iri(prefix, iri),
+                Some((prefix, local)) => {
+                    if let IResult::Done("", _) = pn_local(local) {
+                        self.write_prefixed_iri(prefix, local)
+                    } else {
+                        self.write_full_iri(iri)
+                    }
+                }
                 None => self.write_full_iri(iri),
             }
         }
@@ -92,7 +98,7 @@ impl<'a, 'g, W: 'a, G: 'g> TurtleWriter<'a, 'g, W, G>
         self.buffer.clear();
         for b in iri.as_bytes() {
             if *b < 20 || b"<>\"{}|^`\\".contains(b) {
-                write!(&mut self.buffer, "\\u00{:X} ", *b).unwrap();
+                write!(&mut self.buffer, "\\u00{:X}", *b).unwrap();
             } else {
                 self.buffer.push(*b);
             }
@@ -182,11 +188,11 @@ impl<'a, 'g, W: 'a, G: 'g> TurtleWriter<'a, 'g, W, G>
             }
             self.write_subject(triple.subject(), namespaces)?;
             self.last_subject = Some(subject);
-            self.writer.write_all(b" ")?;
+            self.writer.write_all(b"\t")?;
         }
         self.open_statement = true;
         self.write_predicate(triple.predicate().as_str(), namespaces)?;
-        self.writer.write_all(b" ")?;
+        self.writer.write_all(b"\t")?;
         self.write_object(triple.object(), namespaces)
     }
 }

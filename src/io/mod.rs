@@ -8,3 +8,4 @@ pub type TurtleParser<'a, B> = turtle::parser::TurtleParser<'a, B>;
 pub type NTriplesParser<'a, B> = turtle::parser::TurtleParser<'a, B>;
 pub use self::ntriples_writer::write_ntriples;
 pub use self::turtle::turtle_writer::write_turtle;
+pub use self::turtle::pretty_turtle_writer::write_pretty_turtle;

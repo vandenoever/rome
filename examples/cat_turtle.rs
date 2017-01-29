@@ -1,8 +1,8 @@
 extern crate rome;
-use rome::graph::{GraphWriter, Graph};
+use rome::graph::GraphWriter;
 use rome::graphs::tel;
 use rome::io::TurtleParser;
-use rome::io::write_turtle;
+use rome::io::write_pretty_turtle;
 use rome::namespaces::Namespaces;
 use std::env::args;
 use std::fs;
@@ -40,6 +40,10 @@ fn main() {
     let mut args = args();
     args.next();
     let input = args.next().unwrap();
-    let (ns, graph) = load_file(&input).expect(&format!("cannot read graph {}", input));
-    write_turtle(&ns, graph.iter(), &graph, &mut ::std::io::stdout()).expect("Cannot write graph.");
+    let (mut ns, graph) = load_file(&input).expect(&format!("cannot read graph {}", &input));
+    let mut base = String::from("file:");
+    base.push_str(&input);
+    base.push('#');
+    ns.insert(b"", base);
+    write_pretty_turtle(&ns, &graph, &mut ::std::io::stdout()).expect("Cannot write graph.");
 }

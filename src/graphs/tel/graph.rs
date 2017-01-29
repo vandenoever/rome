@@ -412,7 +412,6 @@ impl<'g, SPO: 'g, OPS: 'g> graph::Graph<'g> for Graph<SPO, OPS>
     type BlankNodePtr = BlankNodePtr<'g, SPO, OPS>;
     type IRIPtr = IRIPtr<'g, SPO, OPS>;
     type LiteralPtr = LiteralPtr<'g, SPO, OPS>;
-    type SubjectIter = SubjectIter<'g, SPO, OPS>;
     type SPOTriple = Triple<'g, SPO, OPS, SPO>;
     type SPOIter = GraphIterator<'g, SPO, OPS, SPO, SPOIndex<SPO, OPS>>;
     type SPORangeIter = TripleRangeIterator<'g, SPO, OPS, SPO, SPOIndex<SPO, OPS>>;
@@ -470,12 +469,6 @@ impl<'g, SPO: 'g, OPS: 'g> graph::Graph<'g> for Graph<SPO, OPS>
                 datatype: d.id,
             }
         })
-    }
-    fn subjects(&'g self) -> SubjectIter<'g, SPO, OPS> {
-        SubjectIter {
-            pos: 0,
-            graph: &self.d,
-        }
     }
     fn iter_s(&'g self, subject: &BlankNodeOrIRI<'g, SPO, OPS>) -> Self::SPORangeIter {
         let spo = match subject {

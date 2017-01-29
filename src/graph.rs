@@ -541,8 +541,6 @@ pub trait Graph<'g> {
     type IRIPtr: IRIPtr<'g> + Ord + Clone + 'g;
     /// The literal type of this graph.
     type LiteralPtr: LiteralPtr<'g> + Ord + Clone;
-    /// Iterator for iterating over subjects.
-    type SubjectIter: SortedIterator<Item = BlankNodeOrIRI<'g, Self::BlankNodePtr, Self::IRIPtr>>;
     /// The implementation of triples that is ordered by subject, predicate, object.
     type SPOTriple: Triple<'g, Self::BlankNodePtr, Self::IRIPtr, Self::LiteralPtr> + Ord + Clone;
     /// Iterator for iterating over all triples.
@@ -565,8 +563,6 @@ pub trait Graph<'g> {
                         datatype: &'a str,
                         language: Option<&'a str>)
                         -> Option<Self::LiteralPtr>;
-    /// Iterate over all subjects.
-    fn subjects(&'g self) -> Self::SubjectIter;
     /// Iterate over the triples that have the given subject.
     fn iter_s(&'g self,
               subject: &BlankNodeOrIRI<'g, Self::BlankNodePtr, Self::IRIPtr>)
