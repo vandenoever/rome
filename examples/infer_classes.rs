@@ -6,7 +6,7 @@
 extern crate rome;
 use rome::graph::{Graph, GraphWriter, Triple, WriterResource, ResourceTranslator};
 use rome::graphs::tel;
-use rome::io::{TurtleParser, write_turtle};
+use rome::io::{TurtleParser, write_pretty_turtle};
 use rome::namespaces::Namespaces;
 use std::collections::BTreeMap;
 use std::env::args;
@@ -51,7 +51,7 @@ fn load_graph(data: &str, base: &str) -> rome::Result<MyGraph> {
 fn output_as_turtle(graph: &MyGraph) -> rome::Result<()> {
     let mut ns = Namespaces::new();
     ns.set(b"rdfs", "http://www.w3.org/2000/01/rdf-schema#");
-    write_turtle(&ns, graph.iter(), graph, &mut ::std::io::stdout())?;
+    write_pretty_turtle(&ns, graph, &mut ::std::io::stdout())?;
     Ok(())
 }
 

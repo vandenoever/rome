@@ -3,7 +3,7 @@ extern crate time;
 use rome::graph;
 use rome::graph::*;
 use rome::graphs::tel;
-use rome::io::{TurtleParser, write_turtle, write_ntriples};
+use rome::io::{TurtleParser, write_pretty_turtle, write_ntriples};
 use rome::namespaces::Namespaces;
 use std::env::args;
 use std::fs;
@@ -591,7 +591,7 @@ fn output_as_turtle(assertions: &Vec<Assertion>) -> rome::Result<()> {
     ns.set(b"earl", "http://www.w3.org/ns/earl#");
     ns.set(b"xsd", "http://www.w3.org/2001/XMLSchema#");
     ns.set(b"test", "http://www.w3.org/2013/TurtleTests/manifest.ttl#");
-    write_turtle(&ns, graph.iter(), &graph, &mut ::std::io::stdout())?;
+    write_pretty_turtle(&ns, &graph, &mut ::std::io::stdout())?;
     Ok(())
 }
 
