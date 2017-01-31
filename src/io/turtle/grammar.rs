@@ -1,3 +1,4 @@
+#![cfg_attr(feature = "cargo-clippy", allow(redundant_closure_call))]
 use constants;
 use nom::{Needed, ErrorKind};
 use nom::IResult;
@@ -23,7 +24,7 @@ macro_rules! one_if (
 );
 
 fn comment(str: &str) -> IResult<&str, ()> {
-    if str.len() == 0 {
+    if str.is_empty() {
         return IResult::Incomplete(Needed::Size(2));
     }
     if &str[0..1] != "#" {
@@ -40,17 +41,11 @@ fn comment(str: &str) -> IResult<&str, ()> {
 pub fn tws(mut str: &str) -> IResult<&str, ()> {
     let mut last_len = str.len();
     loop {
-        match comment(str) {
-            Done(left, _) => {
-                str = left;
-            }
-            _ => {}
+        if let Done(left, _) = comment(str) {
+            str = left;
         }
-        match take_while_s!(str, is_ws) {
-            Done(left, _) => {
-                str = left;
-            }
-            _ => {}
+        if let Done(left, _) = take_while_s!(str, is_ws) {
+            str = left;
         }
         if str.len() == last_len {
             return Done(str, ());
@@ -59,8 +54,8 @@ pub fn tws(mut str: &str) -> IResult<&str, ()> {
     }
 }
 
-/// [2] statement ::= directive | triples '.'
-/// [3] directive ::= prefixID | base | sparqlPrefix | sparqlBase
+/// [2] `statement ::= directive | triples '.'`
+/// [3] `directive ::= prefixID | base | sparqlPrefix | sparqlBase`
 named!(pub statement<&str,Statement>, alt!(statement_triples
 		| prefix_id | base | sparql_prefix | sparql_base));
 
@@ -70,7 +65,7 @@ named!(statement_triples<&str,Statement>, do_parse!(
     (Statement::Triples(triples))
 ));
 
-/// [4] prefixID ::= '@prefix' PNAME_NS IRIREF '.'
+/// [4] `prefixID ::= '@prefix' PNAME_NS IRIREF '.'`
 named!(prefix_id<&str,Statement>, do_parse!(
     tag_s!("@prefix") >> tws >>
     pname_ns: pname_ns >> tws >>
@@ -79,7 +74,7 @@ named!(prefix_id<&str,Statement>, do_parse!(
     (Statement::Prefix(pname_ns, iri_ref))
 ));
 
-/// [5] base ::= '@base' IRIREF '.'
+/// [5] `base ::= '@base' IRIREF '.'`
 named!(base<&str,Statement>, do_parse!(
     tag_s!("@base") >> tws >>
     iri_ref: iri_ref >> tws >>
@@ -87,14 +82,14 @@ named!(base<&str,Statement>, do_parse!(
     (Statement::Base(iri_ref))
 ));
 
-/// [5s] sparqlBase ::= "BASE" IRIREF
+/// [5s] `sparqlBase ::= "BASE" IRIREF`
 named!(sparql_base<&str,Statement>, do_parse!(
     tag_no_case_s!("BASE") >> tws >>
     iri_ref: iri_ref >>
     (Statement::Base(iri_ref))
 ));
 
-/// [6s] sparqlPrefix ::= "PREFIX" PNAME_NS IRIREF
+/// [6s] `sparqlPrefix ::= "PREFIX" PNAME_NS IRIREF`
 named!(sparql_prefix<&str,Statement>, do_parse!(
     tag_no_case_s!("PREFIX") >> tws >>
     pname_ns: pname_ns >> tws >>
@@ -102,7 +97,7 @@ named!(sparql_prefix<&str,Statement>, do_parse!(
     (Statement::Prefix(pname_ns, iri_ref))
 ));
 
-/// [6] triples ::= subject predicateObjectList | blankNodePropertyList predicateObjectList?
+/// [6] `triples ::= subject predicateObjectList | blankNodePropertyList predicateObjectList?`
 named!(triples<&str,Triples>, alt!(triples_subject | triples_blank));
 
 named!(triples_subject<&str,Triples>, do_parse!(
@@ -117,18 +112,15 @@ named!(triples_subject<&str,Triples>, do_parse!(
 fn triples_blank(str: &str) -> IResult<&str, Triples> {
     match blank_node_property_list(str) {
         Done(mut left, mut blank) => {
-            match tws(left) {
-                Done(l, _) => {
-                    match predicated_objects_list(l) {
-                        Done(l, mut pol) => {
-                            left = l;
-                            blank.append(&mut pol);
-                        }
-                        IResult::Incomplete(i) => return IResult::Incomplete(i),
-                        _ => {}
+            if let Done(l, _) = tws(left) {
+                match predicated_objects_list(l) {
+                    Done(l, mut pol) => {
+                        left = l;
+                        blank.append(&mut pol);
                     }
+                    IResult::Incomplete(i) => return IResult::Incomplete(i),
+                    _ => {}
                 }
-                _ => {}
             }
             let t = Triples {
                 subject: Subject::BlankNode(BlankNode::Anon),
@@ -141,14 +133,11 @@ fn triples_blank(str: &str) -> IResult<&str, Triples> {
     }
 }
 
-/// [7] predicateObjectList ::= verb objectList (';' (verb objectList)?)*
+/// [7] `predicateObjectList ::= verb objectList (';' (verb objectList)?)*`
 fn predicated_objects_list(mut str: &str) -> IResult<&str, Vec<PredicatedObjects>> {
     let mut v = Vec::new();
-    match tws(str) {
-        Done(left, _) => {
-            str = left;
-        }
-        _ => {}
+    if let Done(left, _) = tws(str) {
+        str = left;
     }
     match predicated_object(str) {
         Done(left, po) => {
@@ -189,13 +178,13 @@ named!(predicated_object<&str,PredicatedObjects>, do_parse!(
     })
 ));
 
-/// [8] objectList ::= object (',' object)*
+/// [8] `objectList ::= object (',' object)*`
 named!(object_list<&str,Vec<Object> >, separated_nonempty_list!(
     tuple!(tws, tag_s!(","), tws),
     object
 ));
 
-/// [9] verb ::= predicate | 'a'
+/// [9] `verb ::= predicate | 'a'`
 named!(verb<&str,IRI>, alt!(iri|a));
 
 named!(a<&str,IRI>, value!(
@@ -203,16 +192,16 @@ named!(a<&str,IRI>, value!(
     tag_s!("a")
 ));
 
-/// [10] subject ::= iri | BlankNode | collection
+/// [10] `subject ::= iri | BlankNode | collection`
 named!(subject<&str,Subject>, alt!(
     map!(iri, Subject::IRI) |
     map!(blank_node, Subject::BlankNode) |
     map!(collection, Subject::Collection)
 ));
 
-/// [11] predicate ::= iri
+/// [11] `predicate ::= iri`
 
-/// [12] object ::= iri | BlankNode | collection | blankNodePropertyList | literal
+/// [12] `object ::= iri | BlankNode | collection | blankNodePropertyList | literal`
 named!(object<&str,Object>, alt!(
     map!(literal, Object::Literal) |
     map!(iri, Object::IRI) |
@@ -221,17 +210,17 @@ named!(object<&str,Object>, alt!(
     map!(blank_node_property_list, Object::BlankNodePropertyList)
 ));
 
-/// [13] literal ::= RDFLiteral | NumericLiteral | BooleanLiteral
+/// [13] `literal ::= RDFLiteral | NumericLiteral | BooleanLiteral`
 named!(literal<&str,Literal>, alt!(rdfliteral | boolean | double | decimal | integer));
 
-/// [14] blankNodePropertyList ::= '[' predicateObjectList ']'
+/// [14] `blankNodePropertyList ::= '[' predicateObjectList ']'`
 named!(blank_node_property_list<&str,Vec<PredicatedObjects> >, do_parse!(
     tag_s!("[") >> tws >>
     pol: predicated_objects_list >> tws >>
     tag_s!("]") >> (pol)
 ));
 
-/// [15] collection ::= '(' object* ')'
+/// [15] `collection ::= '(' object* ')'`
 named!(collection<&str,Vec<Object> >, do_parse!(
     tag_s!("(") >> tws >>
     objects: many0!(do_parse!(
@@ -240,9 +229,9 @@ named!(collection<&str,Vec<Object> >, do_parse!(
     tag_s!(")") >> (objects)
 ));
 
-/// [16] NumericLiteral ::= INTEGER | DECIMAL | DOUBLE
+/// [16] `NumericLiteral ::= INTEGER | DECIMAL | DOUBLE`
 
-/// [128s]  RDFLiteral ::= String (LANGTAG | '^^' iri)?
+/// [128s]  `RDFLiteral ::= String (LANGTAG | '^^' iri)?`
 named!(rdfliteral<&str,Literal>, do_parse!(
     string: string >>
     datatype: opt!(alt!(langtag | iri_ref_literal)) >>
@@ -279,7 +268,7 @@ named!(iri_ref_literal<&str,RDFLiteralType>, do_parse!(
     (RDFLiteralType::DataType(iri))
 ));
 
-/// [133s] BooleanLiteral ::= 'true' | 'false'
+/// [133s] `BooleanLiteral ::= 'true' | 'false'`
 named!(pub boolean<&str,Literal>, do_parse!(
     b: alt!(tag_s!("true") | tag_s!("false")) >>
     (Literal {
@@ -289,16 +278,16 @@ named!(pub boolean<&str,Literal>, do_parse!(
     })
 ));
 
-/// [17] String ::= STRING_LITERAL_QUOTE | STRING_LITERAL_SINGLE_QUOTE
-///                 | STRING_LITERAL_LONG_SINGLE_QUOTE | STRING_LITERAL_LONG_QUOTE
+/// [17] `String ::= STRING_LITERAL_QUOTE | STRING_LITERAL_SINGLE_QUOTE`
+///      `           | STRING_LITERAL_LONG_SINGLE_QUOTE | STRING_LITERAL_LONG_QUOTE`
 named!(string<&str,&str>, alt!(string_literal_long_single_quote
     | string_literal_long_quote | string_literal_quote
     | string_literal_single_quote));
 
-/// [135s] iri ::= IRIREF | PrefixedName
+/// [135s] `iri ::= IRIREF | PrefixedName`
 named!(iri<&str,IRI>, alt!(iri_iri|prefixed_name));
 
-/// [136s]  PrefixedName ::= PNAME_LN | PNAME_NS
+/// [136s]  `PrefixedName ::= PNAME_LN | PNAME_NS`
 named!(prefixed_name<&str,IRI>, do_parse!(
     pn_prefix: opt!(pn_prefix) >>
     tag_s!(":") >>
@@ -309,26 +298,26 @@ named!(prefixed_name<&str,IRI>, do_parse!(
     ))
 ));
 
-/// [137s]  BlankNode ::= BLANK_NODE_LABEL | ANON
+/// [137s]  `BlankNode ::= BLANK_NODE_LABEL | ANON`
 named!(blank_node<&str,BlankNode>, alt!(blank_node_label | anon));
 
-/// [18] IRIREF ::= '<' ([^#x00-#x20<>"{}|^`\] | UCHAR)* '>'
+/// [18] `IRIREF ::= '<' ([^#x00-#x20<>"{}|^`\] | UCHAR)* '>'`
 /// #x00=NULL #01-#x1F=control codes #x20=space
 named!(iri_ref<&str,&str>, delimited!(
     tag_s!("<"),take_while_s!(is_iri_ref),tag_s!(">")
 ));
 
-/// [139s] PNAME_NS ::= PN_PREFIX? ':'
+/// [139s] `PNAME_NS ::= PN_PREFIX? ':'`
 named!(pname_ns<&str,&str>, do_parse!(
     pn_prefix: opt!(pn_prefix) >>
     tag_s!(":") >>
     (pn_prefix.unwrap_or(""))
 ));
 
-/// [140s] PNAME_LN ::= PNAME_NS PN_LOCAL
+/// [140s] `PNAME_LN ::= PNAME_NS PN_LOCAL`
 /// see prefixed_name
 
-/// [141s] BLANK_NODE_LABEL ::= '_:' (PN_CHARS_U | [0-9]) ((PN_CHARS | '.')* PN_CHARS)?
+/// [141s] `BLANK_NODE_LABEL ::= '_:' (PN_CHARS_U | [0-9]) ((PN_CHARS | '.')* PN_CHARS)?`
 named!(blank_node_label<&str,BlankNode>, do_parse!(
     tag!("_:") >>
     label: recognize!(tuple!(
@@ -349,7 +338,7 @@ fn blank_node_label2(src: &str) -> IResult<&str, ()> {
     match blank_node_label3(src) {
         Done(left, m) => {
             // if last is a '.', remove that
-            if m.ends_with(".") {
+            if m.ends_with('.') {
                 Done(&src[m.len() - 1..], ())
             } else {
                 Done(left, ())
@@ -362,7 +351,7 @@ fn blank_node_label2(src: &str) -> IResult<&str, ()> {
 
 named!(blank_node_label3<&str,&str>, take_while_s!(is_pn_chars_or_dot));
 
-/// [144s] LANGTAG ::= '@' [a-zA-Z]+ ('-' [a-zA-Z0-9]+)*
+/// [144s] `LANGTAG ::= '@' [a-zA-Z]+ ('-' [a-zA-Z0-9]+)*`
 named!(langtag<&str,RDFLiteralType>, do_parse!(
     tag_s!("@") >>
     langtag: recognize!(tuple!(
@@ -372,7 +361,7 @@ named!(langtag<&str,RDFLiteralType>, do_parse!(
     (RDFLiteralType::LangTag(langtag))
 ));
 
-/// [19] INTEGER ::= [+-]? [0-9]+
+/// [19] `INTEGER ::= [+-]? [0-9]+`
 named!(pub integer<&str,Literal>, map!(recognize!(tuple!(
     opt!(alt!(tag_s!("+") | tag_s!("-"))), digit)),
     (|integer|{
@@ -384,7 +373,7 @@ named!(pub integer<&str,Literal>, map!(recognize!(tuple!(
     })
 ));
 
-/// [20] DECIMAL ::= [+-]? [0-9]* '.' [0-9]+
+/// [20] `DECIMAL ::= [+-]? [0-9]* '.' [0-9]+`
 named!(pub decimal<&str,Literal>, map!(recognize!(tuple!(
     opt!(alt!(tag_s!("+") | tag_s!("-"))), opt_digit, tag_s!("."), digit)),
     (|decimal|{
@@ -396,7 +385,7 @@ named!(pub decimal<&str,Literal>, map!(recognize!(tuple!(
     })
 ));
 
-/// [21] DOUBLE ::= [+-]? ([0-9]+ '.' [0-9]* EXPONENT | '.' [0-9]+ EXPONENT | [0-9]+ EXPONENT)
+/// [21] `DOUBLE ::= [+-]? ([0-9]+ '.' [0-9]* EXPONENT | '.' [0-9]+ EXPONENT | [0-9]+ EXPONENT)`
 named!(pub double<&str,Literal>, map!(recognize!(tuple!(
     opt!(alt!(tag_s!("+") | tag_s!("-"))),
     alt!(
@@ -412,13 +401,13 @@ named!(pub double<&str,Literal>, map!(recognize!(tuple!(
     })
 ));
 
-/// [154s] EXPONENT ::= [eE] [+-]? [0-9]+
+/// [154s] `EXPONENT ::= [eE] [+-]? [0-9]+`
 named!(exponent<&str,()>, map!(tuple!(
     alt!(tag_s!("E") | tag_s!("e")),opt!(alt!(tag_s!("+") | tag_s!("-"))), digit),
     (|_|())
 ));
 
-/// [22] STRING_LITERAL_QUOTE ::= '"' ([^#x22#x5C#xA#xD] | ECHAR | UCHAR)* '"'
+/// [22] `STRING_LITERAL_QUOTE ::= '"' ([^#x22#x5C#xA#xD] | ECHAR | UCHAR)* '"'`
 /// /* #x22=" #x5C=\ #xA=new line #xD=carriage return */
 fn string_literal_quote(str: &str) -> IResult<&str, &str> {
     string_literal(str, 1, start_quote, find_quote)
@@ -430,7 +419,7 @@ fn find_quote(s: &str) -> Option<usize> {
     s.find('"')
 }
 
-/// [23] STRING_LITERAL_SINGLE_QUOTE ::= "'" ([^#x27#x5C#xA#xD] | ECHAR | UCHAR)* "'"
+/// [23] `STRING_LITERAL_SINGLE_QUOTE ::= "'" ([^#x27#x5C#xA#xD] | ECHAR | UCHAR)* "'"`
 /// /* #x27=' #x5C=\ #xA=new line #xD=carriage return */
 fn string_literal_single_quote(str: &str) -> IResult<&str, &str> {
     string_literal(str, 1, start_single_quote, find_single_quote)
@@ -442,7 +431,7 @@ fn find_single_quote(s: &str) -> Option<usize> {
     s.find('\'')
 }
 
-/// [24] STRING_LITERAL_LONG_SINGLE_QUOTE ::= "'''" (("'" | "''")? ([^'\] | ECHAR | UCHAR))* "'''"
+/// [24] `STRING_LITERAL_LONG_SINGLE_QUOTE ::= "'''" (("'" | "''")? ([^'\] | ECHAR | UCHAR))* "'''"`
 fn string_literal_long_single_quote(str: &str) -> IResult<&str, &str> {
     string_literal(str, 3, start_long_single_quote, find_long_single_quote)
 }
@@ -453,7 +442,7 @@ fn find_long_single_quote(s: &str) -> Option<usize> {
     s.find("'''")
 }
 
-/// [25] STRING_LITERAL_LONG_QUOTE ::= '"""' (('"' | '""')? ([^"\] | ECHAR | UCHAR))* '"""'
+/// [25] `STRING_LITERAL_LONG_QUOTE ::= '"""' (('"' | '""')? ([^"\] | ECHAR | UCHAR))* '"""'`
 fn string_literal_long_quote(str: &str) -> IResult<&str, &str> {
     string_literal(str, 3, start_long_quote, find_long_quote)
 }
@@ -464,26 +453,26 @@ fn find_long_quote(s: &str) -> Option<usize> {
     s.find("\"\"\"")
 }
 
-/// [26] UCHAR ::= '\u' HEX HEX HEX HEX | '\U' HEX HEX HEX HEX HEX HEX HEX HEX
-/// [159s] ECHAR ::= '\' [tbnrf"'\]
+/// [26] `UCHAR ::= '\u' HEX HEX HEX HEX | '\U' HEX HEX HEX HEX HEX HEX HEX HEX`
+/// [159s] `ECHAR ::= '\' [tbnrf"'\]`
 
-/// [161s] WS ::= #x20 | #x9 | #xD | #xA
+/// [161s] `WS ::= #x20 | #x9 | #xD | #xA`
 /// /* #x20=space #x9=character tabulation #xD=carriage return #xA=new line */
 fn is_ws(c: char) -> bool {
     c == ' ' || c == '\t' || c == '\r' || c == '\n'
 }
 
-/// [162s] ANON ::= '[' WS* ']'
+/// [162s] `ANON ::= '[' WS* ']'`
 named!(anon<&str,BlankNode>, do_parse!(
     tag_s!("[") >>
     tws >>
     tag_s!("]") >> (BlankNode::Anon)
 ));
 
-/// [163s] PN_CHARS_BASE ::= [A-Z] | [a-z] | [#x00C0-#x00D6] | [#x00D8-#x00F6]
-/// | [#x00F8-#x02FF] | [#x0370-#x037D] | [#x037F-#x1FFF] | [#x200C-#x200D]
-/// | [#x2070-#x218F] | [#x2C00-#x2FEF] | [#x3001-#xD7FF] | [#xF900-#xFDCF]
-/// | [#xFDF0-#xFFFD] | [#x10000-#xEFFFF]
+/// `[163s] PN_CHARS_BASE ::= [A-Z] | [a-z] | [#x00C0-#x00D6] | [#x00D8-#x00F6]`
+/// `| [#x00F8-#x02FF] | [#x0370-#x037D] | [#x037F-#x1FFF] | [#x200C-#x200D]`
+/// `| [#x2070-#x218F] | [#x2C00-#x2FEF] | [#x3001-#xD7FF] | [#xF900-#xFDCF]`
+/// `| [#xFDF0-#xFFFD] | [#x10000-#xEFFFF]`
 fn is_pn_chars_base(c: char) -> bool {
     is_alpha(c) || in_range(c, 0xC0, 0x00D6) || in_range(c, 0x00D8, 0x00F6) ||
     in_range(c, 0x00F8, 0x02FF) || in_range(c, 0x0370, 0x037D) ||
@@ -492,12 +481,12 @@ fn is_pn_chars_base(c: char) -> bool {
     in_range(c, 0xF900, 0xFDCF) || in_range(c, 0xFDF0, 0xFFFD) || in_range(c, 0x10000, 0xEFFFF)
 }
 
-/// [164s] PN_CHARS_U ::= PN_CHARS_BASE | '_'
+/// [164s] `PN_CHARS_U ::= PN_CHARS_BASE | '_'`
 fn is_pn_chars_u(c: char) -> bool {
     c == '_' || is_pn_chars_base(c)
 }
 
-/// [166s] PN_CHARS ::= PN_CHARS_U | '-' | [0-9] | #x00B7 | [#x0300-#x036F] | [#x203F-#x2040]
+/// [166s] `PN_CHARS ::= PN_CHARS_U | '-' | [0-9] | #x00B7 | [#x0300-#x036F] | [#x203F-#x2040]`
 fn is_pn_chars(c: char) -> bool {
     is_pn_chars_u(c) || c == '-' || is_digit(c) || c == 0xB7 as char ||
     in_range(c, 0x0300, 0x036F) || in_range(c, 0x203F, 0x2040)
@@ -524,7 +513,7 @@ fn pn_local2(src: &str) -> IResult<&str, ()> {
     match pn_local3(src) {
         Done(left, m) => {
             // if last is a '.', remove that
-            if m.ends_with(".") {
+            if m.ends_with('.') {
                 Done(&src[m.len() - 1..], ())
             } else {
                 Done(left, ())

@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 use std::ops::Index;
 
+#[derive (Clone)]
 struct StringRef {
     start: u32,
     end: u32,
@@ -18,7 +19,7 @@ pub struct StringCollector {
     buffer: String,
     refs: Vec<StringRef>,
 }
-fn slice<'a>(buffer: &'a String, r: &StringRef) -> &'a str {
+fn slice<'a>(buffer: &'a str, r: &StringRef) -> &'a str {
     &buffer[r.start as usize..r.end as usize]
 }
 impl StringCollector {
@@ -51,29 +52,31 @@ impl StringCollector {
     /// Sort the references by the strings that they point to.
     fn sort(&mut self) {
         let buffer = &self.buffer;
-        self.refs.sort_by_key(|s| slice(buffer, &s));
+        self.refs.sort_by_key(|s| slice(buffer, s));
     }
     /// Remove duplicate strings from the refs array and create an array that
     /// translates from the old order to the new order.
     fn deduplicate_and_translate(&mut self) -> Vec<StringId> {
         let buffer = &self.buffer;
         let refs = &mut self.refs;
-        if refs.len() == 0 {
+        if refs.is_empty() {
             return Vec::new();
         }
         let mut translation = vec![StringId{id:0}; refs.len()];
         translation[refs[0].index as usize] = StringId { id: 0 };
         let mut to = 0;
         let mut prev_str = slice(buffer, &refs[0]);
+        #[allow(needless_range_loop)]
         for i in 1..refs.len() {
-            let str = slice(buffer, &refs[i]);
+            let r = refs[i].clone();
+            let str = slice(buffer, &r);
             if str != prev_str {
                 to += 1;
-                refs[to].start = refs[i].start;
-                refs[to].end = refs[i].end;
+                refs[to].start = r.start;
+                refs[to].end = r.end;
                 prev_str = str;
             }
-            translation[refs[i].index as usize] = StringId { id: to as u32 };
+            translation[r.index as usize] = StringId { id: to as u32 };
         }
         refs.truncate(to + 1);
         translation
@@ -86,7 +89,7 @@ impl StringCollector {
         let mut new_buf = String::new();
         for r in refs.iter_mut() {
             let start = new_buf.len() as u32;
-            new_buf.push_str(slice(buffer, &r));
+            new_buf.push_str(slice(buffer, r));
             r.start = start;
         }
         new_buf
@@ -159,7 +162,7 @@ impl Index<StringId> for Vec<StringId> {
     type Output = StringId;
 
     fn index(&self, id: StringId) -> &StringId {
-        self.get(id.id as usize).unwrap()
+        &self[id.id as usize]
     }
 }
 

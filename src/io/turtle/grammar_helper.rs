@@ -35,7 +35,7 @@ pub fn string_literal(str: &str,
 
 fn escaped(hay: &[u8], offset: usize) -> bool {
     let mut p = offset;
-    while p != 0 && hay[p - 1] == '\\' as u8 {
+    while p != 0 && hay[p - 1] == b'\\' {
         p -= 1;
     }
     (offset - p) % 2 == 1

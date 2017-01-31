@@ -1,4 +1,5 @@
 //! Code for dealing with namespaces in RDF files.
+
 use std::slice::Iter;
 
 /// Namespaces object maps prefixes to namespaces.
@@ -39,7 +40,7 @@ impl Namespaces {
     ///
     /// The prefix is returned and the remainder of the string is also also returned.
     pub fn find_prefix<'a>(&self, iri: &'a str) -> Option<(&[u8], &'a str)> {
-        for ns in self.namespaces.iter() {
+        for ns in &self.namespaces {
             if iri.starts_with(&ns.namespace) {
                 return Some((ns.prefix.as_slice(), &iri[ns.namespace.len()..]));
             }
@@ -48,7 +49,7 @@ impl Namespaces {
     }
     /// Find the namespace for the given prefix.
     pub fn find_namespace(&self, prefix: &[u8]) -> Option<&str> {
-        for ns in self.namespaces.iter() {
+        for ns in &self.namespaces {
             if ns.prefix == prefix {
                 return Some(ns.namespace.as_str());
             }
@@ -58,6 +59,12 @@ impl Namespaces {
     /// Iterator overall prefixes and namespaces.
     pub fn iter(&self) -> Iter<Namespace> {
         self.namespaces.iter()
+    }
+}
+
+impl Default for Namespaces {
+    fn default() -> Namespaces {
+        Namespaces::new()
     }
 }
 

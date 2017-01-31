@@ -1,9 +1,10 @@
 //! Combine a number of graphs and access them as one graph.
+
 use graph::*;
 use std::cmp;
 use std::iter::Peekable;
 
-/// An internal enum for TripleCmpWrap which is internal to GraphCollection.
+/// An internal enum for `TripleCmpWrap` which is internal to `GraphCollection`.
 pub enum Object {
     #[doc(hidden)]
     BlankNode,
@@ -13,9 +14,9 @@ pub enum Object {
     Literal,
 }
 
-/// TripleCmpWrap can wrap a Triple and has no associated types.
+/// `TripleCmpWrap` can wrap a Triple and has no associated types.
 /// This makes it possible to re-use a pointer
-/// This is an internal trait for GraphCollection.
+/// This is an internal trait for `GraphCollection`.
 pub trait TripleCmpWrap<'g> {
     #[doc(hidden)]
     fn cmp_subject_iri(&self, o: &str) -> cmp::Ordering;

@@ -40,8 +40,8 @@ fn read_file(path: &str) -> io::Result<String> {
 fn load_graph(data: &str, base: &str) -> rome::Result<MyGraph> {
     let mut writer = tel::GraphCreator::with_capacity(65000);
     {
-        let mut triples = TurtleParser::new(data, base, &mut writer)?;
-        while let Some(step) = triples.next() {
+        let triples = TurtleParser::new(data, base, &mut writer)?;
+        for step in triples {
             step?;
         }
     }
@@ -79,10 +79,10 @@ impl<'g> ResourceTranslator<'g> for Translator<'g> {
                             blank_node: &<Self::Graph as Graph<'g>>::BlankNodePtr
         ) -> <Self::GraphWriter as GraphWriter<'g>>::BlankNode {
         if let Some(blank_node) = self.blank_nodes.get(blank_node) {
-            return blank_node.clone();
+            return *blank_node;
         }
         let new_blank_node = w.create_blank_node();
-        self.blank_nodes.insert(blank_node.clone(), new_blank_node.clone());
+        self.blank_nodes.insert(*blank_node, new_blank_node);
         new_blank_node
     }
 }

@@ -64,7 +64,7 @@ impl<'a, 'g, W: 'a, G: 'g> NTriplesWriter<'a, 'g, W, G>
         self.buffer.clear();
         for b in value.as_bytes() {
             if *b == 0x22 || *b == 0x5C || *b == 0x0A || *b == 0x0D {
-                self.buffer.push('\\' as u8);
+                self.buffer.push(b'\\');
             }
             self.buffer.push(*b);
         }
@@ -91,7 +91,7 @@ impl<'a, 'g, W: 'a, G: 'g> NTriplesWriter<'a, 'g, W, G>
             BlankNodeOrIRI::IRI(iri) => self.write_iri(iri.as_str()),
         }
     }
-    fn write_predicate<'b>(&mut self, predicate: &'b str) -> Result<()> {
+    fn write_predicate(&mut self, predicate: &str) -> Result<()> {
         self.write_iri(predicate)
     }
     fn write_object(&mut self,

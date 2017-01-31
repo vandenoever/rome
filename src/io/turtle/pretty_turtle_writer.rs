@@ -1,5 +1,3 @@
-use super::grammar::{boolean, decimal, integer, double, pn_local};
-use super::grammar_structs::Literal;
 use constants;
 use error::{Error, Result};
 use graph::*;
@@ -8,6 +6,8 @@ use nom::IResult;
 use std::fmt::Display;
 use std::io::Write;
 use std::iter::Peekable;
+use super::grammar::{boolean, decimal, integer, double, pn_local};
+use super::grammar_structs::Literal;
 
 struct TurtleWriter<'a, 'g, W: 'a, G: 'g>
     where W: Write,
@@ -53,7 +53,7 @@ pub fn write_pretty_turtle<'g, G: 'g, W>(namespaces: &Namespaces,
         graph: graph,
     };
     for ns in namespaces.iter() {
-        writer.write_prefix(&ns)?;
+        writer.write_prefix(ns)?;
     }
     writer.writer.write_all(b"\n")?;
     writer.write_statements(namespaces)
@@ -124,7 +124,7 @@ impl<'a, 'g, W: 'a, G: 'g> TurtleWriter<'a, 'g, W, G>
         self.buffer.clear();
         for b in value.as_bytes() {
             if *b == 0x22 || *b == 0x5C || *b == 0x0A || *b == 0x0D {
-                self.buffer.push('\\' as u8);
+                self.buffer.push(b'\\');
             }
             self.buffer.push(*b);
         }
@@ -154,7 +154,7 @@ impl<'a, 'g, W: 'a, G: 'g> TurtleWriter<'a, 'g, W, G>
             self.writer.write_all(b"\"")?;
             self.write_literal_value(literal.as_str())?;
             self.writer.write_all(b"\"")?;
-            if let Some(ref langtag) = literal.language() {
+            if let Some(langtag) = literal.language() {
                 self.writer.write_all(b"@")?;
                 self.writer.write_all(langtag.as_bytes())?;
             } else if d != self.xsd_string {

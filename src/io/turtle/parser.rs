@@ -24,7 +24,7 @@ impl<'a> StatementIterator<'a> {
                     done: false,
                 })
             }
-            IResult::Error(_) => return Err(Error::Custom("cannot start parsing")),
+            IResult::Error(_) => Err(Error::Custom("cannot start parsing")),
             IResult::Incomplete(_) => {
                 Ok(StatementIterator {
                     src: src,
@@ -69,7 +69,7 @@ impl<'a> Iterator for StatementIterator<'a> {
                 self.done = true;
             }
         }
-        if r.is_none() && self.src.len() > 0 {
+        if r.is_none() && !self.src.is_empty() {
             r = Some(Err(Error::Custom("trailing bytes")));
         }
         r
@@ -116,7 +116,7 @@ fn join_iri(base: &str, p: &str, to: &mut String) -> Result<()> {
     to.clear();
     if !is_absolute(p) {
         let mut end = base.len();
-        if !p.starts_with("#") {
+        if !p.starts_with('#') {
             if let Some(pos) = base.rfind('/') {
                 end = pos + 1;
             }
@@ -217,7 +217,7 @@ impl<'a, W: 'a> Iterator for TurtleParser<'a, W>
 }
 
 
-fn unescape_literal<'a>(string: &str, to: &'a mut String) -> Result<()> {
+fn unescape_literal(string: &str, to: &mut String) -> Result<()> {
     to.clear();
     unescape(string, to)?;
     Ok(())
@@ -395,7 +395,7 @@ fn make_object<'a, W>(object: Object<'a>,
         Object::Literal(l) => {
             unescape_literal(l.lexical, &mut state.literal)?;
             graph::WriterResource::Literal(if let Some(lang) = l.language {
-                let language = state.writer.create_language(&lang);
+                let language = state.writer.create_language(lang);
                 state.writer.create_literal_language(&state.literal, &language)
             } else {
                 let datatype = state.get_datatype(l.datatype)?;
@@ -420,7 +420,7 @@ fn add_predicated_objects<'a, W>(subject: graph::WriterBlankNodeOrIRI<'a, W>,
     for po in predicated_objects_list {
         state.resolve_iri(po.verb)?;
         let predicate = state.writer.create_iri(&state.iri);
-        for o in po.objects.into_iter() {
+        for o in po.objects {
             let object = make_object(o, state)?;
             state.writer.add(&subject, &predicate, &object);
         }

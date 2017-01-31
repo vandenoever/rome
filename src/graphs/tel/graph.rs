@@ -1,10 +1,10 @@
+use graph;
+use std::cmp;
+use std::marker::PhantomData;
 use super::compact_triple::*;
 use super::iter::*;
 use super::string_collector::*;
 use super::triple::*;
-use graph;
-use std::cmp;
-use std::marker::PhantomData;
 
 pub struct GraphData<SPO, OPS>
     where SPO: CompactTriple<u32>,
@@ -158,8 +158,7 @@ impl<SPO, OPS> Graph<SPO, OPS>
               F: Index<SPO, OPS, T>
     {
         let pos = match F::index(&self.d).binary_search(&start) {
-            Ok(pos) => pos,
-            Err(pos) => pos,
+            Ok(pos) | Err(pos) => pos,
         };
         TripleRangeIterator {
             graph: &self.d,
@@ -330,20 +329,20 @@ impl<SPO, OPS> Graph<SPO, OPS>
         // sort the vector
         blank_info.sort_by(compare);
         let mut translation = vec![0 as u32;len];
-        for i in 0..len {
-            translation[blank_info[i].blank_node as usize] = i as u32;
+        for (i, b) in blank_info.iter().enumerate().take(len) {
+            translation[b.blank_node as usize] = i as u32;
         }
         blank_info.clear();
         blank_info.shrink_to_fit();
 
         // translate the blank nodes in spo and ops
         let mut spo = self.d.spo.clone();
-        for t in spo.iter_mut() {
+        for t in &mut spo {
             translate_object(t, &translation);
         }
         spo.sort();
         let mut ops = self.d.ops.clone();
-        for t in ops.iter_mut() {
+        for t in &mut ops {
             translate_object(t, &translation);
         }
         ops.sort();
@@ -365,7 +364,7 @@ impl<SPO, OPS> Graph<SPO, OPS>
     }
 }
 
-fn translate_object<T>(t: &mut T, translation: &Vec<u32>)
+fn translate_object<T>(t: &mut T, translation: &[u32])
     where T: CompactTriple<u32>
 {
     if !t.subject_is_iri() {
@@ -424,7 +423,7 @@ impl<'g, SPO: 'g, OPS: 'g> graph::Graph<'g> for Graph<SPO, OPS>
             phantom: PhantomData,
         }
     }
-    fn find_iri<'a>(&'g self, iri: &str) -> Option<Self::IRIPtr> {
+    fn find_iri(&'g self, iri: &str) -> Option<Self::IRIPtr> {
         self.d.strings.find(iri).map(|s| {
             IRIPtr {
                 graph: &self.d,
@@ -471,9 +470,9 @@ impl<'g, SPO: 'g, OPS: 'g> graph::Graph<'g> for Graph<SPO, OPS>
         })
     }
     fn iter_s(&'g self, subject: &BlankNodeOrIRI<'g, SPO, OPS>) -> Self::SPORangeIter {
-        let spo = match subject {
-            &graph::BlankNodeOrIRI::BlankNode(bn, _) => subject_blank_node(bn.node_id),
-            &graph::BlankNodeOrIRI::IRI(ref iri) => subject_iri(iri.iri),
+        let spo = match *subject {
+            graph::BlankNodeOrIRI::BlankNode(bn, _) => subject_blank_node(bn.node_id),
+            graph::BlankNodeOrIRI::IRI(ref iri) => subject_iri(iri.iri),
         };
         self.iter_subject(spo)
     }
@@ -481,19 +480,19 @@ impl<'g, SPO: 'g, OPS: 'g> graph::Graph<'g> for Graph<SPO, OPS>
                 subject: &BlankNodeOrIRI<'g, SPO, OPS>,
                 predicate: &IRIPtr<'g, SPO, OPS>)
                 -> Self::SPORangeIter {
-        let spo = match subject {
-            &graph::BlankNodeOrIRI::BlankNode(bn, _) => {
+        let spo = match *subject {
+            graph::BlankNodeOrIRI::BlankNode(bn, _) => {
                 subject_blank_node_predicate(bn.node_id, predicate.iri)
             }
-            &graph::BlankNodeOrIRI::IRI(ref iri) => subject_iri_predicate(iri.iri, predicate.iri),
+            graph::BlankNodeOrIRI::IRI(ref iri) => subject_iri_predicate(iri.iri, predicate.iri),
         };
         self.iter_subject_predicate(spo)
     }
     fn iter_o(&'g self, object: &Resource<'g, SPO, OPS>) -> Self::OPSRangeIter {
-        let ops = match object {
-            &graph::Resource::BlankNode(bn, _) => object_blank_node(bn.node_id),
-            &graph::Resource::IRI(ref iri) => object_iri(iri.iri),
-            &graph::Resource::Literal(ref l) => {
+        let ops = match *object {
+            graph::Resource::BlankNode(bn, _) => object_blank_node(bn.node_id),
+            graph::Resource::IRI(ref iri) => object_iri(iri.iri),
+            graph::Resource::Literal(ref l) => {
                 match l.language {
                     Some(lang) => object_literal_lang(l.lexical, lang),
                     None => object_literal(l.lexical, l.datatype),
@@ -506,12 +505,12 @@ impl<'g, SPO: 'g, OPS: 'g> graph::Graph<'g> for Graph<SPO, OPS>
                 object: &Resource<'g, SPO, OPS>,
                 predicate: &IRIPtr<'g, SPO, OPS>)
                 -> Self::OPSRangeIter {
-        let ops = match object {
-            &graph::Resource::BlankNode(bn, _) => {
+        let ops = match *object {
+            graph::Resource::BlankNode(bn, _) => {
                 object_blank_node_predicate(bn.node_id, predicate.iri)
             }
-            &graph::Resource::IRI(ref iri) => object_iri_predicate(iri.iri, predicate.iri),
-            &graph::Resource::Literal(ref l) => {
+            graph::Resource::IRI(ref iri) => object_iri_predicate(iri.iri, predicate.iri),
+            graph::Resource::Literal(ref l) => {
                 match l.language {
                     Some(lang) => object_literal_lang_predicate(l.lexical, lang, predicate.iri),
                     None => object_literal_predicate(l.lexical, l.datatype, predicate.iri),

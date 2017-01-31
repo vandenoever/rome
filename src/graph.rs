@@ -51,11 +51,11 @@
 //!
 //! This module contains traits that correspond to concepts in RDF.
 //!
-//! BlankNodePtr, IRIPtr and LiteralPtr are pointers into the graph. Together they
+//! `BlankNodePtr`, `IRIPtr` and `LiteralPtr` are pointers into the graph. Together they
 //! form a Triple. The subject of a triple can be a blank node or an IRI. This is
-//! modelled by the enum BlankNodeOrIRI. A predicate can only be an IRI. An object
-//! can take any kind of resource so the enum Resource encapsulates BlankNodePtr,
-//! IRIPtr and LiteralPtr.
+//! modelled by the enum `BlankNodeOrIRI`. A predicate can only be an IRI. An object
+//! can take any kind of resource so the enum Resource encapsulates `BlankNodePtr`,
+//! `IRIPtr` and `LiteralPtr`.
 //!
 //! In this module, graphs are immutable, but an new graph can be created by
 //! extending another graph (TODO).
@@ -173,7 +173,7 @@ impl<'g> Ord for IRIPtr<'g> {
 }
 /// A trait for a pointers to datatypes of literals in graphs.
 ///
-/// Like literals, DatatypePtrs are tied to the graph to which they
+/// Like literals, `DatatypePtrs` are tied to the graph to which they
 /// belong. A datatype is an IRI, but a graph may use different pointers for
 /// datatypes and IRIs.
 pub trait DatatypePtr<'g> {
@@ -223,29 +223,29 @@ impl<'g, B, I> BlankNodeOrIRI<'g, B, I>
 {
     /// Is the BlankNodeOrIRI a blank node?
     pub fn is_blank_node(&self) -> bool {
-        match self {
-            &BlankNodeOrIRI::BlankNode(_, _) => true,
+        match *self {
+            BlankNodeOrIRI::BlankNode(_, _) => true,
             _ => false,
         }
     }
     /// Is the BlankNodeOrIRI an IRI?
     pub fn is_iri(&self) -> bool {
-        match self {
-            &BlankNodeOrIRI::IRI(_) => true,
+        match *self {
+            BlankNodeOrIRI::IRI(_) => true,
             _ => false,
         }
     }
     /// Cast BlankNodeOrIRI to a blank node, if applicable
     pub fn as_blank_node(&self) -> Option<&B> {
-        match self {
-            &BlankNodeOrIRI::BlankNode(ref b, _) => Some(b),
+        match *self {
+            BlankNodeOrIRI::BlankNode(ref b, _) => Some(b),
             _ => None,
         }
     }
     /// Cast BlankNodeOrIRI to an IRI, if applicable
     pub fn as_iri(&self) -> Option<&I> {
-        match self {
-            &BlankNodeOrIRI::IRI(ref i) => Some(i),
+        match *self {
+            BlankNodeOrIRI::IRI(ref i) => Some(i),
             _ => None,
         }
     }
@@ -254,9 +254,9 @@ impl<'g, B, I> BlankNodeOrIRI<'g, B, I>
         where Self: Clone,
               L: LiteralPtr<'g>
     {
-        match self {
-            &BlankNodeOrIRI::BlankNode(ref b, _) => Resource::BlankNode(b.clone(), PhantomData),
-            &BlankNodeOrIRI::IRI(ref i) => Resource::IRI(i.clone()),
+        match *self {
+            BlankNodeOrIRI::BlankNode(ref b, _) => Resource::BlankNode(b.clone(), PhantomData),
+            BlankNodeOrIRI::IRI(ref i) => Resource::IRI(i.clone()),
         }
     }
 }
@@ -283,43 +283,43 @@ impl<'g, B, I, L> Resource<'g, B, I, L>
 {
     /// Is this a blank node?
     pub fn is_blank_node(&self) -> bool {
-        match self {
-            &Resource::BlankNode(_, _) => true,
+        match *self {
+            Resource::BlankNode(_, _) => true,
             _ => false,
         }
     }
     /// Is this an IRI?
     pub fn is_iri(&self) -> bool {
-        match self {
-            &Resource::IRI(_) => true,
+        match *self {
+            Resource::IRI(_) => true,
             _ => false,
         }
     }
     /// Is this a literal?
     pub fn is_literal(&self) -> bool {
-        match self {
-            &Resource::Literal(_) => true,
+        match *self {
+            Resource::Literal(_) => true,
             _ => false,
         }
     }
     /// Cast Resource to a blank node, if applicable
     pub fn as_blank_node(&self) -> Option<&B> {
-        match self {
-            &Resource::BlankNode(ref b, _) => Some(b),
+        match *self {
+            Resource::BlankNode(ref b, _) => Some(b),
             _ => None,
         }
     }
     /// Cast Resource to an IRI, if applicable
     pub fn as_iri(&self) -> Option<&I> {
-        match self {
-            &Resource::IRI(ref t) => Some(t),
+        match *self {
+            Resource::IRI(ref t) => Some(t),
             _ => None,
         }
     }
     /// Cast Resource to a literal, if applicable
     pub fn as_literal(&self) -> Option<&L> {
-        match self {
-            &Resource::Literal(ref t) => Some(t),
+        match *self {
+            Resource::Literal(ref t) => Some(t),
             _ => None,
         }
     }
@@ -328,11 +328,11 @@ impl<'g, B, I, L> Resource<'g, B, I, L>
         where B: Clone,
               I: Clone
     {
-        match self {
-            &Resource::BlankNode(ref b, _) => {
+        match *self {
+            Resource::BlankNode(ref b, _) => {
                 Some(BlankNodeOrIRI::BlankNode(b.clone(), PhantomData))
             }
-            &Resource::IRI(ref i) => Some(BlankNodeOrIRI::IRI(i.clone())),
+            Resource::IRI(ref i) => Some(BlankNodeOrIRI::IRI(i.clone())),
             _ => None,
         }
     }
@@ -354,7 +354,7 @@ pub trait Triple<'g, B, I, L>
     fn object(&self) -> Resource<'g, B, I, L>;
 }
 
-/// WriterBlankNodeOrIRI is like BlankNodeOrIRI but for writing graphs.
+/// `WriterBlankNodeOrIRI` is like `BlankNodeOrIRI` but for writing graphs.
 pub enum WriterBlankNodeOrIRI<'g, W>
     where W: GraphWriter<'g>
 {
@@ -363,7 +363,7 @@ pub enum WriterBlankNodeOrIRI<'g, W>
     /// This is an IRI.
     IRI(W::IRI),
 }
-/// WriterResource is like Resource but for writing graphs.
+/// `WriterResource` is like `Resource` but for writing graphs.
 pub enum WriterResource<'g, W>
     where W: GraphWriter<'g>
 {
@@ -398,11 +398,11 @@ pub trait ResourceTranslator<'g> {
                                   ) -> WriterBlankNodeOrIRI<'g, Self::GraphWriter>
         where Self: 'g
     {
-        match blank_node_or_iri {
-            &BlankNodeOrIRI::BlankNode(ref b, p) => {
+        match *blank_node_or_iri {
+            BlankNodeOrIRI::BlankNode(ref b, p) => {
                 WriterBlankNodeOrIRI::BlankNode(self.translate_blank_node(w, b), p)
             }
-            &BlankNodeOrIRI::IRI(ref i) => WriterBlankNodeOrIRI::IRI(w.create_iri(i)),
+            BlankNodeOrIRI::IRI(ref i) => WriterBlankNodeOrIRI::IRI(w.create_iri(i)),
         }
     }
     /// Translate a Resource from the source graph to the graph writer.
@@ -415,12 +415,12 @@ pub trait ResourceTranslator<'g> {
                          ) -> WriterResource<'g, Self::GraphWriter>
         where Self: 'g
     {
-        match resource {
-            &Resource::BlankNode(ref b, p) => {
+        match *resource {
+            Resource::BlankNode(ref b, p) => {
                 WriterResource::BlankNode(self.translate_blank_node(w, b), p)
             }
-            &Resource::IRI(ref i) => WriterResource::IRI(w.create_iri(i)),
-            &Resource::Literal(ref l) => WriterResource::Literal(w.create_literal(l)),
+            Resource::IRI(ref i) => WriterResource::IRI(w.create_iri(i)),
+            Resource::Literal(ref l) => WriterResource::Literal(w.create_literal(l)),
         }
     }
 }
@@ -451,15 +451,9 @@ pub trait GraphWriter<'g> {
     /// Create a new language for the graph.
     fn create_language(&mut self, &str) -> Self::Language;
     /// Create a new literal with the given datatype for the graph.
-    fn create_literal_datatype<'a>(&mut self,
-                                   value: &str,
-                                   datatype: &Self::Datatype)
-                                   -> Self::Literal;
+    fn create_literal_datatype(&mut self, value: &str, datatype: &Self::Datatype) -> Self::Literal;
     /// Create a new literal with the given language for the graph.
-    fn create_literal_language<'a>(&mut self,
-                                   value: &str,
-                                   language: &Self::Language)
-                                   -> Self::Literal;
+    fn create_literal_language(&mut self, value: &str, language: &Self::Language) -> Self::Literal;
 
     /// Add a new triple to the graph.
     fn add(&mut self,
@@ -468,29 +462,29 @@ pub trait GraphWriter<'g> {
            object: &WriterResource<'g, Self>)
         where Self: Sized
     {
-        match subject {
-            &WriterBlankNodeOrIRI::BlankNode(ref subject, _) => {
-                match object {
-                    &WriterResource::BlankNode(ref object, _) => {
+        match *subject {
+            WriterBlankNodeOrIRI::BlankNode(ref subject, _) => {
+                match *object {
+                    WriterResource::BlankNode(ref object, _) => {
                         self.add_blank_blank(subject, predicate, object);
                     }
-                    &WriterResource::IRI(ref object) => {
+                    WriterResource::IRI(ref object) => {
                         GraphWriter::add_blank_iri(self, subject, predicate, object);
                     }
-                    &WriterResource::Literal(ref object) => {
+                    WriterResource::Literal(ref object) => {
                         GraphWriter::add_blank_literal(self, subject, predicate, object);
                     }
                 }
             }
-            &WriterBlankNodeOrIRI::IRI(ref subject) => {
-                match object {
-                    &WriterResource::BlankNode(ref object, _) => {
+            WriterBlankNodeOrIRI::IRI(ref subject) => {
+                match *object {
+                    WriterResource::BlankNode(ref object, _) => {
                         GraphWriter::add_iri_blank(self, subject, predicate, object);
                     }
-                    &WriterResource::IRI(ref object) => {
+                    WriterResource::IRI(ref object) => {
                         GraphWriter::add_iri_iri(self, subject, predicate, object);
                     }
-                    &WriterResource::Literal(ref object) => {
+                    WriterResource::Literal(ref object) => {
                         GraphWriter::add_iri_literal(self, subject, predicate, object);
                     }
                 }

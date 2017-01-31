@@ -1,4 +1,5 @@
 //! Iterator that is a collection of iterators.
+
 use iter::SortedIterator;
 use std::collections::BTreeMap;
 use std::iter::Peekable;
@@ -35,10 +36,8 @@ impl<I, J, F> TransitiveIterator<I, J, F>
     fn min_next(&mut self) -> Option<usize> {
         let mut min = self.iter.peek();
         let mut min_pos = if min.is_some() { Some(0) } else { None };
-        let mut pos = 0;
-        for i in self.iters.iter_mut() {
-            pos += 1;
-            match (i.1.peek(), min) {
+        for (pos, item) in self.iters.iter_mut().enumerate() {
+            match (item.1.peek(), min) {
                 (Some(m), Some(n)) if m < n => {
                     min_pos = Some(pos);
                     min = Some(m)

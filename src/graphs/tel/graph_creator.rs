@@ -24,7 +24,7 @@ pub struct GraphCreator<SPO, OPS>
     phantom: PhantomData<OPS>,
 }
 
-fn translate<T>(t: &mut T, translation: &Vec<StringId>, datatrans: &Vec<StringId>)
+fn translate<T>(t: &mut T, translation: &[StringId], datatrans: &[StringId])
     where T: CompactTriple<u32>
 {
     if t.subject_is_iri() {
@@ -81,7 +81,7 @@ impl<SPO, OPS> GraphCreator<SPO, OPS>
         let t = SPO::triple(false, s, p.id, ot, o, d);
         self.triples.push(t);
     }
-    fn add_blank_blank<'a>(&mut self, s: u32, p: StringId, o: u32) {
+    fn add_blank_blank(&mut self, s: u32, p: StringId, o: u32) {
         self.highest_blank_node = cmp::max(self.highest_blank_node, o);
         self.add_s_blank(s, p, TripleObjectType::BlankNode, o, 0);
     }
@@ -184,20 +184,14 @@ impl<'g, SPO: 'g, OPS: 'g> graph::GraphWriter<'g> for GraphCreator<SPO, OPS>
     fn create_language(&mut self, language: &str) -> Self::Language {
         CreateLanguage { language: self.datatype_lang_collector.add_string(language) }
     }
-    fn create_literal_datatype<'a>(&mut self,
-                                   value: &str,
-                                   datatype: &Self::Datatype)
-                                   -> Self::Literal {
+    fn create_literal_datatype(&mut self, value: &str, datatype: &Self::Datatype) -> Self::Literal {
         CreateLiteral {
             lexical: self.string_collector.add_string(value),
             datatype: datatype.datatype,
             language: None,
         }
     }
-    fn create_literal_language<'a>(&mut self,
-                                   value: &str,
-                                   language: &Self::Language)
-                                   -> Self::Literal {
+    fn create_literal_language(&mut self, value: &str, language: &Self::Language) -> Self::Literal {
         CreateLiteral {
             lexical: self.string_collector.add_string(value),
             datatype: self.lang_string_datatype_id,
@@ -210,7 +204,7 @@ impl<'g, SPO: 'g, OPS: 'g> graph::GraphWriter<'g> for GraphCreator<SPO, OPS>
         let (datatrans, datatype_lang_collection) = self.datatype_lang_collector.collect();
         let mut spo = Vec::new();
         mem::swap(&mut spo, &mut self.triples);
-        for t in spo.iter_mut() {
+        for t in &mut spo {
             translate(t, &translation, &datatrans);
         }
         // sort according to StringId, which is sorted alphabetically
@@ -234,22 +228,22 @@ impl<'g, SPO: 'g, OPS: 'g> graph::GraphWriter<'g> for GraphCreator<SPO, OPS>
                        subject: &BlankNodePtr<SPO, OPS>,
                        predicate: &CreateIRI,
                        object: &BlankNodePtr<SPO, OPS>) {
-        self.check_blank_node(&subject);
-        self.check_blank_node(&object);
+        self.check_blank_node(subject);
+        self.check_blank_node(object);
         GraphCreator::add_blank_blank(self, subject.node_id, predicate.iri, object.node_id);
     }
     fn add_blank_iri(&mut self,
                      subject: &BlankNodePtr<SPO, OPS>,
                      predicate: &CreateIRI,
                      object: &CreateIRI) {
-        self.check_blank_node(&subject);
+        self.check_blank_node(subject);
         GraphCreator::add_blank_iri(self, subject.node_id, predicate.iri, object.iri);
     }
     fn add_blank_literal(&mut self,
                          subject: &BlankNodePtr<SPO, OPS>,
                          predicate: &CreateIRI,
                          object: &CreateLiteral) {
-        self.check_blank_node(&subject);
+        self.check_blank_node(subject);
         match object.language {
             Some(lang) => {
                 GraphCreator::add_blank_lit_lang(self,
@@ -271,7 +265,7 @@ impl<'g, SPO: 'g, OPS: 'g> graph::GraphWriter<'g> for GraphCreator<SPO, OPS>
                      subject: &CreateIRI,
                      predicate: &CreateIRI,
                      object: &BlankNodePtr<SPO, OPS>) {
-        self.check_blank_node(&object);
+        self.check_blank_node(object);
         GraphCreator::add_iri_blank(self, subject.iri, predicate.iri, object.node_id);
     }
     fn add_iri_iri(&mut self, subject: &CreateIRI, predicate: &CreateIRI, object: &CreateIRI) {

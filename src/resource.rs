@@ -1,10 +1,11 @@
 //! Helper traits used in generated ontology code.
+#![cfg_attr(feature = "cargo-clippy", allow(type_complexity))]
 use graph;
 use graph::Triple;
-use ontology_adapter;
-use std;
-use resource;
 use iter;
+use ontology_adapter;
+use resource;
+use std;
 
 macro_rules!
 rb{($p:ident) =>
@@ -49,10 +50,12 @@ pub trait ResourceBase<'g>: Clone + Ord {
     {
         let adapter = self.adapter();
         let iter = match predicate {
-            Some(ref predicate) => match self.this().to_blank_node_or_iri() {
-                Some(subject) => adapter.iter_s_p(subject, (*predicate).clone()),
-                None => adapter.empty_spo_range(),
-            },
+            Some(predicate) => {
+                match self.this().to_blank_node_or_iri() {
+                    Some(subject) => adapter.iter_s_p(subject, (*predicate).clone()),
+                    None => adapter.empty_spo_range(),
+                }
+            }
             None => adapter.empty_spo_range(),
         };
         ObjectIter {
@@ -62,17 +65,19 @@ pub trait ResourceBase<'g>: Clone + Ord {
     }
     /// Return this resource as an IRI, if it is an IRI.
     fn iri(&self) -> Option<IRI<'g, Self>> {
-        match self.this() {
-            &graph::Resource::IRI(_) => Some(IRI {
-                resource: self.clone(),
-                phantom: std::marker::PhantomData,
-            }),
-            _ => None
+        match *self.this() {
+            graph::Resource::IRI(_) => {
+                Some(IRI {
+                    resource: self.clone(),
+                    phantom: std::marker::PhantomData,
+                })
+            }
+            _ => None,
         }
     }
 }
 
-/// A wrapper around 'ResourceBase' that guarantees that the resource
+/// A wrapper around `ResourceBase` that guarantees that the resource
 /// is an IRI and not a blank node or a literal.
 pub struct IRI<'g, R: 'g>
     where R: ResourceBase<'g>
@@ -88,15 +93,15 @@ impl<'g, R> IRI<'g, R>
     pub fn this(&self) -> &rb!(IRIPtr) {
         match self.resource.this().as_iri() {
             Some(iri) => iri,
-            _ => panic!("unreachable")
+            _ => panic!("unreachable"),
         }
     }
     /// Access the IRI that underlies this instance as a string.
     pub fn as_str(&self) -> &str {
         use graph::IRIPtr;
-        match self.resource.this() {
-            &graph::Resource::IRI(ref iri) => iri.as_str(),
-            _ => panic!("unreachable")
+        match *self.resource.this() {
+            graph::Resource::IRI(ref iri) => iri.as_str(),
+            _ => panic!("unreachable"),
         }
     }
 }
@@ -105,7 +110,6 @@ impl<'g, R: ?Sized> std::ops::Deref for IRI<'g, R>
 {
     type Target = R;
 
-    #[inline(always)]
     fn deref(&self) -> &R {
         &self.resource
     }
@@ -187,7 +191,7 @@ impl<'g, R> Iterator for ObjectIter<'g, R>
     type Item = R;
     fn next(&mut self) -> Option<Self::Item> {
         match self.iter.next() {
-            Some(triple) => Some(R::new(triple.object(), &self.adapter)),
+            Some(triple) => Some(R::new(triple.object(), self.adapter)),
             None => None,
         }
     }
@@ -214,7 +218,7 @@ impl<'g, R> Iterator for SubjectIter<'g, R>
             Some(triple) => {
                 let s = triple.subject();
                 let o = s.to_resource();
-                Some(R::new(o, &self.adapter))
+                Some(R::new(o, self.adapter))
             }
             None => None,
         }
@@ -236,6 +240,7 @@ impl<'g, R: 'g> Iterator for IRISubjectIter<'g, R>
 {
     type Item = IRI<'g, R>;
     fn next(&mut self) -> Option<Self::Item> {
+        #[allow(while_let_on_iterator)]
         while let Some(r) = self.iter.next() {
             if let Some(iri) = r.iri() {
                 return Some(iri);
@@ -365,14 +370,14 @@ impl<'g, G: 'g> resource::ResourceBase<'g> for $name<'g, G>
 
 #[cfg(test)]
 mod tests {
-    use std;
+    use constants;
     use graph;
-    use resource;
-    use ontology_adapter;
-    use resource::{ResourceBase, IRI};
     use graph::GraphWriter;
     use graphs::tel;
-    use constants;
+    use ontology_adapter;
+    use resource;
+    use resource::{ResourceBase, IRI};
+    use std;
 
     const RDF_PROPERTY: &'static str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#Property";
     const RDFS_CLASS: &'static str = "http://www.w3.org/2000/01/rdf-schema#Class";

@@ -13,13 +13,8 @@ use std::path::Path;
 use std::rc::Rc;
 
 type MyGraph = tel::Graph64;
-type MyIter<'g> = <MyGraph as Graph<'g>>::SPORangeIter;
 type MyBlankNodeOrIRI<'g> =
     graph::BlankNodeOrIRI<'g, <MyGraph as Graph<'g>>::BlankNodePtr, <MyGraph as Graph<'g>>::IRIPtr>;
-type MyResource<'g> = graph::Resource<'g,
-                                      <MyGraph as Graph<'g>>::BlankNodePtr,
-                                      <MyGraph as Graph<'g>>::IRIPtr,
-                                      <MyGraph as Graph<'g>>::LiteralPtr>;
 
 macro_rules! println_stderr(
     ($($arg:tt)*) => { {
@@ -144,9 +139,9 @@ impl<'g> LiteralPtr<'g> for Literal {
         &self.datatype
     }
     fn language(&self) -> Option<&str> {
-        match &self.language {
-            &Some(ref l) => Some(l.as_str()),
-            &None => None,
+        match self.language {
+            Some(ref l) => Some(l.as_str()),
+            None => None,
         }
     }
 }
@@ -192,38 +187,38 @@ impl<'g, W: 'g> Cache<'g, W>
         o.clone().unwrap()
     }
     fn rdf_type(&mut self, w: &mut W) -> W::IRI {
-        Cache::get(&mut self.rdf_type, w, &RDF_TYPE)
+        Cache::get(&mut self.rdf_type, w, RDF_TYPE)
     }
     fn earl_assertion(&mut self, w: &mut W) -> W::IRI {
-        Cache::get(&mut self.earl_assertion, w, &EARL_ASSERTION)
+        Cache::get(&mut self.earl_assertion, w, EARL_ASSERTION)
     }
     fn earl_test_result(&mut self, w: &mut W) -> W::IRI {
-        Cache::get(&mut self.earl_test_result, w, &EARL_TEST_RESULT)
+        Cache::get(&mut self.earl_test_result, w, EARL_TEST_RESULT)
     }
     fn earl_test(&mut self, w: &mut W) -> W::IRI {
-        Cache::get(&mut self.earl_test, w, &EARL_TEST)
+        Cache::get(&mut self.earl_test, w, EARL_TEST)
     }
     fn earl_result(&mut self, w: &mut W) -> W::IRI {
-        Cache::get(&mut self.earl_result, w, &EARL_RESULT)
+        Cache::get(&mut self.earl_result, w, EARL_RESULT)
     }
     fn earl_passed(&mut self, w: &mut W) -> W::IRI {
-        Cache::get(&mut self.earl_passed, w, &EARL_PASSED)
+        Cache::get(&mut self.earl_passed, w, EARL_PASSED)
     }
     fn earl_failed(&mut self, w: &mut W) -> W::IRI {
-        Cache::get(&mut self.earl_failed, w, &EARL_FAILED)
+        Cache::get(&mut self.earl_failed, w, EARL_FAILED)
     }
     fn earl_cant_tell(&mut self, w: &mut W) -> W::IRI {
-        Cache::get(&mut self.earl_cant_tell, w, &EARL_CANT_TELL)
+        Cache::get(&mut self.earl_cant_tell, w, EARL_CANT_TELL)
     }
     fn earl_outcome(&mut self, w: &mut W) -> W::IRI {
-        Cache::get(&mut self.earl_outcome, w, &EARL_OUTCOME)
+        Cache::get(&mut self.earl_outcome, w, EARL_OUTCOME)
     }
     fn dc_date(&mut self, w: &mut W) -> W::IRI {
-        Cache::get(&mut self.dc_date, w, &DC_DATE)
+        Cache::get(&mut self.dc_date, w, DC_DATE)
     }
     fn xsd_date_time(&mut self, w: &mut W) -> W::Datatype {
         if self.xsd_date_time.is_none() {
-            self.xsd_date_time = Some(w.create_datatype(&XSD_DATE_TIME));
+            self.xsd_date_time = Some(w.create_datatype(XSD_DATE_TIME));
         }
         self.xsd_date_time.clone().unwrap()
     }
@@ -283,8 +278,8 @@ fn read_file(path: &str) -> io::Result<String> {
 fn load_graph(data: &str, base: &str) -> rome::Result<MyGraph> {
     let mut writer = tel::GraphCreator::with_capacity(65000);
     {
-        let mut triples = TurtleParser::new(data, base, &mut writer)?;
-        while let Some(step) = triples.next() {
+        let triples = TurtleParser::new(data, base, &mut writer)?;
+        for step in triples {
             step?;
         }
     }
@@ -329,10 +324,10 @@ fn to_approval<'g, B, I, L>(object: Resource<'g, B, I, L>) -> Result<Approval, S
           I: IRIPtr<'g>,
           L: LiteralPtr<'g>
 {
-    match &object {
-        &graph::Resource::IRI(ref iri) if iri.as_str() == RDFT_APPROVED => Ok(Approval::Approved),
-        &graph::Resource::IRI(ref iri) if iri.as_str() == RDFT_PROPOSED => Ok(Approval::Proposed),
-        &graph::Resource::IRI(ref iri) if iri.as_str() == RDFT_REJECTED => Ok(Approval::Rejected),
+    match object {
+        graph::Resource::IRI(ref iri) if iri.as_str() == RDFT_APPROVED => Ok(Approval::Approved),
+        graph::Resource::IRI(ref iri) if iri.as_str() == RDFT_PROPOSED => Ok(Approval::Proposed),
+        graph::Resource::IRI(ref iri) if iri.as_str() == RDFT_REJECTED => Ok(Approval::Rejected),
         _ => Err(String::from("object is not the right value for approval")),
     }
 }
@@ -414,8 +409,8 @@ fn eval_result(r: &Assertion) {
 }
 
 fn subject_to_string(subject: &MyBlankNodeOrIRI) -> Rc<String> {
-    match subject {
-        &graph::BlankNodeOrIRI::IRI(ref iri) => Rc::new(String::from(iri.as_str())),
+    match *subject {
+        graph::BlankNodeOrIRI::IRI(ref iri) => Rc::new(String::from(iri.as_str())),
         _ => {
             panic!("a blank node as subject is not expected");
         }
@@ -426,7 +421,7 @@ fn run_tests(graph: &MyGraph, base: &str, base_dir: &str) -> rome::Result<Vec<As
     let mut assertions = Vec::new();
     for t in
         graph.iter_object_iri_predicate("http://www.w3.org/ns/rdftest#TestTurtleEval", RDF_TYPE) {
-        let test = load_test_turtle_eval(&graph, t.subject())?;
+        let test = load_test_turtle_eval(graph, t.subject())?;
         let r = run_eval(&test, base, base_dir)?;
         eval_result(&r);
         assertions.push(r);
@@ -434,7 +429,7 @@ fn run_tests(graph: &MyGraph, base: &str, base_dir: &str) -> rome::Result<Vec<As
     for t in
         graph.iter_object_iri_predicate("http://www.w3.org/ns/rdftest#TestTurtlePositiveSyntax",
                                         RDF_TYPE) {
-        let test = load_positive_syntax(&graph, t.subject())?;
+        let test = load_positive_syntax(graph, t.subject())?;
         let r = run_eval_positive_syntax(&test, base, base_dir)?;
         eval_result(&r);
         assertions.push(r);
@@ -442,14 +437,14 @@ fn run_tests(graph: &MyGraph, base: &str, base_dir: &str) -> rome::Result<Vec<As
     for t in
         graph.iter_object_iri_predicate("http://www.w3.org/ns/rdftest#TestTurtleNegativeSyntax",
                                         RDF_TYPE) {
-        let test = load_negative_syntax(&graph, t.subject())?;
+        let test = load_negative_syntax(graph, t.subject())?;
         let r = run_eval_negative_syntax(&test, base, base_dir)?;
         eval_result(&r);
         assertions.push(r);
     }
     for t in graph.iter_object_iri_predicate("http://www.w3.org/ns/rdftest#TestTurtleNegativeEval",
                                    RDF_TYPE) {
-        let test = load_negative_eval(&graph, t.subject())?;
+        let test = load_negative_eval(graph, t.subject())?;
         let r = run_eval_negative_eval(&test, base, base_dir)?;
         eval_result(&r);
         assertions.push(r);
@@ -459,14 +454,14 @@ fn run_tests(graph: &MyGraph, base: &str, base_dir: &str) -> rome::Result<Vec<As
 
 fn change_base(iri: &str, old_base: &str, new_base: &str) -> String {
     let mut n = String::from(new_base);
-    n.push_str(&iri[(old_base.rfind("/").unwrap() + 1)..]);
+    n.push_str(&iri[(old_base.rfind('/').unwrap() + 1)..]);
     n
 }
 
-fn fail(test: &Rc<String>, input_file: &String, info: String) -> rome::Result<Assertion> {
+fn fail(test: &Rc<String>, input_file: &str, info: String) -> rome::Result<Assertion> {
     Ok(Assertion {
         test: test.clone(),
-        input_file: input_file.clone(),
+        input_file: String::from(input_file),
         result: TestResult {
             outcome: Outcome::Failed,
             date: String::new(),
@@ -476,10 +471,10 @@ fn fail(test: &Rc<String>, input_file: &String, info: String) -> rome::Result<As
     })
 }
 
-fn pass(test: &Rc<String>, input_file: &String) -> rome::Result<Assertion> {
+fn pass(test: &Rc<String>, input_file: &str) -> rome::Result<Assertion> {
     Ok(Assertion {
         test: test.clone(),
-        input_file: input_file.clone(),
+        input_file: String::from(input_file),
         result: TestResult {
             outcome: Outcome::Passed,
             date: String::new(),
@@ -539,10 +534,10 @@ fn graph_to_ntriples(graph: &MyGraph) -> rome::Result<String> {
     let string = String::from_utf8(bytes)?;
     Ok(string)
 }
-fn run_eval_positive_syntax<'a>(test: &TestTurtlePositiveSyntax,
-                                base: &str,
-                                base_dir: &str)
-                                -> rome::Result<Assertion> {
+fn run_eval_positive_syntax(test: &TestTurtlePositiveSyntax,
+                            base: &str,
+                            base_dir: &str)
+                            -> rome::Result<Assertion> {
     let ttl_path = change_base(test.action.as_str(), base, base_dir);
     let ttl = read_file(&ttl_path)?;
     if let Err(err) = load_graph(ttl.as_str(), test.action.as_str()) {
@@ -552,10 +547,10 @@ fn run_eval_positive_syntax<'a>(test: &TestTurtlePositiveSyntax,
     };
     pass(&test.id, &ttl_path)
 }
-fn run_eval_negative_syntax<'a>(test: &TestTurtleNegativeSyntax,
-                                base: &str,
-                                base_dir: &str)
-                                -> rome::Result<Assertion> {
+fn run_eval_negative_syntax(test: &TestTurtleNegativeSyntax,
+                            base: &str,
+                            base_dir: &str)
+                            -> rome::Result<Assertion> {
     let ttl_path = change_base(test.action.as_str(), base, base_dir);
     let ttl = read_file(&ttl_path)?;
     if let Ok(graph) = load_graph(ttl.as_str(), test.action.as_str()) {
@@ -565,10 +560,10 @@ fn run_eval_negative_syntax<'a>(test: &TestTurtleNegativeSyntax,
     };
     pass(&test.id, &ttl_path)
 }
-fn run_eval_negative_eval<'a>(test: &TestTurtleNegativeEval,
-                              base: &str,
-                              base_dir: &str)
-                              -> rome::Result<Assertion> {
+fn run_eval_negative_eval(test: &TestTurtleNegativeEval,
+                          base: &str,
+                          base_dir: &str)
+                          -> rome::Result<Assertion> {
     let ttl_path = change_base(test.action.as_str(), base, base_dir);
     let ttl = read_file(&ttl_path)?;
     if let Ok(graph) = load_graph(ttl.as_str(), test.action.as_str()) {
@@ -579,11 +574,11 @@ fn run_eval_negative_eval<'a>(test: &TestTurtleNegativeEval,
     pass(&test.id, &ttl_path)
 }
 
-fn output_as_turtle(assertions: &Vec<Assertion>) -> rome::Result<()> {
+fn output_as_turtle(assertions: &[Assertion]) -> rome::Result<()> {
     let mut writer = tel::GraphCreator::with_capacity(100000);
     let mut cache = Cache::new();
     for a in assertions {
-        write_assertion(&a, &mut writer, &mut cache)?;
+        write_assertion(a, &mut writer, &mut cache)?;
     }
     let graph: MyGraph = writer.collect().sort_blank_nodes();
     let mut ns = Namespaces::new();

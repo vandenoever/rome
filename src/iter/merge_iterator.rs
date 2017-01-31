@@ -35,9 +35,8 @@ impl<I> MergeIterator<I>
     fn min_next(&mut self) -> Option<usize> {
         let mut min_pos = None;
         let mut min = None;
-        let mut pos = 0;
-        for i in self.iters.iter_mut() {
-            match (i.peek(), min) {
+        for (pos, item) in self.iters.iter_mut().enumerate() {
+            match (item.peek(), min) {
                 (Some(m), Some(n)) if m < n => {
                     min_pos = Some(pos);
                     min = Some(m)
@@ -48,7 +47,6 @@ impl<I> MergeIterator<I>
                 }
                 _ => {}
             }
-            pos += 1;
         }
         min_pos
     }
