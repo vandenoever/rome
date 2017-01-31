@@ -24,3 +24,9 @@ default = []
 # Unstable parts of this crate are hidden behind this feature.
 # There are no API guarantees for the functionality exposed by this feature.
 unstable = []
+
+[profile.release]
+debug = true
+
+[profile.bench]
+debug = true
