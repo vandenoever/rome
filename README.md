@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/vandenoever/rome.svg?branch=master)](https://travis-ci.org/vandenoever/rome)
+[![Current Version](http://meritbadge.herokuapp.com/rome)](https://crates.io/crates/rome)
 
 **Rome** is an **RDF library** written in safe Rust.
 
