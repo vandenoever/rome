@@ -17,3 +17,12 @@
 # Testing
 
 The Turtle parser passes the [W3 test suite](https://www.w3.org/2013/TurtleTests/).
+
+# License
+
+Rome is licensed under AGPLv3.0 or any later version.
+
+## Contribution
+
+Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in the work by you, as defined in the AGPLv3.0 license, shall be licensed as above, without any additional terms or conditions.
