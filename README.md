@@ -18,6 +18,14 @@
 
 The Turtle parser passes the [W3 test suite](https://www.w3.org/2013/TurtleTests/).
 
+Run the tests like this:
+
+```bash
+wget https://www.w3.org/2013/TurtleTests/TESTS.tar.gz
+tar xf TESTS.tar.gz
+cargo run --example w3tests TurtleTests/manifest.ttl
+```
+
 # License
 
 Rome is licensed under AGPLv3.0 or any later version.
