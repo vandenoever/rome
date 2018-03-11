@@ -377,7 +377,8 @@ fn uses(o: &Output, classes: bool) -> String {
 fn write_files(o: &Output, writers: &Writers, folder: &str, classes: bool) -> rome::Result<()> {
     let uses = uses(o, classes);
     let dir_path = o.output_dir.join(folder);
-    if !fs::metadata(&dir_path)?.is_dir() {
+    let metadata = fs::metadata(&dir_path);
+    if !fs::metadata(&dir_path).is_ok() || !metadata?.is_dir() {
         fs::create_dir(&dir_path)?;
     }
     let path = dir_path.join("mod.rs");

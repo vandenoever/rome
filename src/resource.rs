@@ -7,22 +7,27 @@ use ontology_adapter;
 use resource;
 use std;
 
+#[macro_export]
 macro_rules!
 rb{($p:ident) =>
     (<<Self as resource::ResourceBase<'g>>::Graph as graph::Graph<'g>>::$p)
 }
+#[macro_export]
 macro_rules!
 resource{() =>
     (graph::Resource<'g, rb!(BlankNodePtr), rb!(IRIPtr), rb!(LiteralPtr)>)
 }
+#[macro_export]
 macro_rules!
 adapter{() =>
     (ontology_adapter::OntologyAdapter<'g, Self::Graph>)
 }
+#[macro_export]
 macro_rules!
 g{($p:ident) =>
     (<G as graph::Graph<'g>>::$p)
 }
+#[macro_export]
 macro_rules!
 g_resource{() =>
     (graph::Resource<'g, g!(BlankNodePtr), g!(IRIPtr), g!(LiteralPtr)>)
@@ -341,7 +346,7 @@ impl<'g, G: 'g> resource::ResourceBase<'g> for $name<'g, G>
         }
     }
     fn iter(adapter: &'g adapter!()) -> resource::SubjectIter<'g, Self> {
-        use graph::IRIPtr;
+        use self::graph::IRIPtr;
         let rdf_type = adapter.preloaded_iri(0);
         let class = adapter.preloaded_iri($pos);
         let iter = match (rdf_type, class) {
