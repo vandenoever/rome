@@ -39,11 +39,11 @@ impl<I, J, F> TransitiveIterator<I, J, F>
         for (pos, item) in self.iters.iter_mut().enumerate() {
             match (item.1.peek(), min) {
                 (Some(m), Some(n)) if m < n => {
-                    min_pos = Some(pos);
+                    min_pos = Some(pos + 1);
                     min = Some(m)
                 }
                 (Some(m), None) => {
-                    min_pos = Some(pos);
+                    min_pos = Some(pos + 1);
                     min = Some(m)
                 }
                 _ => {}
