@@ -240,13 +240,7 @@ impl<'g, R: 'g> Iterator for IRISubjectIter<'g, R>
 {
     type Item = IRI<'g, R>;
     fn next(&mut self) -> Option<Self::Item> {
-        #[allow(while_let_on_iterator)]
-        while let Some(r) = self.iter.next() {
-            if let Some(iri) = r.iri() {
-                return Some(iri);
-            }
-        }
-        None
+        self.iter.by_ref().filter_map(|r| r.iri()).next()
     }
 }
 
