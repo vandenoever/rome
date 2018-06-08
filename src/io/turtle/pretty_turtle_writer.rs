@@ -180,7 +180,7 @@ impl<'a, 'g, W: 'a, G: 'g> TurtleWriter<'a, 'g, W, G>
         loop {
             // write rdf:first value
             self.write_object(triple.object(), namespaces)?;
-            let rest = iter.next().ok_or(Error::Custom("An rdf:rest triple was expected."))?;
+            let rest = iter.next().ok_or_else(||Error::Custom("An rdf:rest triple was expected."))?;
             if Some(rest.predicate()) != self.rdf_rest {
                 return Err(Error::Custom("An rdf:rest triple was expected."));
             }
@@ -193,7 +193,7 @@ impl<'a, 'g, W: 'a, G: 'g> TurtleWriter<'a, 'g, W, G>
             }
             let rest = rest.object()
                 .as_blank_node()
-                .ok_or(Error::Custom("A blank node was expected."))?
+                .ok_or_else(||Error::Custom("A blank node was expected."))?
                 .clone();
             if iter.next().is_some() {
                 return Err(Error::Custom("No more triples were expected for the list node."));

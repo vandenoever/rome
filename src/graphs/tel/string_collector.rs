@@ -66,8 +66,8 @@ impl StringCollector {
         translation[refs[0].index as usize] = StringId { id: 0 };
         let mut to = 0;
         let mut prev_str = slice(buffer, &refs[0]);
-        #[allow(needless_range_loop)]
-        for i in 1..refs.len() {
+        let end = refs.len();
+        for i in 1..end {
             let r = refs[i].clone();
             let str = slice(buffer, &r);
             if str != prev_str {
