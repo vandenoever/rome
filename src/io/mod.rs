@@ -1,6 +1,6 @@
 //! Functions for reading and writing RDF files.
-mod turtle;
 mod ntriples_writer;
+mod turtle;
 
 /// A parser for Turtle files.
 pub type TurtleParser<'a, B> = turtle::parser::TurtleParser<'a, B>;

@@ -1,19 +1,20 @@
-use constants;
-use graph;
-use rand;
-use std::cmp;
-use std::marker::PhantomData;
-use std::mem;
 use super::compact_triple::*;
 use super::graph::*;
 use super::string_collector::*;
 use super::triple::*;
 #[cfg(test)]
 use super::triple64::*;
+use constants;
+use graph;
+use rand;
+use std::cmp;
+use std::marker::PhantomData;
+use std::mem;
 
 pub struct GraphCreator<SPO, OPS>
-    where SPO: CompactTriple<u32>,
-          OPS: CompactTriple<u32>
+where
+    SPO: CompactTriple<u32>,
+    OPS: CompactTriple<u32>,
 {
     graph_id: u32,
     string_collector: StringCollector,
@@ -25,7 +26,8 @@ pub struct GraphCreator<SPO, OPS>
 }
 
 fn translate<T>(t: &mut T, translation: &[StringId], datatrans: &[StringId])
-    where T: CompactTriple<u32>
+where
+    T: CompactTriple<u32>,
 {
     if t.subject_is_iri() {
         let subject = t.subject() as usize;
@@ -43,8 +45,9 @@ fn translate<T>(t: &mut T, translation: &[StringId], datatrans: &[StringId])
     }
 }
 impl<SPO, OPS> GraphCreator<SPO, OPS>
-    where SPO: CompactTriple<u32>,
-          OPS: CompactTriple<u32>
+where
+    SPO: CompactTriple<u32>,
+    OPS: CompactTriple<u32>,
 {
     pub fn with_capacity(capacity: usize) -> GraphCreator<SPO, OPS> {
         let mut dlc = StringCollector::with_capacity(capacity);
@@ -95,24 +98,28 @@ impl<SPO, OPS> GraphCreator<SPO, OPS>
         self.add_s_blank(s, p, TripleObjectType::LiteralLang, o.id, lang.id);
     }
     fn check_blank_node(&self, blank_node: &BlankNodePtr<SPO, OPS>) {
-        assert_eq!(self.graph_id,
-                   blank_node.graph_id,
-                   "Blank node is not associated with this graph creator.");
+        assert_eq!(
+            self.graph_id, blank_node.graph_id,
+            "Blank node is not associated with this graph creator."
+        );
     }
 }
 
 fn create_ops<SPO, OPS>(spo: &[SPO]) -> Vec<OPS>
-    where SPO: CompactTriple<u32>,
-          OPS: CompactTriple<u32>
+where
+    SPO: CompactTriple<u32>,
+    OPS: CompactTriple<u32>,
 {
     let mut ops = Vec::with_capacity(spo.len());
     for t in spo {
-        ops.push(OPS::triple(t.subject_is_iri(),
-                             t.subject(),
-                             t.predicate(),
-                             t.object_type(),
-                             t.object(),
-                             t.datatype_or_lang()));
+        ops.push(OPS::triple(
+            t.subject_is_iri(),
+            t.subject(),
+            t.predicate(),
+            t.object_type(),
+            t.object(),
+            t.datatype_or_lang(),
+        ));
     }
     ops.sort();
     ops
@@ -136,8 +143,9 @@ pub struct CreateLanguage {
 }
 
 impl<'g, SPO: 'g, OPS: 'g> graph::GraphWriter<'g> for GraphCreator<SPO, OPS>
-    where SPO: CompactTriple<u32>,
-          OPS: CompactTriple<u32>
+where
+    SPO: CompactTriple<u32>,
+    OPS: CompactTriple<u32>,
 {
     type BlankNode = BlankNodePtr<'g, SPO, OPS>;
     type IRI = CreateIRI;
@@ -154,35 +162,39 @@ impl<'g, SPO: 'g, OPS: 'g> graph::GraphWriter<'g> for GraphCreator<SPO, OPS>
         }
     }
     fn create_iri<'a, I: 'a>(&mut self, i: &I) -> CreateIRI
-        where I: graph::IRIPtr<'a>
+    where
+        I: graph::IRIPtr<'a>,
     {
-        CreateIRI { iri: self.string_collector.add_string(i.as_str()) }
+        CreateIRI {
+            iri: self.string_collector.add_string(i.as_str()),
+        }
     }
     fn create_literal<'a, L: 'a>(&mut self, l: &L) -> CreateLiteral
-        where L: graph::LiteralPtr<'a>
+    where
+        L: graph::LiteralPtr<'a>,
     {
         match l.language() {
-            Some(language) => {
-                CreateLiteral {
-                    lexical: self.string_collector.add_string(l.as_str()),
-                    datatype: self.lang_string_datatype_id,
-                    language: Some(self.datatype_lang_collector.add_string(language)),
-                }
-            }
-            None => {
-                CreateLiteral {
-                    lexical: self.string_collector.add_string(l.as_str()),
-                    datatype: self.datatype_lang_collector.add_string(l.datatype_str()),
-                    language: None,
-                }
-            }
+            Some(language) => CreateLiteral {
+                lexical: self.string_collector.add_string(l.as_str()),
+                datatype: self.lang_string_datatype_id,
+                language: Some(self.datatype_lang_collector.add_string(language)),
+            },
+            None => CreateLiteral {
+                lexical: self.string_collector.add_string(l.as_str()),
+                datatype: self.datatype_lang_collector.add_string(l.datatype_str()),
+                language: None,
+            },
         }
     }
     fn create_datatype(&mut self, datatype: &str) -> Self::Datatype {
-        CreateDatatype { datatype: self.datatype_lang_collector.add_string(datatype) }
+        CreateDatatype {
+            datatype: self.datatype_lang_collector.add_string(datatype),
+        }
     }
     fn create_language(&mut self, language: &str) -> Self::Language {
-        CreateLanguage { language: self.datatype_lang_collector.add_string(language) }
+        CreateLanguage {
+            language: self.datatype_lang_collector.add_string(language),
+        }
     }
     fn create_literal_datatype(&mut self, value: &str, datatype: &Self::Datatype) -> Self::Literal {
         CreateLiteral {
@@ -224,72 +236,82 @@ impl<'g, SPO: 'g, OPS: 'g> graph::GraphWriter<'g> for GraphCreator<SPO, OPS>
             },
         }
     }
-    fn add_blank_blank(&mut self,
-                       subject: &BlankNodePtr<SPO, OPS>,
-                       predicate: &CreateIRI,
-                       object: &BlankNodePtr<SPO, OPS>) {
+    fn add_blank_blank(
+        &mut self,
+        subject: &BlankNodePtr<SPO, OPS>,
+        predicate: &CreateIRI,
+        object: &BlankNodePtr<SPO, OPS>,
+    ) {
         self.check_blank_node(subject);
         self.check_blank_node(object);
         GraphCreator::add_blank_blank(self, subject.node_id, predicate.iri, object.node_id);
     }
-    fn add_blank_iri(&mut self,
-                     subject: &BlankNodePtr<SPO, OPS>,
-                     predicate: &CreateIRI,
-                     object: &CreateIRI) {
+    fn add_blank_iri(
+        &mut self,
+        subject: &BlankNodePtr<SPO, OPS>,
+        predicate: &CreateIRI,
+        object: &CreateIRI,
+    ) {
         self.check_blank_node(subject);
         GraphCreator::add_blank_iri(self, subject.node_id, predicate.iri, object.iri);
     }
-    fn add_blank_literal(&mut self,
-                         subject: &BlankNodePtr<SPO, OPS>,
-                         predicate: &CreateIRI,
-                         object: &CreateLiteral) {
+    fn add_blank_literal(
+        &mut self,
+        subject: &BlankNodePtr<SPO, OPS>,
+        predicate: &CreateIRI,
+        object: &CreateLiteral,
+    ) {
         self.check_blank_node(subject);
         match object.language {
-            Some(lang) => {
-                GraphCreator::add_blank_lit_lang(self,
-                                                 subject.node_id,
-                                                 predicate.iri,
-                                                 object.lexical,
-                                                 lang)
-            }
-            None => {
-                GraphCreator::add_blank_lit(self,
-                                            subject.node_id,
-                                            predicate.iri,
-                                            object.lexical,
-                                            object.datatype)
-            }
+            Some(lang) => GraphCreator::add_blank_lit_lang(
+                self,
+                subject.node_id,
+                predicate.iri,
+                object.lexical,
+                lang,
+            ),
+            None => GraphCreator::add_blank_lit(
+                self,
+                subject.node_id,
+                predicate.iri,
+                object.lexical,
+                object.datatype,
+            ),
         }
     }
-    fn add_iri_blank(&mut self,
-                     subject: &CreateIRI,
-                     predicate: &CreateIRI,
-                     object: &BlankNodePtr<SPO, OPS>) {
+    fn add_iri_blank(
+        &mut self,
+        subject: &CreateIRI,
+        predicate: &CreateIRI,
+        object: &BlankNodePtr<SPO, OPS>,
+    ) {
         self.check_blank_node(object);
         GraphCreator::add_iri_blank(self, subject.iri, predicate.iri, object.node_id);
     }
     fn add_iri_iri(&mut self, subject: &CreateIRI, predicate: &CreateIRI, object: &CreateIRI) {
         GraphCreator::add_iri_iri(self, subject.iri, predicate.iri, object.iri);
     }
-    fn add_iri_literal(&mut self,
-                       subject: &CreateIRI,
-                       predicate: &CreateIRI,
-                       object: &CreateLiteral) {
+    fn add_iri_literal(
+        &mut self,
+        subject: &CreateIRI,
+        predicate: &CreateIRI,
+        object: &CreateLiteral,
+    ) {
         match object.language {
-            Some(lang) => {
-                GraphCreator::add_iri_lit_lang(self,
-                                               subject.iri,
-                                               predicate.iri,
-                                               object.lexical,
-                                               lang)
-            }
-            None => {
-                GraphCreator::add_iri_lit(self,
-                                          subject.iri,
-                                          predicate.iri,
-                                          object.lexical,
-                                          object.datatype)
-            }
+            Some(lang) => GraphCreator::add_iri_lit_lang(
+                self,
+                subject.iri,
+                predicate.iri,
+                object.lexical,
+                lang,
+            ),
+            None => GraphCreator::add_iri_lit(
+                self,
+                subject.iri,
+                predicate.iri,
+                object.lexical,
+                object.datatype,
+            ),
         }
     }
 }
@@ -304,16 +326,20 @@ fn collect_empty() {
 #[test]
 fn keep_blank_subject() {
     let mut creator: GraphCreator<Triple64SPO, Triple64OPS> = GraphCreator::with_capacity(0);
-    use graph::{GraphWriter, Graph, IRIPtr, Triple};
+    use graph::{Graph, GraphWriter, IRIPtr, Triple};
     let blank1 = creator.create_blank_node();
     let blank2 = creator.create_blank_node();
     let iri = creator.create_iri(&"");
     creator.add_blank_blank(blank1.node_id, iri.iri, blank2.node_id);
     let graph = creator.collect();
     let triple = graph.iter().next().unwrap();
-    assert_eq!(triple.subject(),
-               graph::BlankNodeOrIRI::BlankNode(blank1, PhantomData));
+    assert_eq!(
+        triple.subject(),
+        graph::BlankNodeOrIRI::BlankNode(blank1, PhantomData)
+    );
     assert_eq!(triple.predicate().as_str(), "");
-    assert_eq!(triple.object(),
-               graph::Resource::BlankNode(blank2, PhantomData));
+    assert_eq!(
+        triple.object(),
+        graph::Resource::BlankNode(blank2, PhantomData)
+    );
 }

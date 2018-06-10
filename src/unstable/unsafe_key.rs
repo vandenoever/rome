@@ -21,29 +21,37 @@ impl<T> UnsafeKey<T> {
 }
 
 impl<T> PartialEq for UnsafeKey<T>
-    where T: PartialEq
+where
+    T: PartialEq,
 {
     fn eq(&self, other: &UnsafeKey<T>) -> bool {
         self.get().eq(other.get())
     }
 }
 impl<T> PartialOrd for UnsafeKey<T>
-    where T: PartialOrd
+where
+    T: PartialOrd,
 {
     fn partial_cmp(&self, other: &UnsafeKey<T>) -> Option<Ordering> {
         self.get().partial_cmp(other.get())
     }
 }
-impl<T> Eq for UnsafeKey<T> where T: Eq {}
+impl<T> Eq for UnsafeKey<T>
+where
+    T: Eq,
+{
+}
 impl<T> Ord for UnsafeKey<T>
-    where T: Ord
+where
+    T: Ord,
 {
     fn cmp(&self, other: &Self) -> Ordering {
         self.get().cmp(other.get())
     }
 }
 impl<T> Hash for UnsafeKey<T>
-    where T: Hash
+where
+    T: Hash,
 {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.get().hash(state);

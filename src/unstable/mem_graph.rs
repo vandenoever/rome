@@ -1,37 +1,37 @@
 use graph;
+use graph::Triple;
 #[cfg(test)]
 use graph::{Graph, WritableGraph};
-use graph::Triple;
 use rand;
-use std::collections::BTreeMap;
-use std::collections::BTreeSet;
 use std::collections::btree_map::Entry;
 use std::collections::btree_set;
+use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 use std::rc::Rc;
 
 pub type BlankNode = (usize, usize);
 
-#[derive(PartialEq,Eq,Hash,PartialOrd,Ord)]
+#[derive(PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct MemGraphTriple {
     pub subject: Subject,
     pub predicate: Rc<String>,
     pub object: Object,
 }
 
-#[derive(PartialEq,Eq,Hash,Clone,PartialOrd,Ord)]
+#[derive(PartialEq, Eq, Hash, Clone, PartialOrd, Ord)]
 pub enum Subject {
     IRI(Rc<String>),
     BlankNode(BlankNode),
 }
 
-#[derive(PartialEq,Eq,Hash,PartialOrd,Ord)]
+#[derive(PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Literal {
     pub lexical: Rc<String>,
     pub datatype: Rc<String>,
     pub language: Option<Rc<String>>,
 }
 
-#[derive(PartialEq,Eq,Hash,PartialOrd,Ord)]
+#[derive(PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Object {
     IRI(Rc<String>),
     BlankNode(BlankNode),
@@ -105,8 +105,8 @@ fn down_use(iri: &mut StringUsage, which: Which) {
 }
 
 fn use_count(u: &StringUsage) -> usize {
-    u.subject_count + u.predicate_count + u.object_count + u.datatype_count + u.literal_count +
-    u.langtag_count
+    u.subject_count + u.predicate_count + u.object_count + u.datatype_count + u.literal_count
+        + u.langtag_count
 }
 
 fn blank_use_count(blank: &Blank) -> usize {
@@ -115,7 +115,8 @@ fn blank_use_count(blank: &Blank) -> usize {
 
 impl MemGraphTriple {
     fn new<T>(triple: &T) -> MemGraphTriple
-        where T: graph::Triple
+    where
+        T: graph::Triple,
     {
         MemGraphTriple {
             subject: match triple.subject() {
@@ -126,14 +127,11 @@ impl MemGraphTriple {
             object: match triple.object() {
                 graph::Object::IRI(iri) => Object::IRI(Rc::new(String::from(iri))),
                 graph::Object::BlankNode(n) => Object::BlankNode(n),
-                graph::Object::Literal(ref l) => {
-                    Object::Literal(Literal {
-                        lexical: Rc::new(String::from(l.lexical)),
-                        datatype: Rc::new(String::from(l.datatype)),
-                        language: l.language
-                            .map(|l| Rc::new(String::from(l))),
-                    })
-                }
+                graph::Object::Literal(ref l) => Object::Literal(Literal {
+                    lexical: Rc::new(String::from(l.lexical)),
+                    datatype: Rc::new(String::from(l.datatype)),
+                    language: l.language.map(|l| Rc::new(String::from(l))),
+                }),
             },
         }
     }
@@ -187,17 +185,18 @@ impl MemGraph {
         match *object {
             graph::Object::IRI(ref iri) => Object::IRI(self.register_string(iri, Which::Object)),
             graph::Object::BlankNode(b) => Object::BlankNode(b),
-            graph::Object::Literal(ref l) => {
-                Object::Literal(Literal {
-                    lexical: self.register_string(&l.lexical, Which::Literal),
-                    datatype: self.register_string(&l.datatype, Which::Datatype),
-                    language: l.language.as_ref().map(|l| self.register_string(l, Which::LangTag)),
-                })
-            }
+            graph::Object::Literal(ref l) => Object::Literal(Literal {
+                lexical: self.register_string(&l.lexical, Which::Literal),
+                datatype: self.register_string(&l.datatype, Which::Datatype),
+                language: l.language
+                    .as_ref()
+                    .map(|l| self.register_string(l, Which::LangTag)),
+            }),
         }
     }
     fn register_triple<T>(&mut self, triple: &T) -> MemGraphTriple
-        where T: graph::Triple
+    where
+        T: graph::Triple,
     {
         MemGraphTriple {
             subject: self.register_subject(&triple.subject()),
@@ -237,7 +236,10 @@ impl MemGraph {
             Object::Literal(ref literal) => {
                 self.unregister_string(&literal.lexical, Which::Literal);
                 self.unregister_string(&literal.datatype, Which::Datatype);
-                literal.language.as_ref().map(|l| self.unregister_string(l, Which::LangTag));
+                literal
+                    .language
+                    .as_ref()
+                    .map(|l| self.unregister_string(l, Which::LangTag));
             }
         }
     }
@@ -246,7 +248,9 @@ impl MemGraph {
 impl<'a> graph::Graph<'a> for MemGraph {
     type Triple = &'a MemGraphTriple;
     fn iter(&'a self) -> Box<Iterator<Item = Self::Triple> + 'a> {
-        let i = TripleIterator { iter: self.triples.iter() };
+        let i = TripleIterator {
+            iter: self.triples.iter(),
+        };
         Box::new(i)
     }
     fn len(&self) -> usize {
@@ -266,13 +270,15 @@ impl graph::WritableGraph for MemGraph {
         });
     }
     fn add_triple<T>(&mut self, triple: &T)
-        where T: graph::Triple
+    where
+        T: graph::Triple,
     {
         let t = self.register_triple(triple);
         self.triples.insert(t);
     }
     fn remove_triple<T>(&mut self, triple: &T)
-        where T: graph::Triple
+    where
+        T: graph::Triple,
     {
         let triple = MemGraphTriple::new(triple);
         if self.triples.remove(&triple) {
@@ -314,13 +320,11 @@ impl Triple for MemGraphTriple {
         match self.object {
             Object::IRI(ref iri) => graph::Object::IRI(iri.as_str()),
             Object::BlankNode(n) => graph::Object::BlankNode(n),
-            Object::Literal(ref l) => {
-                graph::Object::Literal(graph::Literal {
-                    lexical: l.lexical.as_str(),
-                    datatype: l.datatype.as_str(),
-                    language: l.language.as_ref().map(|l| l.as_str()),
-                })
-            }
+            Object::Literal(ref l) => graph::Object::Literal(graph::Literal {
+                lexical: l.lexical.as_str(),
+                datatype: l.datatype.as_str(),
+                language: l.language.as_ref().map(|l| l.as_str()),
+            }),
         }
     }
 }
@@ -339,13 +343,11 @@ impl<'a> Triple for &'a MemGraphTriple {
         match self.object {
             Object::IRI(ref iri) => graph::Object::IRI(iri.as_str()),
             Object::BlankNode(n) => graph::Object::BlankNode(n),
-            Object::Literal(ref l) => {
-                graph::Object::Literal(graph::Literal {
-                    lexical: l.lexical.as_str(),
-                    datatype: l.datatype.as_str(),
-                    language: l.language.as_ref().map(|l| l.as_str()),
-                })
-            }
+            Object::Literal(ref l) => graph::Object::Literal(graph::Literal {
+                lexical: l.lexical.as_str(),
+                datatype: l.datatype.as_str(),
+                language: l.language.as_ref().map(|l| l.as_str()),
+            }),
         }
     }
 }

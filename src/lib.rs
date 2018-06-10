@@ -1,6 +1,6 @@
 #![warn(missing_docs)]
-#![cfg_attr(feature="clippy", feature(plugin))]
-#![cfg_attr(feature="clippy", plugin(clippy))]
+#![cfg_attr(feature = "clippy", feature(plugin))]
+#![cfg_attr(feature = "clippy", plugin(clippy))]
 //! A crate for working with RDF
 //! By implementing `graph::Graph`, one can make any data source available as RDF.
 //! Ontology wrappers can be generated from RDF Schema.
@@ -19,8 +19,8 @@ pub mod graph;
 pub mod graphs;
 pub mod io;
 pub mod iter;
-pub mod ontology_adapter;
 pub mod namespaces;
+pub mod ontology_adapter;
 #[macro_use]
 pub mod resource;
 /// Ontology mapping for rdf: and rdfs:

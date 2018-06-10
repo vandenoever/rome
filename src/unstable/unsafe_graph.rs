@@ -4,7 +4,7 @@ use std::hash::{Hash, Hasher};
 use std::mem;
 use unsafe_key::UnsafeKey;
 
-#[derive(PartialEq,Eq,PartialOrd,Ord)]
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
 struct Item {
     one: String,
     two: String,

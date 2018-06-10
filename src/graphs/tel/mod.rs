@@ -6,16 +6,16 @@
 //! it is recommended to use `Graph128`.
 
 mod compact_triple;
+mod graph;
+mod graph_creator;
+mod iter;
+mod string_collector;
+mod triple;
 mod triple128;
 mod triple64;
-mod graph_creator;
-mod string_collector;
-mod graph;
-mod iter;
-mod triple;
 
-pub use self::triple128::{Triple128SPO, Triple128OPS};
-pub use self::triple64::{Triple64SPO, Triple64OPS};
+pub use self::triple128::{Triple128OPS, Triple128SPO};
+pub use self::triple64::{Triple64OPS, Triple64SPO};
 
 /// Implementation of `rome::graph::Graph` that stores triples in 64 bits.
 pub type Graph64 = graph::Graph<Triple64SPO, Triple64OPS>;

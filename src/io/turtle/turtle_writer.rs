@@ -1,16 +1,17 @@
+use super::grammar::{boolean, decimal, double, integer, pn_local};
+use super::grammar_structs::Literal;
 use constants;
 use graph::*;
 use namespaces::*;
-use nom::IResult;
 use nom::types::CompleteStr;
+use nom::IResult;
 use std::fmt::Display;
 use std::io::{Result, Write};
-use super::grammar::{boolean, decimal, integer, double, pn_local};
-use super::grammar_structs::Literal;
 
 struct TurtleWriter<'a, 'g, W: 'a, G: 'g>
-    where W: Write,
-          G: Graph<'g>
+where
+    W: Write,
+    G: Graph<'g>,
 {
     buffer: Vec<u8>,
     base: String,
@@ -20,21 +21,24 @@ struct TurtleWriter<'a, 'g, W: 'a, G: 'g>
     xsd_integer: Option<<G::LiteralPtr as LiteralPtr<'g>>::DatatypePtr>,
     xsd_decimal: Option<<G::LiteralPtr as LiteralPtr<'g>>::DatatypePtr>,
     xsd_double: Option<<G::LiteralPtr as LiteralPtr<'g>>::DatatypePtr>,
-    last_subject: Option<BlankNodeOrIRI<'g, <G as Graph<'g>>::BlankNodePtr, <G as Graph<'g>>::IRIPtr>>,
+    last_subject:
+        Option<BlankNodeOrIRI<'g, <G as Graph<'g>>::BlankNodePtr, <G as Graph<'g>>::IRIPtr>>,
     open_statement: bool,
 }
 
 /// Write out triples as turtle.
-pub fn write_turtle<'g, G: 'g, T: 'g, I, W>(namespaces: &Namespaces,
-                                            triples: I,
-                                            graph: &'g G,
-                                            writer: &mut W)
-                                            -> Result<()>
-    where T: Triple<'g, G::BlankNodePtr, G::IRIPtr, G::LiteralPtr>,
-          G: Graph<'g>,
-          <G as Graph<'g>>::BlankNodePtr: Display,
-          I: Iterator<Item = T>,
-          W: Write
+pub fn write_turtle<'g, G: 'g, T: 'g, I, W>(
+    namespaces: &Namespaces,
+    triples: I,
+    graph: &'g G,
+    writer: &mut W,
+) -> Result<()>
+where
+    T: Triple<'g, G::BlankNodePtr, G::IRIPtr, G::LiteralPtr>,
+    G: Graph<'g>,
+    <G as Graph<'g>>::BlankNodePtr: Display,
+    I: Iterator<Item = T>,
+    W: Write,
 {
     let mut writer = TurtleWriter::<_, G> {
         buffer: Vec::new(),
@@ -59,9 +63,10 @@ pub fn write_turtle<'g, G: 'g, T: 'g, I, W>(namespaces: &Namespaces,
 }
 
 impl<'a, 'g, W: 'a, G: 'g> TurtleWriter<'a, 'g, W, G>
-    where W: Write,
-          G: Graph<'g>,
-          <G as Graph<'g>>::BlankNodePtr: Display
+where
+    W: Write,
+    G: Graph<'g>,
+    <G as Graph<'g>>::BlankNodePtr: Display,
 {
     fn write_prefix(&mut self, ns: &Namespace) -> Result<()> {
         self.writer.write_all(b"@prefix ")?;
@@ -128,10 +133,15 @@ impl<'a, 'g, W: 'a, G: 'g> TurtleWriter<'a, 'g, W, G>
         // if the literal matches the unquoted production for its datatype,
         // print without quotes
         let mut unquoted = false;
-        for i in &[(&self.xsd_boolean, boolean as fn(CompleteStr) -> IResult<CompleteStr, Literal>),
-                   (&self.xsd_integer, integer),
-                   (&self.xsd_decimal, decimal),
-                   (&self.xsd_double, double)] {
+        for i in &[
+            (
+                &self.xsd_boolean,
+                boolean as fn(CompleteStr) -> IResult<CompleteStr, Literal>,
+            ),
+            (&self.xsd_integer, integer),
+            (&self.xsd_decimal, decimal),
+            (&self.xsd_double, double),
+        ] {
             if &d == i.0 {
                 if let Ok((CompleteStr(""), _)) = (i.1)(CompleteStr(v)) {
                     unquoted = true;
@@ -155,10 +165,11 @@ impl<'a, 'g, W: 'a, G: 'g> TurtleWriter<'a, 'g, W, G>
         }
         Ok(())
     }
-    fn write_subject(&mut self,
-                     subject: BlankNodeOrIRI<'g, G::BlankNodePtr, G::IRIPtr>,
-                     namespaces: &Namespaces)
-                     -> Result<()> {
+    fn write_subject(
+        &mut self,
+        subject: BlankNodeOrIRI<'g, G::BlankNodePtr, G::IRIPtr>,
+        namespaces: &Namespaces,
+    ) -> Result<()> {
         match subject {
             BlankNodeOrIRI::BlankNode(blank_node, _) => self.write_blank_node(blank_node),
             BlankNodeOrIRI::IRI(ref iri) => self.write_iri(iri.as_str(), namespaces),
@@ -167,10 +178,11 @@ impl<'a, 'g, W: 'a, G: 'g> TurtleWriter<'a, 'g, W, G>
     fn write_predicate(&mut self, predicate: &str, namespaces: &Namespaces) -> Result<()> {
         self.write_iri(predicate, namespaces)
     }
-    fn write_object(&mut self,
-                    object: Resource<'g, G::BlankNodePtr, G::IRIPtr, G::LiteralPtr>,
-                    namespaces: &Namespaces)
-                    -> Result<()> {
+    fn write_object(
+        &mut self,
+        object: Resource<'g, G::BlankNodePtr, G::IRIPtr, G::LiteralPtr>,
+        namespaces: &Namespaces,
+    ) -> Result<()> {
         match object {
             Resource::BlankNode(blank_node, _) => self.write_blank_node(blank_node),
             Resource::IRI(iri) => self.write_iri(iri.as_str(), namespaces),
@@ -178,7 +190,8 @@ impl<'a, 'g, W: 'a, G: 'g> TurtleWriter<'a, 'g, W, G>
         }
     }
     fn write_triple<T>(&mut self, triple: &T, namespaces: &Namespaces) -> Result<()>
-        where T: Triple<'g, G::BlankNodePtr, G::IRIPtr, G::LiteralPtr>
+    where
+        T: Triple<'g, G::BlankNodePtr, G::IRIPtr, G::LiteralPtr>,
     {
         let subject = triple.subject();
         if self.last_subject.as_ref() == Some(&subject) {

@@ -12,8 +12,10 @@ impl_triple_cmp_wrap!(tel::Graph128);
 
 #[cfg(test)]
 mod test {
-    graph_collection!(test_collection(0: super::super::tel::Graph64,
-                                      1: super::super::tel::Graph128));
+    graph_collection!(test_collection(
+        0: super::super::tel::Graph64,
+        1: super::super::tel::Graph128
+    ));
 
     #[test]
     fn test() {

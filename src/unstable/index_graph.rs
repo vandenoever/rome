@@ -1,8 +1,8 @@
 use rand;
-use std::collections::BTreeMap;
-use std::collections::BTreeSet;
 use std::collections::btree_map::Entry;
 use std::collections::btree_set;
+use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 use std::iter::FromIterator;
 use std::marker::PhantomData;
 use std::rc::Rc;
@@ -86,7 +86,7 @@ fn up_use(iri: &mut StringUsage, which: Which) {
     }
 }
 
-#[derive(PartialEq,Eq,PartialOrd,Ord)]
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
 struct Triple {
     subject: StringId,
     predicate: StringId,

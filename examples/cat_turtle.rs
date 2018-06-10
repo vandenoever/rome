@@ -1,8 +1,8 @@
 extern crate rome;
 use rome::graph::GraphWriter;
 use rome::graphs::tel;
-use rome::io::TurtleParser;
 use rome::io::write_pretty_turtle;
+use rome::io::TurtleParser;
 use rome::namespaces::Namespaces;
 use std::env::args;
 use std::fs;
@@ -34,7 +34,6 @@ fn load_file(input: &str) -> rome::Result<(Namespaces, tel::Graph128)> {
     let graph = writer.collect();
     Ok((prefixes, graph))
 }
-
 
 fn main() {
     let mut args = args();

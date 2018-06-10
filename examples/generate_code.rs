@@ -1,8 +1,7 @@
 /// Generate rust code from a set of ontologies
 ///
-
 extern crate rome;
-use rome::graph::{Graph, GraphWriter, Triple, ResourceTranslator, IRIPtr, LiteralPtr,
+use rome::graph::{Graph, GraphWriter, IRIPtr, LiteralPtr, ResourceTranslator, Triple,
                   WriterResource};
 use rome::graphs::tel;
 use rome::io::TurtleParser;
@@ -13,7 +12,7 @@ use rome::ontology::classes::rdf::Property;
 use rome::ontology::classes::rdfs::Class;
 use rome::ontology::properties::rdfs::{Comment, Domain, Range, SubClassOf};
 use rome::ontology_adapter;
-use rome::resource::{ResourceBase, IRI, ObjectIter};
+use rome::resource::{ObjectIter, ResourceBase, IRI};
 use std::collections::BTreeMap;
 use std::collections::HashSet;
 use std::env::args;
@@ -86,15 +85,17 @@ fn comment_escape(str: &str) -> String {
     str.replace("\n", "")
 }
 
-fn write_impl_property<'g, G, W>(class: &IRI<'g, Class<'g, G>>,
-                                 property: &IRI<'g, Property<'g, G>>,
-                                 mod_name: &str,
-                                 prefixes: &Namespaces,
-                                 done: &mut HashSet<String>,
-                                 writer: &mut W)
-                                 -> rome::Result<()>
-    where W: Write,
-          G: Graph<'g>
+fn write_impl_property<'g, G, W>(
+    class: &IRI<'g, Class<'g, G>>,
+    property: &IRI<'g, Property<'g, G>>,
+    mod_name: &str,
+    prefixes: &Namespaces,
+    done: &mut HashSet<String>,
+    writer: &mut W,
+) -> rome::Result<()>
+where
+    W: Write,
+    G: Graph<'g>,
 {
     let iri = property.as_str();
     if done.contains(iri) {
@@ -102,34 +103,42 @@ fn write_impl_property<'g, G, W>(class: &IRI<'g, Class<'g, G>>,
     }
     if let Some((prop_prefix, prop)) = prefixes.find_prefix(iri) {
         if let Some((_, domain)) = prefixes.find_prefix(class.as_str()) {
-            writer.write_all(format!("impl<'g, G: 'g> {}::properties::{}::{}<'g> for {}<'g, G> \
-                                    where G: graph::Graph<'g> {{}}\n",
-                                   mod_name,
-                                   String::from_utf8_lossy(prop_prefix),
-                                   camel_case(prop),
-                                   camel_case(domain))
-                    .as_bytes())?;
-            writer.write_all(format!("impl<'g, G: 'g> {}::properties::{}::{}<'g> for \
-                                    resource::IRI<'g, {}<'g, G>> where G: graph::Graph<'g> \
-                                    {{}}\n",
-                                   mod_name,
-                                   String::from_utf8_lossy(prop_prefix),
-                                   camel_case(prop),
-                                   camel_case(domain))
-                    .as_bytes())?;
+            writer.write_all(
+                format!(
+                    "impl<'g, G: 'g> {}::properties::{}::{}<'g> for {}<'g, G> \
+                     where G: graph::Graph<'g> {{}}\n",
+                    mod_name,
+                    String::from_utf8_lossy(prop_prefix),
+                    camel_case(prop),
+                    camel_case(domain)
+                ).as_bytes(),
+            )?;
+            writer.write_all(
+                format!(
+                    "impl<'g, G: 'g> {}::properties::{}::{}<'g> for \
+                     resource::IRI<'g, {}<'g, G>> where G: graph::Graph<'g> \
+                     {{}}\n",
+                    mod_name,
+                    String::from_utf8_lossy(prop_prefix),
+                    camel_case(prop),
+                    camel_case(domain)
+                ).as_bytes(),
+            )?;
             done.insert(String::from(iri));
         }
     }
     Ok(())
 }
 
-fn write_impl_properties<'g, W>(class: &IRI<'g, Class<'g, MyGraph>>,
-                                parent: &Class<'g, MyGraph>,
-                                d: &OntoData<'g>,
-                                done: &mut HashSet<String>,
-                                writer: &mut W)
-                                -> rome::Result<()>
-    where W: Write
+fn write_impl_properties<'g, W>(
+    class: &IRI<'g, Class<'g, MyGraph>>,
+    parent: &Class<'g, MyGraph>,
+    d: &OntoData<'g>,
+    done: &mut HashSet<String>,
+    writer: &mut W,
+) -> rome::Result<()>
+where
+    W: Write,
 {
     for property in &d.properties {
         for domain in property.domain() {
@@ -153,24 +162,28 @@ fn closure<'g>(class: &Class<'g, MyGraph>) -> ObjectIter<'g, Class<'g, MyGraph>>
 }
 
 struct Translator<'g> {
-    blank_nodes: BTreeMap<<MyGraph as Graph<'g>>::BlankNodePtr,
-                          <tel::GraphCreator<tel::Triple128SPO,
-                           tel::Triple128OPS> as GraphWriter<'g>>::BlankNode>
+    blank_nodes: BTreeMap<
+        <MyGraph as Graph<'g>>::BlankNodePtr,
+        <tel::GraphCreator<tel::Triple128SPO, tel::Triple128OPS> as GraphWriter<'g>>::BlankNode,
+    >,
 }
 
 impl<'g> Translator<'g> {
     fn new() -> Translator<'g> {
-        Translator { blank_nodes: BTreeMap::new() }
+        Translator {
+            blank_nodes: BTreeMap::new(),
+        }
     }
 }
 
 impl<'g> ResourceTranslator<'g> for Translator<'g> {
     type Graph = MyGraph;
     type GraphWriter = tel::GraphCreator<tel::Triple128SPO, tel::Triple128OPS>;
-    fn translate_blank_node(&mut self,
-                            w: &mut Self::GraphWriter,
-                            blank_node: &<Self::Graph as Graph<'g>>::BlankNodePtr
-        ) -> <Self::GraphWriter as GraphWriter<'g>>::BlankNode {
+    fn translate_blank_node(
+        &mut self,
+        w: &mut Self::GraphWriter,
+        blank_node: &<Self::Graph as Graph<'g>>::BlankNodePtr,
+    ) -> <Self::GraphWriter as GraphWriter<'g>>::BlankNode {
         if let Some(blank_node) = self.blank_nodes.get(blank_node) {
             return *blank_node;
         }
@@ -189,14 +202,14 @@ fn infer(graph: &MyGraph) -> rome::Result<MyGraph> {
     let rdf_type = w.create_iri(&RDF_TYPE);
     let rdfs_class = WriterResource::IRI(w.create_iri(&RDFS_CLASS));
     let rdfs_sub_class_of = graph.find_iri(RDFS_SUB_CLASS_OF).unwrap();
-    for triple in graph.iter()
-        .filter(|triple| !triple.object().is_literal() && triple.predicate() == rdfs_sub_class_of) {
+    for triple in graph
+        .iter()
+        .filter(|triple| !triple.object().is_literal() && triple.predicate() == rdfs_sub_class_of)
+    {
         let class = translator.translate_blank_node_or_iri(&mut w, &triple.subject());
         w.add(&class, &rdf_type, &rdfs_class);
-        let class = translator.translate_blank_node_or_iri(&mut w,
-                                                           &triple.object()
-                                                               .to_blank_node_or_iri()
-                                                               .unwrap());
+        let class = translator
+            .translate_blank_node_or_iri(&mut w, &triple.object().to_blank_node_or_iri().unwrap());
         w.add(&class, &rdf_type, &rdfs_class);
     }
     // copy all triples
@@ -213,10 +226,8 @@ fn infer(graph: &MyGraph) -> rome::Result<MyGraph> {
             // let i = TransitiveIterator::new(class.sub_class_of(),
             //                                |class: &Class<MyGraph>| class.sub_class_of());
             let i = TransitiveIterator::new(class.sub_class_of(), closure);
-            let c1 = translator.translate_blank_node_or_iri(&mut w,
-                                                            &class.this()
-                                                                .to_blank_node_or_iri()
-                                                                .unwrap());
+            let c1 = translator
+                .translate_blank_node_or_iri(&mut w, &class.this().to_blank_node_or_iri().unwrap());
             for parent in i {
                 let o = parent.this().as_iri().unwrap();
                 let iri = w.create_iri(o);
@@ -243,10 +254,12 @@ fn write_mod(o: &Output, iris: &[String]) -> rome::Result<()> {
         mod_rs.write_all(b"use rome::ontology_adapter;\n")?;
     }
     mod_rs.write_all(b"/// Adapter to access RDF data in graph via the ontology\n")?;
-    mod_rs.write_all(b"pub fn adapter<'g, G>(graph: &'g G) -> ontology_adapter::OntologyAdapter<'g, G>
+    mod_rs.write_all(
+        b"pub fn adapter<'g, G>(graph: &'g G) -> ontology_adapter::OntologyAdapter<'g, G>
     where G: graph::Graph<'g>
 {
-    let mut iris = Vec::with_capacity(")?;
+    let mut iris = Vec::with_capacity(",
+    )?;
     mod_rs.write_all(format!("{});\n", iris.len()).as_bytes())?;
     for iri in iris {
         mod_rs.write_all(format!("    iris.push(graph.find_iri(\"{}\"));\n", iri).as_bytes())?;
@@ -276,9 +289,10 @@ fn load_files(inputs: &[String]) -> rome::Result<(Namespaces, MyGraph)> {
 }
 
 fn write_comment<'g, W, C>(r: &C, writer: &mut W) -> rome::Result<()>
-    where W: Write,
-          C: 'g + Comment<'g>,
-          <C as rome::resource::ResourceBase<'g>>::Graph: 'g
+where
+    W: Write,
+    C: 'g + Comment<'g>,
+    <C as rome::resource::ResourceBase<'g>>::Graph: 'g,
 {
     for comment in r.comment() {
         if let Some(l) = comment.this().as_literal() {
@@ -304,11 +318,9 @@ fn generate_classes(d: &OntoData, iris: &mut Vec<String>) -> rome::Result<()> {
                 writer.write_all(name.as_bytes())?;
                 writer.write_all(b"**")?;
                 write_comment(class, writer)?;
-                writer.write_all(format!("\n:\"{}\", {},\n{});\n",
-                                       iri,
-                                       camel_case(name),
-                                       iris.len())
-                        .as_bytes())?;
+                writer.write_all(
+                    format!("\n:\"{}\", {},\n{});\n", iri, camel_case(name), iris.len()).as_bytes(),
+                )?;
                 let mut done = HashSet::new();
                 write_impl_properties(class, class, d, &mut done, &mut writer)?;
                 iris.push(String::from(iri));
@@ -326,8 +338,11 @@ fn generate_properties(d: &OntoData, iris: &mut Vec<String>) -> rome::Result<()>
         let iri = property.as_str();
         if let Some((prop_prefix, prop)) = d.prefixes.find_prefix(iri) {
             for range in property.range() {
-                if let Some((prefix, range)) =
-                    range.this().as_iri().and_then(|i| d.prefixes.find_prefix(i.as_str())) {
+                if let Some((prefix, range)) = range
+                    .this()
+                    .as_iri()
+                    .and_then(|i| d.prefixes.find_prefix(i.as_str()))
+                {
                     if let Some(mut writer) = outputs.get_mut(prop_prefix) {
                         writer.write_all(b"\nproperty!(\n/// **")?;
                         writer.write_all(prop_prefix)?;
@@ -335,16 +350,19 @@ fn generate_properties(d: &OntoData, iris: &mut Vec<String>) -> rome::Result<()>
                         writer.write_all(prop.as_bytes())?;
                         writer.write_all(b"**")?;
                         write_comment(property, writer)?;
-                        writer.write_all(format!("\n:\"{}\", {}, {},\n{}::classes::{}::{}<'g, \
-                                                G>,\n{});\n",
-                                               iri,
-                                               camel_case(prop),
-                                               snake_case(prop),
-                                               d.o.mod_name,
-                                               String::from_utf8_lossy(prefix),
-                                               camel_case(range),
-                                               iris.len())
-                                .as_bytes())?;
+                        writer.write_all(
+                            format!(
+                                "\n:\"{}\", {}, {},\n{}::classes::{}::{}<'g, \
+                                 G>,\n{});\n",
+                                iri,
+                                camel_case(prop),
+                                snake_case(prop),
+                                d.o.mod_name,
+                                String::from_utf8_lossy(prefix),
+                                camel_case(range),
+                                iris.len()
+                            ).as_bytes(),
+                        )?;
                     }
                 }
             }
@@ -400,11 +418,12 @@ fn write_files(o: &Output, writers: &Writers, folder: &str, classes: bool) -> ro
     Ok(())
 }
 
-fn generate(output_dir: PathBuf,
-            mod_name: String,
-            internal: bool,
-            inputs: &[String])
-            -> rome::Result<()> {
+fn generate(
+    output_dir: PathBuf,
+    mod_name: String,
+    internal: bool,
+    inputs: &[String],
+) -> rome::Result<()> {
     let (prefixes, graph) = load_files(inputs)?;
     let oa = ontology::adapter(&graph);
     let mut iris = Vec::new();

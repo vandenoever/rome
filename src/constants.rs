@@ -1,4 +1,3 @@
-
 pub const XSD_BOOLEAN: &'static str = "http://www.w3.org/2001/XMLSchema#boolean";
 pub const XSD_DECIMAL: &'static str = "http://www.w3.org/2001/XMLSchema#decimal";
 pub const XSD_DOUBLE: &'static str = "http://www.w3.org/2001/XMLSchema#double";

@@ -1,18 +1,19 @@
+use super::grammar::{boolean, decimal, double, integer, pn_local};
+use super::grammar_structs::Literal;
 use constants;
 use error::{Error, Result};
 use graph::*;
 use namespaces::*;
-use nom::IResult;
 use nom::types::CompleteStr;
+use nom::IResult;
 use std::fmt::Display;
 use std::io::Write;
 use std::iter::Peekable;
-use super::grammar::{boolean, decimal, integer, double, pn_local};
-use super::grammar_structs::Literal;
 
 struct TurtleWriter<'a, 'g, W: 'a, G: 'g>
-    where W: Write,
-          G: Graph<'g>
+where
+    W: Write,
+    G: Graph<'g>,
 {
     buffer: Vec<u8>,
     base: String,
@@ -26,17 +27,19 @@ struct TurtleWriter<'a, 'g, W: 'a, G: 'g>
     rdf_nil: Option<G::IRIPtr>,
     rdf_rest: Option<G::IRIPtr>,
     rdf_type: Option<G::IRIPtr>,
-    graph: &'g G
+    graph: &'g G,
 }
 
 /// Write out triples as pretty turtle.
-pub fn write_pretty_turtle<'g, G: 'g, W>(namespaces: &Namespaces,
-                                         graph: &'g G,
-                                         writer: &mut W)
-                                         -> Result<()>
-    where G: Graph<'g>,
-          <G as Graph<'g>>::BlankNodePtr: Display,
-          W: Write
+pub fn write_pretty_turtle<'g, G: 'g, W>(
+    namespaces: &Namespaces,
+    graph: &'g G,
+    writer: &mut W,
+) -> Result<()>
+where
+    G: Graph<'g>,
+    <G as Graph<'g>>::BlankNodePtr: Display,
+    W: Write,
 {
     let mut writer = TurtleWriter::<_, G> {
         buffer: Vec::new(),
@@ -61,9 +64,10 @@ pub fn write_pretty_turtle<'g, G: 'g, W>(namespaces: &Namespaces,
 }
 
 impl<'a, 'g, W: 'a, G: 'g> TurtleWriter<'a, 'g, W, G>
-    where W: Write,
-          G: Graph<'g>,
-          <G as Graph<'g>>::BlankNodePtr: Display
+where
+    W: Write,
+    G: Graph<'g>,
+    <G as Graph<'g>>::BlankNodePtr: Display,
 {
     fn write_prefix(&mut self, ns: &Namespace) -> Result<()> {
         self.writer.write_all(b"@prefix ")?;
@@ -138,10 +142,15 @@ impl<'a, 'g, W: 'a, G: 'g> TurtleWriter<'a, 'g, W, G>
         // if the literal matches the unquoted production for its datatype,
         // print without quotes
         let mut unquoted = false;
-        for i in &[(&self.xsd_boolean, boolean as fn(CompleteStr) -> IResult<CompleteStr, Literal>),
-                   (&self.xsd_integer, integer),
-                   (&self.xsd_decimal, decimal),
-                   (&self.xsd_double, double)] {
+        for i in &[
+            (
+                &self.xsd_boolean,
+                boolean as fn(CompleteStr) -> IResult<CompleteStr, Literal>,
+            ),
+            (&self.xsd_integer, integer),
+            (&self.xsd_decimal, decimal),
+            (&self.xsd_double, double),
+        ] {
             if &d == i.0 {
                 if let Ok((CompleteStr(""), _)) = (i.1)(CompleteStr(v)) {
                     unquoted = true;
@@ -173,31 +182,37 @@ impl<'a, 'g, W: 'a, G: 'g> TurtleWriter<'a, 'g, W, G>
         }
         Ok(())
     }
-    fn write_collection(&mut self,
-                        mut triple: G::SPOTriple,
-                        mut iter: G::SPORangeIter,
-                        namespaces: &Namespaces)
-                        -> Result<()> {
+    fn write_collection(
+        &mut self,
+        mut triple: G::SPOTriple,
+        mut iter: G::SPORangeIter,
+        namespaces: &Namespaces,
+    ) -> Result<()> {
         loop {
             // write rdf:first value
             self.write_object(triple.object(), namespaces)?;
-            let rest = iter.next().ok_or_else(||Error::Custom("An rdf:rest triple was expected."))?;
+            let rest = iter.next()
+                .ok_or_else(|| Error::Custom("An rdf:rest triple was expected."))?;
             if Some(rest.predicate()) != self.rdf_rest {
                 return Err(Error::Custom("An rdf:rest triple was expected."));
             }
             if rest.object().as_iri() == self.rdf_nil.as_ref() {
                 if iter.next().is_some() {
-                    return Err(Error::Custom("No more triples were expected for the list node."));
+                    return Err(Error::Custom(
+                        "No more triples were expected for the list node.",
+                    ));
                 }
                 self.writer.write_all(b")")?;
                 return Ok(());
             }
             let rest = rest.object()
                 .as_blank_node()
-                .ok_or_else(||Error::Custom("A blank node was expected."))?
+                .ok_or_else(|| Error::Custom("A blank node was expected."))?
                 .clone();
             if iter.next().is_some() {
-                return Err(Error::Custom("No more triples were expected for the list node."));
+                return Err(Error::Custom(
+                    "No more triples were expected for the list node.",
+                ));
             }
             self.writer.write_all(b"\n\t\t\t")?;
             iter = self.graph.iter_s(&rest.to_blank_node_or_iri());
@@ -207,16 +222,18 @@ impl<'a, 'g, W: 'a, G: 'g> TurtleWriter<'a, 'g, W, G>
             }
         }
     }
-    fn write_object(&mut self,
-                    object: Resource<'g, G::BlankNodePtr, G::IRIPtr, G::LiteralPtr>,
-                    namespaces: &Namespaces)
-                    -> Result<()> {
+    fn write_object(
+        &mut self,
+        object: Resource<'g, G::BlankNodePtr, G::IRIPtr, G::LiteralPtr>,
+        namespaces: &Namespaces,
+    ) -> Result<()> {
         match object {
             Resource::BlankNode(blank_node, _) => {
                 // check how often the node is used as an object
                 {
                     let mut object_iter = self.graph.iter_o(&blank_node.to_resource());
-                    object_iter.next()
+                    object_iter
+                        .next()
                         .expect("Implementation error. There should be at least one triple.");
                     if object_iter.next().is_some() {
                         // blank node is used more than once, cannot be anonymous
@@ -249,12 +266,14 @@ impl<'a, 'g, W: 'a, G: 'g> TurtleWriter<'a, 'g, W, G>
         }
         Ok(())
     }
-    fn write_predicate_object_list<I>(&mut self,
-                                      first_triple: &G::SPOTriple,
-                                      iter: &mut Peekable<I>,
-                                      namespaces: &Namespaces)
-                                      -> Result<()>
-        where I: Iterator<Item = G::SPOTriple>
+    fn write_predicate_object_list<I>(
+        &mut self,
+        first_triple: &G::SPOTriple,
+        iter: &mut Peekable<I>,
+        namespaces: &Namespaces,
+    ) -> Result<()>
+    where
+        I: Iterator<Item = G::SPOTriple>,
     {
         let subject = first_triple.subject();
         let mut triple = first_triple.clone();

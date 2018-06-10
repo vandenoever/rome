@@ -3,7 +3,7 @@
 use std::slice::Iter;
 
 /// Namespaces object maps prefixes to namespaces.
-#[derive (Clone)]
+#[derive(Clone)]
 pub struct Namespaces {
     namespaces: Vec<Namespace>,
 }
@@ -11,7 +11,9 @@ pub struct Namespaces {
 impl Namespaces {
     /// Create a new Namespaces struct.
     pub fn new() -> Namespaces {
-        Namespaces { namespaces: Vec::new() }
+        Namespaces {
+            namespaces: Vec::new(),
+        }
     }
     /// Append a new mapping from prefix to namespace.
     pub fn set(&mut self, prefix: &[u8], namespace: &str) {
@@ -69,7 +71,7 @@ impl Default for Namespaces {
 }
 
 /// An entry in Namespaces.
-#[derive (Clone)]
+#[derive(Clone)]
 pub struct Namespace {
     namespace: String,
     prefix: Vec<u8>,

@@ -8,15 +8,17 @@ use std::iter::Peekable;
 /// Each unique value in the merged iterators is returned only once.
 /// The input iterators must be sorted.
 pub struct MergeIterator<I>
-    where I: SortedIterator,
-          I::Item: Ord
+where
+    I: SortedIterator,
+    I::Item: Ord,
 {
     iters: Vec<Peekable<I>>,
 }
 
 impl<I> MergeIterator<I>
-    where I: SortedIterator,
-          I::Item: Ord
+where
+    I: SortedIterator,
+    I::Item: Ord,
 {
     /// Create a new MergeIterator.
     pub fn new() -> MergeIterator<I> {
@@ -24,7 +26,9 @@ impl<I> MergeIterator<I>
     }
     /// Create a new MergeIterator that expects `capacity` iterators.
     pub fn with_capacity(capacity: usize) -> MergeIterator<I> {
-        MergeIterator { iters: Vec::with_capacity(capacity) }
+        MergeIterator {
+            iters: Vec::with_capacity(capacity),
+        }
     }
     /// Add another iterator to the MergeIterator.
     pub fn push(&mut self, i: I) {
@@ -63,8 +67,9 @@ impl<I> MergeIterator<I>
 }
 
 impl<I> Iterator for MergeIterator<I>
-    where I: SortedIterator,
-          I::Item: Ord
+where
+    I: SortedIterator,
+    I::Item: Ord,
 {
     type Item = I::Item;
     fn next(&mut self) -> Option<Self::Item> {
@@ -76,7 +81,8 @@ impl<I> Iterator for MergeIterator<I>
     }
 }
 impl<I> SortedIterator for MergeIterator<I>
-    where I: SortedIterator,
-          I::Item: Ord
+where
+    I: SortedIterator,
+    I::Item: Ord,
 {
 }

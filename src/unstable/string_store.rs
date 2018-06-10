@@ -5,21 +5,23 @@ use std::default::Default;
 use std::rc::Rc;
 
 pub struct StringStoreItem<T>
-    where T: Default
+where
+    T: Default,
 {
     string: StoreString,
     item: T,
 }
 
 pub struct StringStore<T>
-    where T: Default
+where
+    T: Default,
 {
     store: Vec<StringStoreItem<T>>,
     unused: Vec<usize>,
     index: BTreeMap<StoreString, StringId>,
 }
 
-#[derive(PartialEq,Eq,Hash,Clone,PartialOrd,Ord)]
+#[derive(PartialEq, Eq, Hash, Clone, PartialOrd, Ord)]
 struct StoreString {
     string: Rc<String>,
 }
@@ -36,13 +38,14 @@ impl Borrow<Rc<String>> for StoreString {
     }
 }
 
-#[derive(Clone,Copy,PartialEq,Eq,PartialOrd,Ord)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct StringId {
     index: usize,
 }
 
 impl<T> StringStore<T>
-    where T: Default
+where
+    T: Default,
 {
     pub fn new() -> StringStore<T> {
         StringStore {

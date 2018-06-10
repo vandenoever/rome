@@ -1,15 +1,15 @@
+use super::grammar::{statement, tws};
+use super::grammar_helper::*;
+use super::grammar_structs::*;
 use constants::*;
 use error::{Error, Result};
 use graph;
 use namespaces::*;
-use nom::Err;
 use nom::types::CompleteStr;
+use nom::Err;
 use regex::Regex;
 use std::collections::HashMap;
 use std::marker::PhantomData;
-use super::grammar::{statement, tws};
-use super::grammar_helper::*;
-use super::grammar_structs::*;
 
 struct StatementIterator<'a> {
     src: CompleteStr<'a>,
@@ -19,18 +19,14 @@ struct StatementIterator<'a> {
 impl<'a> StatementIterator<'a> {
     pub fn new(src: &str) -> Result<StatementIterator> {
         match tws(CompleteStr(src)) {
-            Ok((left, _)) => {
-                Ok(StatementIterator {
-                    src: left,
-                    done: false,
-                })
-            }
-            Err(Err::Incomplete(_)) => {
-                Ok(StatementIterator {
-                    src: CompleteStr(src),
-                    done: false,
-                })
-            }
+            Ok((left, _)) => Ok(StatementIterator {
+                src: left,
+                done: false,
+            }),
+            Err(Err::Incomplete(_)) => Ok(StatementIterator {
+                src: CompleteStr(src),
+                done: false,
+            }),
             Err(_) => Err(Error::Custom("cannot start parsing")),
         }
     }
@@ -78,7 +74,8 @@ impl<'a> Iterator for StatementIterator<'a> {
 }
 
 struct ParserState<'a, W: 'a>
-    where W: graph::GraphWriter<'a>
+where
+    W: graph::GraphWriter<'a>,
 {
     base: String,
     prefixes: Namespaces,
@@ -99,7 +96,8 @@ struct ParserState<'a, W: 'a>
 }
 
 pub struct TurtleParser<'a, W: 'a>
-    where W: graph::GraphWriter<'a>
+where
+    W: graph::GraphWriter<'a>,
 {
     statement_iterator: StatementIterator<'a>,
     state: ParserState<'a, W>,
@@ -129,7 +127,8 @@ fn join_iri(base: &str, p: &str, to: &mut String) -> Result<()> {
 }
 
 impl<'a, W: 'a> TurtleParser<'a, W>
-    where W: graph::GraphWriter<'a>
+where
+    W: graph::GraphWriter<'a>,
 {
     pub fn new(src: &'a str, base: &str, writer: &'a mut W) -> Result<TurtleParser<'a, W>> {
         if !is_absolute(base) {
@@ -172,18 +171,22 @@ impl<'a, W: 'a> TurtleParser<'a, W>
                     let mut result = String::with_capacity(iri.len());
                     self.state.buffer.clear();
                     unescape_iri(iri, &mut self.state.buffer)?;
-                    join_iri(self.state.base.as_str(),
-                             self.state.buffer.as_str(),
-                             &mut result)?;
+                    join_iri(
+                        self.state.base.as_str(),
+                        self.state.buffer.as_str(),
+                        &mut result,
+                    )?;
                     self.set_prefix(prefix, result);
                 }
                 Ok(Statement::Base(new_base)) => {
                     self.state.buffer.clear();
                     unescape_iri(new_base, &mut self.state.buffer)?;
                     let old_base = self.state.base.clone();
-                    join_iri(old_base.as_str(),
-                             self.state.buffer.as_str(),
-                             &mut self.state.base)?;
+                    join_iri(
+                        old_base.as_str(),
+                        self.state.buffer.as_str(),
+                        &mut self.state.base,
+                    )?;
                 }
                 Ok(Statement::Triples(new_triples)) => {
                     add_triples(new_triples, &mut self.state)?;
@@ -198,7 +201,8 @@ impl<'a, W: 'a> TurtleParser<'a, W>
 }
 
 impl<'a, W: 'a> Iterator for TurtleParser<'a, W>
-    where W: graph::GraphWriter<'a>
+where
+    W: graph::GraphWriter<'a>,
 {
     type Item = Result<()>;
 
@@ -217,7 +221,6 @@ impl<'a, W: 'a> Iterator for TurtleParser<'a, W>
     }
 }
 
-
 fn unescape_literal(string: &str, to: &mut String) -> Result<()> {
     to.clear();
     unescape(string, to)?;
@@ -225,7 +228,8 @@ fn unescape_literal(string: &str, to: &mut String) -> Result<()> {
 }
 
 impl<'a, W> ParserState<'a, W>
-    where W: graph::GraphWriter<'a>
+where
+    W: graph::GraphWriter<'a>,
 {
     fn new_blank(&mut self) -> W::BlankNode {
         self.writer.create_blank_node()
@@ -286,21 +290,23 @@ impl<'a, W> ParserState<'a, W>
     }
 }
 
-fn get_cached_datatype<'a, W: 'a>(cache: &mut Option<W::Datatype>,
-                                  writer: &mut W,
-                                  datatype: &str)
-                                  -> W::Datatype
-    where W: graph::GraphWriter<'a>
+fn get_cached_datatype<'a, W: 'a>(
+    cache: &mut Option<W::Datatype>,
+    writer: &mut W,
+    datatype: &str,
+) -> W::Datatype
+where
+    W: graph::GraphWriter<'a>,
 {
     if cache.is_none() {
         *cache = Some(writer.create_datatype(datatype));
     }
     cache.clone().unwrap()
-
 }
 
 fn get_cached_iri<'a, W: 'a>(cache: &mut Option<W::IRI>, writer: &mut W, iri: &str) -> W::IRI
-    where W: graph::GraphWriter<'a>
+where
+    W: graph::GraphWriter<'a>,
 {
     if cache.is_none() {
         *cache = Some(writer.create_iri(&iri));
@@ -309,7 +315,8 @@ fn get_cached_iri<'a, W: 'a>(cache: &mut Option<W::IRI>, writer: &mut W, iri: &s
 }
 
 fn make_blank<'a, W: 'a>(blank_node: BlankNode<'a>, state: &mut ParserState<'a, W>) -> W::BlankNode
-    where W: graph::GraphWriter<'a>
+where
+    W: graph::GraphWriter<'a>,
 {
     match blank_node {
         BlankNode::Anon => state.new_blank(),
@@ -318,7 +325,8 @@ fn make_blank<'a, W: 'a>(blank_node: BlankNode<'a>, state: &mut ParserState<'a, 
 }
 
 fn s2o<'a, W>(s: graph::WriterBlankNodeOrIRI<'a, W>) -> graph::WriterResource<'a, W>
-    where W: graph::GraphWriter<'a>
+where
+    W: graph::GraphWriter<'a>,
 {
     match s {
         graph::WriterBlankNodeOrIRI::IRI(iri) => graph::WriterResource::IRI(iri),
@@ -326,10 +334,12 @@ fn s2o<'a, W>(s: graph::WriterBlankNodeOrIRI<'a, W>) -> graph::WriterResource<'a
     }
 }
 
-fn make_collection<'a, W>(collection: Vec<Object<'a>>,
-                          state: &mut ParserState<'a, W>)
-                          -> Result<graph::WriterBlankNodeOrIRI<'a, W>>
-    where W: graph::GraphWriter<'a>
+fn make_collection<'a, W>(
+    collection: Vec<Object<'a>>,
+    state: &mut ParserState<'a, W>,
+) -> Result<graph::WriterBlankNodeOrIRI<'a, W>>
+where
+    W: graph::GraphWriter<'a>,
 {
     let mut head =
         graph::WriterBlankNodeOrIRI::IRI(get_cached_iri(&mut state.rdf_nil, state.writer, RDF_NIL));
@@ -362,10 +372,12 @@ fn make_collection<'a, W>(collection: Vec<Object<'a>>,
     Ok(head)
 }
 
-fn make_subject<'a, W>(subject: Subject<'a>,
-                       state: &mut ParserState<'a, W>)
-                       -> Result<graph::WriterBlankNodeOrIRI<'a, W>>
-    where W: graph::GraphWriter<'a>
+fn make_subject<'a, W>(
+    subject: Subject<'a>,
+    state: &mut ParserState<'a, W>,
+) -> Result<graph::WriterBlankNodeOrIRI<'a, W>>
+where
+    W: graph::GraphWriter<'a>,
 {
     Ok(match subject {
         Subject::BlankNode(blank) => {
@@ -379,10 +391,12 @@ fn make_subject<'a, W>(subject: Subject<'a>,
     })
 }
 
-fn make_object<'a, W>(object: Object<'a>,
-                      state: &mut ParserState<'a, W>)
-                      -> Result<graph::WriterResource<'a, W>>
-    where W: graph::GraphWriter<'a>
+fn make_object<'a, W>(
+    object: Object<'a>,
+    state: &mut ParserState<'a, W>,
+) -> Result<graph::WriterResource<'a, W>>
+where
+    W: graph::GraphWriter<'a>,
 {
     Ok(match object {
         Object::IRI(iri) => {
@@ -397,10 +411,14 @@ fn make_object<'a, W>(object: Object<'a>,
             unescape_literal(l.lexical, &mut state.literal)?;
             graph::WriterResource::Literal(if let Some(lang) = l.language {
                 let language = state.writer.create_language(lang);
-                state.writer.create_literal_language(&state.literal, &language)
+                state
+                    .writer
+                    .create_literal_language(&state.literal, &language)
             } else {
                 let datatype = state.get_datatype(l.datatype)?;
-                state.writer.create_literal_datatype(&state.literal, &datatype)
+                state
+                    .writer
+                    .create_literal_datatype(&state.literal, &datatype)
             })
         }
         Object::BlankNodePropertyList(predicated_objects_list) => {
@@ -412,11 +430,13 @@ fn make_object<'a, W>(object: Object<'a>,
     })
 }
 
-fn add_predicated_objects<'a, W>(subject: graph::WriterBlankNodeOrIRI<'a, W>,
-                                 predicated_objects_list: Vec<PredicatedObjects<'a>>,
-                                 state: &mut ParserState<'a, W>)
-                                 -> Result<()>
-    where W: graph::GraphWriter<'a>
+fn add_predicated_objects<'a, W>(
+    subject: graph::WriterBlankNodeOrIRI<'a, W>,
+    predicated_objects_list: Vec<PredicatedObjects<'a>>,
+    state: &mut ParserState<'a, W>,
+) -> Result<()>
+where
+    W: graph::GraphWriter<'a>,
 {
     for po in predicated_objects_list {
         state.resolve_iri(po.verb)?;
@@ -430,7 +450,8 @@ fn add_predicated_objects<'a, W>(subject: graph::WriterBlankNodeOrIRI<'a, W>,
 }
 
 fn add_triples<'a, W>(new_triples: Triples<'a>, state: &mut ParserState<'a, W>) -> Result<()>
-    where W: graph::GraphWriter<'a>
+where
+    W: graph::GraphWriter<'a>,
 {
     let subject = make_subject(new_triples.subject, state)?;
     add_predicated_objects(subject, new_triples.predicated_objects_list, state)

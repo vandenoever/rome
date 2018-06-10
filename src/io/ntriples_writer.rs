@@ -5,8 +5,9 @@ use std::io::{Result, Write};
 use std::marker::PhantomData;
 
 struct NTriplesWriter<'a, 'g, W: 'a, G: 'g>
-    where W: Write,
-          G: Graph<'g>
+where
+    W: Write,
+    G: Graph<'g>,
 {
     buffer: Vec<u8>,
     writer: &'a mut W,
@@ -15,15 +16,17 @@ struct NTriplesWriter<'a, 'g, W: 'a, G: 'g>
 }
 
 /// write an RDF 1.1 N-Triples file in canonical form
-pub fn write_ntriples<'g, G: 'g, T: 'g, I, W>(triples: I,
-                                              graph: &'g G,
-                                              writer: &mut W)
-                                              -> Result<()>
-    where T: Triple<'g, G::BlankNodePtr, G::IRIPtr, G::LiteralPtr>,
-          G: Graph<'g>,
-          <G as Graph<'g>>::BlankNodePtr: Display,
-          I: Iterator<Item = T>,
-          W: Write
+pub fn write_ntriples<'g, G: 'g, T: 'g, I, W>(
+    triples: I,
+    graph: &'g G,
+    writer: &mut W,
+) -> Result<()>
+where
+    T: Triple<'g, G::BlankNodePtr, G::IRIPtr, G::LiteralPtr>,
+    G: Graph<'g>,
+    <G as Graph<'g>>::BlankNodePtr: Display,
+    I: Iterator<Item = T>,
+    W: Write,
 {
     let mut writer = NTriplesWriter::<_, G> {
         buffer: Vec::new(),
@@ -38,9 +41,10 @@ pub fn write_ntriples<'g, G: 'g, T: 'g, I, W>(triples: I,
 }
 
 impl<'a, 'g, W: 'a, G: 'g> NTriplesWriter<'a, 'g, W, G>
-    where W: Write,
-          G: Graph<'g>,
-          <G as Graph<'g>>::BlankNodePtr: Display
+where
+    W: Write,
+    G: Graph<'g>,
+    <G as Graph<'g>>::BlankNodePtr: Display,
 {
     fn write_iri(&mut self, iri: &str) -> Result<()> {
         self.writer.write_all(b"<")?;
@@ -83,9 +87,10 @@ impl<'a, 'g, W: 'a, G: 'g> NTriplesWriter<'a, 'g, W, G>
         }
         Ok(())
     }
-    fn write_subject(&mut self,
-                     subject: BlankNodeOrIRI<'g, G::BlankNodePtr, G::IRIPtr>)
-                     -> Result<()> {
+    fn write_subject(
+        &mut self,
+        subject: BlankNodeOrIRI<'g, G::BlankNodePtr, G::IRIPtr>,
+    ) -> Result<()> {
         match subject {
             BlankNodeOrIRI::BlankNode(blank_node, _) => self.write_blank_node(blank_node),
             BlankNodeOrIRI::IRI(iri) => self.write_iri(iri.as_str()),
@@ -94,9 +99,10 @@ impl<'a, 'g, W: 'a, G: 'g> NTriplesWriter<'a, 'g, W, G>
     fn write_predicate(&mut self, predicate: &str) -> Result<()> {
         self.write_iri(predicate)
     }
-    fn write_object(&mut self,
-                    object: Resource<'g, G::BlankNodePtr, G::IRIPtr, G::LiteralPtr>)
-                    -> Result<()> {
+    fn write_object(
+        &mut self,
+        object: Resource<'g, G::BlankNodePtr, G::IRIPtr, G::LiteralPtr>,
+    ) -> Result<()> {
         match object {
             Resource::BlankNode(blank_node, _) => self.write_blank_node(blank_node),
             Resource::IRI(iri) => self.write_iri(iri.as_str()),
@@ -104,7 +110,8 @@ impl<'a, 'g, W: 'a, G: 'g> NTriplesWriter<'a, 'g, W, G>
         }
     }
     fn write_ntriple<T: 'g>(&mut self, triple: &T) -> Result<()>
-        where T: Triple<'g, G::BlankNodePtr, G::IRIPtr, G::LiteralPtr>
+    where
+        T: Triple<'g, G::BlankNodePtr, G::IRIPtr, G::LiteralPtr>,
     {
         self.write_subject(triple.subject())?;
         self.writer.write_all(b" ")?;

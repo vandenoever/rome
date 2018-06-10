@@ -6,7 +6,8 @@ use graph;
 use ontology_adapter;
 /// Adapter to access RDF data in graph via the ontology
 pub fn adapter<'g, G>(graph: &'g G) -> ontology_adapter::OntologyAdapter<'g, G>
-    where G: graph::Graph<'g>
+where
+    G: graph::Graph<'g>,
 {
     let mut iris = Vec::with_capacity(33);
     iris.push(graph.find_iri("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"));

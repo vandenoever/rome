@@ -1,7 +1,7 @@
-use std;
 use graph;
-use resource;
 use ontology;
+use resource;
+use std;
 
 property!(
 /// **rdfs:comment**

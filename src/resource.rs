@@ -7,9 +7,10 @@ use ontology_adapter;
 use resource;
 use std;
 
-macro_rules!
-rb{($p:ident) =>
-    (<<Self as resource::ResourceBase<'g>>::Graph as graph::Graph<'g>>::$p)
+macro_rules! rb {
+    ($p:ident) => {
+        <<Self as resource::ResourceBase<'g>>::Graph as graph::Graph<'g>>::$p
+    };
 }
 macro_rules!
 resource{() =>
@@ -19,9 +20,10 @@ macro_rules!
 adapter{() =>
     (ontology_adapter::OntologyAdapter<'g, Self::Graph>)
 }
-macro_rules!
-g{($p:ident) =>
-    (<G as graph::Graph<'g>>::$p)
+macro_rules! g {
+    ($p:ident) => {
+        <G as graph::Graph<'g>>::$p
+    };
 }
 macro_rules!
 g_resource{() =>
@@ -44,18 +46,17 @@ pub trait ResourceBase<'g>: Clone + Ord {
     /// The adapter that wraps the graph.
     fn adapter(&self) -> &'g adapter!();
     /// iterate over all the objects for this subject and the given predicate
-    fn iter_objects<O>(&self, predicate: Option<&rb!(IRIPtr)>) -> ObjectIter<'g,O>
-        where O: ResourceBase<'g, Graph = Self::Graph>,
-              Self: 'g
+    fn iter_objects<O>(&self, predicate: Option<&rb!(IRIPtr)>) -> ObjectIter<'g, O>
+    where
+        O: ResourceBase<'g, Graph = Self::Graph>,
+        Self: 'g,
     {
         let adapter = self.adapter();
         let iter = match predicate {
-            Some(predicate) => {
-                match self.this().to_blank_node_or_iri() {
-                    Some(subject) => adapter.iter_s_p(subject, (*predicate).clone()),
-                    None => adapter.empty_spo_range(),
-                }
-            }
+            Some(predicate) => match self.this().to_blank_node_or_iri() {
+                Some(subject) => adapter.iter_s_p(subject, (*predicate).clone()),
+                None => adapter.empty_spo_range(),
+            },
             None => adapter.empty_spo_range(),
         };
         ObjectIter {
@@ -66,12 +67,10 @@ pub trait ResourceBase<'g>: Clone + Ord {
     /// Return this resource as an IRI, if it is an IRI.
     fn iri(&self) -> Option<IRI<'g, Self>> {
         match *self.this() {
-            graph::Resource::IRI(_) => {
-                Some(IRI {
-                    resource: self.clone(),
-                    phantom: std::marker::PhantomData,
-                })
-            }
+            graph::Resource::IRI(_) => Some(IRI {
+                resource: self.clone(),
+                phantom: std::marker::PhantomData,
+            }),
             _ => None,
         }
     }
@@ -80,14 +79,16 @@ pub trait ResourceBase<'g>: Clone + Ord {
 /// A wrapper around `ResourceBase` that guarantees that the resource
 /// is an IRI and not a blank node or a literal.
 pub struct IRI<'g, R: 'g>
-    where R: ResourceBase<'g>
+where
+    R: ResourceBase<'g>,
 {
     resource: R,
     phantom: std::marker::PhantomData<&'g u8>,
 }
 
 impl<'g, R> IRI<'g, R>
-    where R: ResourceBase<'g>
+where
+    R: ResourceBase<'g>,
 {
     /// Access the IRI that underlies this instance.
     pub fn this(&self) -> &rb!(IRIPtr) {
@@ -106,7 +107,8 @@ impl<'g, R> IRI<'g, R>
     }
 }
 impl<'g, R: ?Sized> std::ops::Deref for IRI<'g, R>
-    where R: ResourceBase<'g>
+where
+    R: ResourceBase<'g>,
 {
     type Target = R;
 
@@ -116,7 +118,8 @@ impl<'g, R: ?Sized> std::ops::Deref for IRI<'g, R>
 }
 
 impl<'g, R> Clone for IRI<'g, R>
-    where R: ResourceBase<'g>
+where
+    R: ResourceBase<'g>,
 {
     fn clone(&self) -> Self {
         IRI {
@@ -127,23 +130,30 @@ impl<'g, R> Clone for IRI<'g, R>
 }
 
 impl<'g, R> PartialEq for IRI<'g, R>
-    where R: ResourceBase<'g>
+where
+    R: ResourceBase<'g>,
 {
     fn eq(&self, rhs: &IRI<'g, R>) -> bool {
         self.resource.eq(&rhs.resource)
     }
 }
-impl<'g, R> Eq for IRI<'g, R> where R: ResourceBase<'g> {}
+impl<'g, R> Eq for IRI<'g, R>
+where
+    R: ResourceBase<'g>,
+{
+}
 
 impl<'g, R> PartialOrd for IRI<'g, R>
-    where R: ResourceBase<'g>
+where
+    R: ResourceBase<'g>,
 {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         self.resource.partial_cmp(&other.resource)
     }
 }
 impl<'g, R> Ord for IRI<'g, R>
-    where R: ResourceBase<'g>
+where
+    R: ResourceBase<'g>,
 {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.resource.cmp(&other.resource)
@@ -151,7 +161,8 @@ impl<'g, R> Ord for IRI<'g, R>
 }
 
 impl<'g, R: 'g> ResourceBase<'g> for IRI<'g, R>
-    where R: ResourceBase<'g>
+where
+    R: ResourceBase<'g>,
 {
     type Graph = R::Graph;
     type SubjectIter = IRISubjectIter<'g, R>;
@@ -162,7 +173,9 @@ impl<'g, R: 'g> ResourceBase<'g> for IRI<'g, R>
         }
     }
     fn iter(graph: &'g adapter!()) -> Self::SubjectIter {
-        IRISubjectIter { iter: R::iter(graph) }
+        IRISubjectIter {
+            iter: R::iter(graph),
+        }
     }
     fn this(&self) -> &resource!() {
         self.resource.this()
@@ -170,8 +183,9 @@ impl<'g, R: 'g> ResourceBase<'g> for IRI<'g, R>
     fn adapter(&self) -> &'g adapter!() {
         self.resource.adapter()
     }
-    fn iter_objects<O>(&self, predicate: Option<&rb!(IRIPtr)>) -> ObjectIter<'g,O>
-        where O: ResourceBase<'g, Graph = Self::Graph>
+    fn iter_objects<O>(&self, predicate: Option<&rb!(IRIPtr)>) -> ObjectIter<'g, O>
+    where
+        O: ResourceBase<'g, Graph = Self::Graph>,
     {
         self.resource.iter_objects(predicate)
     }
@@ -179,14 +193,16 @@ impl<'g, R: 'g> ResourceBase<'g> for IRI<'g, R>
 
 /// Iterate over all objects for the given subject and predicate.
 pub struct ObjectIter<'g, R: 'g>
-    where R: ResourceBase<'g>
+where
+    R: ResourceBase<'g>,
 {
     adapter: &'g ontology_adapter::OntologyAdapter<'g, R::Graph>,
     iter: <R::Graph as graph::Graph<'g>>::SPORangeIter,
 }
 
 impl<'g, R> Iterator for ObjectIter<'g, R>
-    where R: ResourceBase<'g>
+where
+    R: ResourceBase<'g>,
 {
     type Item = R;
     fn next(&mut self) -> Option<Self::Item> {
@@ -197,11 +213,16 @@ impl<'g, R> Iterator for ObjectIter<'g, R>
     }
 }
 
-impl<'g, R> iter::SortedIterator for ObjectIter<'g, R> where R: ResourceBase<'g> {}
+impl<'g, R> iter::SortedIterator for ObjectIter<'g, R>
+where
+    R: ResourceBase<'g>,
+{
+}
 
 /// Iterate over all subjects for the given object and predicate.
 pub struct SubjectIter<'g, R: 'g>
-    where R: ResourceBase<'g>
+where
+    R: ResourceBase<'g>,
 {
     #[doc(hidden)]
     pub adapter: &'g ontology_adapter::OntologyAdapter<'g, R::Graph>,
@@ -210,7 +231,8 @@ pub struct SubjectIter<'g, R: 'g>
 }
 
 impl<'g, R> Iterator for SubjectIter<'g, R>
-    where R: ResourceBase<'g>
+where
+    R: ResourceBase<'g>,
 {
     type Item = R;
     fn next(&mut self) -> Option<Self::Item> {
@@ -225,18 +247,24 @@ impl<'g, R> Iterator for SubjectIter<'g, R>
     }
 }
 
-impl<'g, R> iter::SortedIterator for SubjectIter<'g, R> where R: ResourceBase<'g> {}
+impl<'g, R> iter::SortedIterator for SubjectIter<'g, R>
+where
+    R: ResourceBase<'g>,
+{
+}
 
 /// Iterate over all subjects that are an IRI for the given object and predicate.
 /// In other words: no blank nodes are returned.
 pub struct IRISubjectIter<'g, R>
-    where R: ResourceBase<'g>
+where
+    R: ResourceBase<'g>,
 {
     iter: R::SubjectIter,
 }
 
 impl<'g, R: 'g> Iterator for IRISubjectIter<'g, R>
-    where R: ResourceBase<'g>
+where
+    R: ResourceBase<'g>,
 {
     type Item = IRI<'g, R>;
     fn next(&mut self) -> Option<Self::Item> {
@@ -382,7 +410,8 @@ mod tests {
     const RDFS_SUB_CLASS_OF: &'static str = "http://www.w3.org/2000/01/rdf-schema#subClassOF";
 
     pub fn adapter<'g, G: 'g>(graph: &'g G) -> ontology_adapter::OntologyAdapter<'g, G>
-        where G: graph::Graph<'g>
+    where
+        G: graph::Graph<'g>,
     {
         let mut iris = Vec::with_capacity(7);
         iris.push(graph.find_iri(constants::RDF_TYPE));
@@ -404,12 +433,36 @@ mod tests {
     property!(:"http://www.w3.org/2000/01/rdf-schema#range", Range, range, Class<'g, G>, 6);
     property!(:"http://www.w3.org/2000/01/rdf-schema#subClassOf", SubClassOf, sub_class_of, Class<'g, G>, 7);
 
-    impl<'g, G> SubClassOf<'g> for Class<'g, G> where G: graph::Graph<'g> {}
-    impl<'g, G> Comment<'g> for Class<'g, G> where G: graph::Graph<'g> {}
-    impl<'g, G> Domain<'g> for Property<'g, G> where G: graph::Graph<'g> {}
-    impl<'g, G> Range<'g> for Property<'g, G> where G: graph::Graph<'g> {}
-    impl<'g, G> Comment<'g> for Property<'g, G> where G: graph::Graph<'g> {}
-    impl<'g, G> Comment<'g> for Literal<'g, G> where G: graph::Graph<'g> {}
+    impl<'g, G> SubClassOf<'g> for Class<'g, G>
+    where
+        G: graph::Graph<'g>,
+    {
+    }
+    impl<'g, G> Comment<'g> for Class<'g, G>
+    where
+        G: graph::Graph<'g>,
+    {
+    }
+    impl<'g, G> Domain<'g> for Property<'g, G>
+    where
+        G: graph::Graph<'g>,
+    {
+    }
+    impl<'g, G> Range<'g> for Property<'g, G>
+    where
+        G: graph::Graph<'g>,
+    {
+    }
+    impl<'g, G> Comment<'g> for Property<'g, G>
+    where
+        G: graph::Graph<'g>,
+    {
+    }
+    impl<'g, G> Comment<'g> for Literal<'g, G>
+    where
+        G: graph::Graph<'g>,
+    {
+    }
 
     #[test]
     fn instantiate_ontology_classes() {

@@ -2,11 +2,10 @@
 ///
 /// The program reads a Turtle or N-Triples file and infers Class instances by
 /// using rdf:subClassOf.
-
 extern crate rome;
-use rome::graph::{Graph, GraphWriter, Triple, WriterResource, ResourceTranslator};
+use rome::graph::{Graph, GraphWriter, ResourceTranslator, Triple, WriterResource};
 use rome::graphs::tel;
-use rome::io::{TurtleParser, write_pretty_turtle};
+use rome::io::{write_pretty_turtle, TurtleParser};
 use rome::namespaces::Namespaces;
 use std::collections::BTreeMap;
 use std::env::args;
@@ -60,24 +59,28 @@ const RDFS_CLASS: &'static str = "http://www.w3.org/2000/01/rdf-schema#Class";
 const RDF_TYPE: &'static str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 
 struct Translator<'g> {
-    blank_nodes: BTreeMap<<MyGraph as Graph<'g>>::BlankNodePtr,
-                          <tel::GraphCreator<tel::Triple64SPO,
-                           tel::Triple64OPS> as GraphWriter<'g>>::BlankNode>
+    blank_nodes: BTreeMap<
+        <MyGraph as Graph<'g>>::BlankNodePtr,
+        <tel::GraphCreator<tel::Triple64SPO, tel::Triple64OPS> as GraphWriter<'g>>::BlankNode,
+    >,
 }
 
 impl<'g> Translator<'g> {
     fn new() -> Translator<'g> {
-        Translator { blank_nodes: BTreeMap::new() }
+        Translator {
+            blank_nodes: BTreeMap::new(),
+        }
     }
 }
 
 impl<'g> ResourceTranslator<'g> for Translator<'g> {
     type Graph = MyGraph;
     type GraphWriter = tel::GraphCreator<tel::Triple64SPO, tel::Triple64OPS>;
-    fn translate_blank_node(&mut self,
-                            w: &mut Self::GraphWriter,
-                            blank_node: &<Self::Graph as Graph<'g>>::BlankNodePtr
-        ) -> <Self::GraphWriter as GraphWriter<'g>>::BlankNode {
+    fn translate_blank_node(
+        &mut self,
+        w: &mut Self::GraphWriter,
+        blank_node: &<Self::Graph as Graph<'g>>::BlankNodePtr,
+    ) -> <Self::GraphWriter as GraphWriter<'g>>::BlankNode {
         if let Some(blank_node) = self.blank_nodes.get(blank_node) {
             return *blank_node;
         }
@@ -95,14 +98,14 @@ fn infer(graph: &MyGraph) -> rome::Result<MyGraph> {
     let rdf_type = w.create_iri(&RDF_TYPE);
     let rdfs_class = WriterResource::IRI(w.create_iri(&RDFS_CLASS));
     let rdfs_sub_class_of = graph.find_iri(RDFS_SUB_CLASS_OF).unwrap();
-    for triple in graph.iter()
-        .filter(|triple| !triple.object().is_literal() && triple.predicate() == rdfs_sub_class_of) {
+    for triple in graph
+        .iter()
+        .filter(|triple| !triple.object().is_literal() && triple.predicate() == rdfs_sub_class_of)
+    {
         let class = translator.translate_blank_node_or_iri(&mut w, &triple.subject());
         w.add(&class, &rdf_type, &rdfs_class);
-        let class = translator.translate_blank_node_or_iri(&mut w,
-                                                           &triple.object()
-                                                               .to_blank_node_or_iri()
-                                                               .unwrap());
+        let class = translator
+            .translate_blank_node_or_iri(&mut w, &triple.object().to_blank_node_or_iri().unwrap());
         w.add(&class, &rdf_type, &rdfs_class);
     }
     Ok(w.collect().sort_blank_nodes())

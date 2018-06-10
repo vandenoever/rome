@@ -3,7 +3,7 @@ extern crate time;
 use rome::graph;
 use rome::graph::*;
 use rome::graphs::tel;
-use rome::io::{TurtleParser, write_pretty_turtle, write_ntriples};
+use rome::io::{write_ntriples, write_pretty_turtle, TurtleParser};
 use rome::namespaces::Namespaces;
 use std::env::args;
 use std::fs;
@@ -44,7 +44,7 @@ const EARL_PASSED: &'static str = "http://www.w3.org/ns/earl#passed";
 const EARL_FAILED: &'static str = "http://www.w3.org/ns/earl#failed";
 const EARL_CANT_TELL: &'static str = "http://www.w3.org/ns/earl#cantTell";
 
-#[derive (Debug)]
+#[derive(Debug)]
 struct TestTurtleEval {
     id: Rc<String>,
     name: String,
@@ -54,7 +54,7 @@ struct TestTurtleEval {
     result: String,
 }
 
-#[derive (Debug)]
+#[derive(Debug)]
 struct TestTurtlePositiveSyntax {
     id: Rc<String>,
     name: String,
@@ -63,7 +63,7 @@ struct TestTurtlePositiveSyntax {
     action: String,
 }
 
-#[derive (Debug)]
+#[derive(Debug)]
 struct TestTurtleNegativeSyntax {
     id: Rc<String>,
     name: String,
@@ -72,7 +72,7 @@ struct TestTurtleNegativeSyntax {
     action: String,
 }
 
-#[derive (Debug)]
+#[derive(Debug)]
 struct TestTurtleNegativeEval {
     id: Rc<String>,
     name: String,
@@ -82,7 +82,7 @@ struct TestTurtleNegativeEval {
 }
 
 /// run all w3 RDF 1.1 Turtle tests from https://www.w3.org/TR/rdf11-testcases/
-#[derive (Debug)]
+#[derive(Debug)]
 enum Approval {
     Approved,
     Proposed,
@@ -90,7 +90,7 @@ enum Approval {
 }
 
 // prefix earl: <http://www.w3.org/ns/earl#>
-#[derive (PartialEq,Debug)]
+#[derive(PartialEq, Debug)]
 enum Outcome {
     Passed,
     Failed,
@@ -98,7 +98,7 @@ enum Outcome {
                  * NotTested, */
 }
 
-#[derive (Debug)]
+#[derive(Debug)]
 struct Assertion {
     test: Rc<String>,
     date: time::Tm,
@@ -106,7 +106,7 @@ struct Assertion {
     result: TestResult,
 }
 
-#[derive (Debug)]
+#[derive(Debug)]
 struct TestResult {
     outcome: Outcome,
     date: String,
@@ -121,7 +121,7 @@ impl<'g> DatatypePtr<'g> for Datatype {
         &self.datatype
     }
 }
-#[derive(Debug,Clone,Ord,PartialOrd,Eq,PartialEq)]
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq)]
 struct Literal {
     value: String,
     datatype: String,
@@ -133,7 +133,9 @@ impl<'g> LiteralPtr<'g> for Literal {
         &self.value
     }
     fn datatype(&self) -> Datatype {
-        Datatype { datatype: self.datatype.clone() }
+        Datatype {
+            datatype: self.datatype.clone(),
+        }
     }
     fn datatype_str(&self) -> &str {
         &self.datatype
@@ -147,7 +149,8 @@ impl<'g> LiteralPtr<'g> for Literal {
 }
 
 struct Cache<'g, W: 'g>
-    where W: GraphWriter<'g>
+where
+    W: GraphWriter<'g>,
 {
     rdf_type: Option<W::IRI>,
     earl_assertion: Option<W::IRI>,
@@ -163,7 +166,8 @@ struct Cache<'g, W: 'g>
 }
 
 impl<'g, W: 'g> Cache<'g, W>
-    where W: GraphWriter<'g>
+where
+    W: GraphWriter<'g>,
 {
     fn new() -> Cache<'g, W> {
         Cache {
@@ -224,12 +228,13 @@ impl<'g, W: 'g> Cache<'g, W>
     }
 }
 
-
-fn write_assertion<'a, 'g, W: 'g>(assertion: &'a Assertion,
-                                  w: &mut W,
-                                  cache: &mut Cache<'g, W>)
-                                  -> rome::Result<()>
-    where W: GraphWriter<'g>
+fn write_assertion<'a, 'g, W: 'g>(
+    assertion: &'a Assertion,
+    w: &mut W,
+    cache: &mut Cache<'g, W>,
+) -> rome::Result<()>
+where
+    W: GraphWriter<'g>,
 {
     let rdf_type = cache.rdf_type(w);
     let earl_assertion = cache.earl_assertion(w);
@@ -286,16 +291,18 @@ fn load_graph(data: &str, base: &str) -> rome::Result<MyGraph> {
     Ok(writer.collect().sort_blank_nodes())
 }
 
-fn read<'g, T, B: 'g, I: 'g, L: 'g, F, R>(mut last: Option<T>,
-                                          i: &mut Iterator<Item = T>,
-                                          predicate: &str,
-                                          convert: F)
-                                          -> Result<(R, Option<T>), String>
-    where T: graph::Triple<'g, B, I, L>,
-          B: BlankNodePtr<'g>,
-          I: IRIPtr<'g>,
-          L: LiteralPtr<'g>,
-          F: Fn(Resource<'g, B, I, L>) -> Result<R, String>
+fn read<'g, T, B: 'g, I: 'g, L: 'g, F, R>(
+    mut last: Option<T>,
+    i: &mut Iterator<Item = T>,
+    predicate: &str,
+    convert: F,
+) -> Result<(R, Option<T>), String>
+where
+    T: graph::Triple<'g, B, I, L>,
+    B: BlankNodePtr<'g>,
+    I: IRIPtr<'g>,
+    L: LiteralPtr<'g>,
+    F: Fn(Resource<'g, B, I, L>) -> Result<R, String>,
 {
     last = last.or_else(|| i.next());
     while let Some(triple) = last {
@@ -308,9 +315,10 @@ fn read<'g, T, B: 'g, I: 'g, L: 'g, F, R>(mut last: Option<T>,
 }
 
 fn to_string<'g, B, I, L>(object: Resource<'g, B, I, L>) -> Result<String, String>
-    where B: BlankNodePtr<'g>,
-          I: IRIPtr<'g>,
-          L: LiteralPtr<'g>
+where
+    B: BlankNodePtr<'g>,
+    I: IRIPtr<'g>,
+    L: LiteralPtr<'g>,
 {
     match object {
         graph::Resource::IRI(iri) => Ok(String::from(iri.as_str())),
@@ -320,9 +328,10 @@ fn to_string<'g, B, I, L>(object: Resource<'g, B, I, L>) -> Result<String, Strin
 }
 
 fn to_approval<'g, B, I, L>(object: Resource<'g, B, I, L>) -> Result<Approval, String>
-    where B: BlankNodePtr<'g>,
-          I: IRIPtr<'g>,
-          L: LiteralPtr<'g>
+where
+    B: BlankNodePtr<'g>,
+    I: IRIPtr<'g>,
+    L: LiteralPtr<'g>,
 {
     match object {
         graph::Resource::IRI(ref iri) if iri.as_str() == RDFT_APPROVED => Ok(Approval::Approved),
@@ -332,9 +341,10 @@ fn to_approval<'g, B, I, L>(object: Resource<'g, B, I, L>) -> Result<Approval, S
     }
 }
 
-fn load_test_turtle_eval(graph: &MyGraph,
-                         subject: MyBlankNodeOrIRI)
-                         -> Result<TestTurtleEval, String> {
+fn load_test_turtle_eval(
+    graph: &MyGraph,
+    subject: MyBlankNodeOrIRI,
+) -> Result<TestTurtleEval, String> {
     let mut i = graph.iter_s(&subject);
     let (comment, prev) = read(None, &mut i, RDFS_COMMENT, to_string)?;
     let (action, prev) = read(prev, &mut i, MF_ACTION, to_string)?;
@@ -350,9 +360,10 @@ fn load_test_turtle_eval(graph: &MyGraph,
         result: result,
     })
 }
-fn load_positive_syntax(graph: &MyGraph,
-                        subject: MyBlankNodeOrIRI)
-                        -> Result<TestTurtlePositiveSyntax, String> {
+fn load_positive_syntax(
+    graph: &MyGraph,
+    subject: MyBlankNodeOrIRI,
+) -> Result<TestTurtlePositiveSyntax, String> {
     let mut i = graph.iter_s(&subject);
     let (comment, prev) = read(None, &mut i, RDFS_COMMENT, to_string)?;
     let (action, prev) = read(prev, &mut i, MF_ACTION, to_string)?;
@@ -366,9 +377,10 @@ fn load_positive_syntax(graph: &MyGraph,
         action: action,
     })
 }
-fn load_negative_syntax(graph: &MyGraph,
-                        subject: MyBlankNodeOrIRI)
-                        -> Result<TestTurtleNegativeSyntax, String> {
+fn load_negative_syntax(
+    graph: &MyGraph,
+    subject: MyBlankNodeOrIRI,
+) -> Result<TestTurtleNegativeSyntax, String> {
     let mut i = graph.iter_s(&subject);
     let (comment, prev) = read(None, &mut i, RDFS_COMMENT, to_string)?;
     let (action, prev) = read(prev, &mut i, MF_ACTION, to_string)?;
@@ -382,9 +394,10 @@ fn load_negative_syntax(graph: &MyGraph,
         action: action,
     })
 }
-fn load_negative_eval(graph: &MyGraph,
-                      subject: MyBlankNodeOrIRI)
-                      -> Result<TestTurtleNegativeEval, String> {
+fn load_negative_eval(
+    graph: &MyGraph,
+    subject: MyBlankNodeOrIRI,
+) -> Result<TestTurtleNegativeEval, String> {
     let mut i = graph.iter_s(&subject);
     let (comment, prev) = read(None, &mut i, RDFS_COMMENT, to_string)?;
     let (action, prev) = read(prev, &mut i, MF_ACTION, to_string)?;
@@ -420,30 +433,35 @@ fn subject_to_string(subject: &MyBlankNodeOrIRI) -> Rc<String> {
 fn run_tests(graph: &MyGraph, base: &str, base_dir: &str) -> rome::Result<Vec<Assertion>> {
     let mut assertions = Vec::new();
     for t in
-        graph.iter_object_iri_predicate("http://www.w3.org/ns/rdftest#TestTurtleEval", RDF_TYPE) {
+        graph.iter_object_iri_predicate("http://www.w3.org/ns/rdftest#TestTurtleEval", RDF_TYPE)
+    {
         let test = load_test_turtle_eval(graph, t.subject())?;
         let r = run_eval(&test, base, base_dir)?;
         eval_result(&r);
         assertions.push(r);
     }
-    for t in
-        graph.iter_object_iri_predicate("http://www.w3.org/ns/rdftest#TestTurtlePositiveSyntax",
-                                        RDF_TYPE) {
+    for t in graph.iter_object_iri_predicate(
+        "http://www.w3.org/ns/rdftest#TestTurtlePositiveSyntax",
+        RDF_TYPE,
+    ) {
         let test = load_positive_syntax(graph, t.subject())?;
         let r = run_eval_positive_syntax(&test, base, base_dir)?;
         eval_result(&r);
         assertions.push(r);
     }
-    for t in
-        graph.iter_object_iri_predicate("http://www.w3.org/ns/rdftest#TestTurtleNegativeSyntax",
-                                        RDF_TYPE) {
+    for t in graph.iter_object_iri_predicate(
+        "http://www.w3.org/ns/rdftest#TestTurtleNegativeSyntax",
+        RDF_TYPE,
+    ) {
         let test = load_negative_syntax(graph, t.subject())?;
         let r = run_eval_negative_syntax(&test, base, base_dir)?;
         eval_result(&r);
         assertions.push(r);
     }
-    for t in graph.iter_object_iri_predicate("http://www.w3.org/ns/rdftest#TestTurtleNegativeEval",
-                                   RDF_TYPE) {
+    for t in graph.iter_object_iri_predicate(
+        "http://www.w3.org/ns/rdftest#TestTurtleNegativeEval",
+        RDF_TYPE,
+    ) {
         let test = load_negative_eval(graph, t.subject())?;
         let r = run_eval_negative_eval(&test, base, base_dir)?;
         eval_result(&r);
@@ -507,24 +525,32 @@ fn run_eval(test: &TestTurtleEval, base: &str, base_dir: &str) -> rome::Result<A
     let ttl_graph = match load_graph(ttl.as_str(), test.action.as_str()) {
         Ok(graph) => graph,
         Err(err) => {
-            return fail(&test.id,
-                        &ttl_path,
-                        format!("error parsing the graph: {}", err));
+            return fail(
+                &test.id,
+                &ttl_path,
+                format!("error parsing the graph: {}", err),
+            );
         }
     };
     if ttl_graph.len() != nt_graph.len() {
-        return fail(&test.id,
-                    &ttl_path,
-                    format!("different amounts of triples: {} vs {}",
-                            ttl_graph.len(),
-                            nt_graph.len()));
+        return fail(
+            &test.id,
+            &ttl_path,
+            format!(
+                "different amounts of triples: {} vs {}",
+                ttl_graph.len(),
+                nt_graph.len()
+            ),
+        );
     }
     let graph1 = graph_to_ntriples(&ttl_graph)?;
     let graph2 = graph_to_ntriples(&nt_graph)?;
     if graph1 != graph2 {
-        return fail(&test.id,
-                    &ttl_path,
-                    format!("unequal graphs:\n{}\n{}\n", graph1, graph2));
+        return fail(
+            &test.id,
+            &ttl_path,
+            format!("unequal graphs:\n{}\n{}\n", graph1, graph2),
+        );
     }
     pass(&test.id, &ttl_path)
 }
@@ -534,42 +560,51 @@ fn graph_to_ntriples(graph: &MyGraph) -> rome::Result<String> {
     let string = String::from_utf8(bytes)?;
     Ok(string)
 }
-fn run_eval_positive_syntax(test: &TestTurtlePositiveSyntax,
-                            base: &str,
-                            base_dir: &str)
-                            -> rome::Result<Assertion> {
+fn run_eval_positive_syntax(
+    test: &TestTurtlePositiveSyntax,
+    base: &str,
+    base_dir: &str,
+) -> rome::Result<Assertion> {
     let ttl_path = change_base(test.action.as_str(), base, base_dir);
     let ttl = read_file(&ttl_path)?;
     if let Err(err) = load_graph(ttl.as_str(), test.action.as_str()) {
-        return fail(&test.id,
-                    &ttl_path,
-                    format!("error parsing the graph: {}", err));
+        return fail(
+            &test.id,
+            &ttl_path,
+            format!("error parsing the graph: {}", err),
+        );
     };
     pass(&test.id, &ttl_path)
 }
-fn run_eval_negative_syntax(test: &TestTurtleNegativeSyntax,
-                            base: &str,
-                            base_dir: &str)
-                            -> rome::Result<Assertion> {
+fn run_eval_negative_syntax(
+    test: &TestTurtleNegativeSyntax,
+    base: &str,
+    base_dir: &str,
+) -> rome::Result<Assertion> {
     let ttl_path = change_base(test.action.as_str(), base, base_dir);
     let ttl = read_file(&ttl_path)?;
     if let Ok(graph) = load_graph(ttl.as_str(), test.action.as_str()) {
-        return fail(&test.id,
-                    &ttl_path,
-                    format!("no error parsing the graph, {} triples.", graph.len()));
+        return fail(
+            &test.id,
+            &ttl_path,
+            format!("no error parsing the graph, {} triples.", graph.len()),
+        );
     };
     pass(&test.id, &ttl_path)
 }
-fn run_eval_negative_eval(test: &TestTurtleNegativeEval,
-                          base: &str,
-                          base_dir: &str)
-                          -> rome::Result<Assertion> {
+fn run_eval_negative_eval(
+    test: &TestTurtleNegativeEval,
+    base: &str,
+    base_dir: &str,
+) -> rome::Result<Assertion> {
     let ttl_path = change_base(test.action.as_str(), base, base_dir);
     let ttl = read_file(&ttl_path)?;
     if let Ok(graph) = load_graph(ttl.as_str(), test.action.as_str()) {
-        return fail(&test.id,
-                    &ttl_path,
-                    format!("no error parsing the graph, {} triples.", graph.len()));
+        return fail(
+            &test.id,
+            &ttl_path,
+            format!("no error parsing the graph, {} triples.", graph.len()),
+        );
     };
     pass(&test.id, &ttl_path)
 }

@@ -1,16 +1,17 @@
 use error::{Error, Result};
-use nom::ErrorKind;
-use nom::{IResult, Context, Err};
 use nom::types::CompleteStr;
+use nom::ErrorKind;
 use nom::Needed;
+use nom::{Context, Err, IResult};
 use std::char;
 use std::str::Chars;
 
-pub fn string_literal(str: CompleteStr,
-                      ql: usize,
-                      starts_with: fn(CompleteStr) -> bool,
-                      find: fn(CompleteStr) -> Option<usize>)
-                      -> IResult<CompleteStr, &str> {
+pub fn string_literal(
+    str: CompleteStr,
+    ql: usize,
+    starts_with: fn(CompleteStr) -> bool,
+    find: fn(CompleteStr) -> Option<usize>,
+) -> IResult<CompleteStr, &str> {
     if !starts_with(str) {
         return Err(Err::Error(Context::Code(str, ErrorKind::Custom(0))));
     }
@@ -47,7 +48,8 @@ fn acc(acc: Option<(u32, u8)>, c: char) -> Option<(u32, u8)> {
 }
 
 fn hex_to_char(chars: &mut Chars, n: u8) -> Option<char> {
-    chars.by_ref()
+    chars
+        .by_ref()
         .take(n as usize)
         .fold(Some((0, 0)), acc)
         .and_then(|(ch, count)| if count == n { char::from_u32(ch) } else { None })

@@ -21,156 +21,182 @@ const DL: u32 = 29;
 const BILMASK: u64 = 0xffffffff;
 const DLMASK: u64 = 0x1fffffff;
 
-macro_rules! triple128{(
-    $name:ident,
-    $subject_var:ident,
-    $subject_offset:expr,
-    $predicate_offset:expr,
-    $object_var:ident,
-    $object_offset:expr) => {
-        triple128_helper!($name, $subject_var, $subject_offset, $predicate_offset,
-            (64 - $predicate_offset), $object_var, $object_offset,
-            ($subject_offset + BIL), ($object_offset + BIL));
+macro_rules! triple128 {
+    (
+        $name:ident,
+        $subject_var:ident,
+        $subject_offset:expr,
+        $predicate_offset:expr,
+        $object_var:ident,
+        $object_offset:expr
+    ) => {
+        triple128_helper!(
+            $name,
+            $subject_var,
+            $subject_offset,
+            $predicate_offset,
+            (64 - $predicate_offset),
+            $object_var,
+            $object_offset,
+            ($subject_offset + BIL),
+            ($object_offset + BIL)
+        );
     };
 }
 
-macro_rules! triple128_helper{(
-    $name:ident,
-    $subject_var:ident,
-    $subject_offset:expr,
-    $predicate_offset_1:expr,
-    $predicate_offset_2:expr,
-    $object_var:ident,
-    $object_offset:expr,
-    $subject_type_offset:expr,
-    $object_type_offset:expr) => {
+macro_rules! triple128_helper {
+    (
+        $name:ident,
+        $subject_var:ident,
+        $subject_offset:expr,
+        $predicate_offset_1:expr,
+        $predicate_offset_2:expr,
+        $object_var:ident,
+        $object_offset:expr,
+        $subject_type_offset:expr,
+        $object_type_offset:expr
+    ) => {
+        /// Compact triple used in tel::Graph.
+        #[derive(PartialEq, Eq, Hash, PartialOrd, Ord, Clone, Copy, Debug)]
+        pub struct $name {
+            v1: u64,
+            v2: u64,
+        }
 
-/// Compact triple used in tel::Graph.
-#[derive(PartialEq,Eq,Hash,PartialOrd,Ord,Clone,Copy,Debug)]
-pub struct $name {
-    v1: u64,
-    v2: u64,
-}
-
-impl CompactTriple<u32> for $name {
-    fn max_subject_value() -> u32 {
-        2 ^ BIL as u32
-    }
-    fn max_datatype_value() -> u32 {
-        2 ^ DL as u32
-    }
-    fn triple(subject_is_iri: bool,
-              subject: u32,
-              predicate: u32,
-              object_type: TripleObjectType,
-              object: u32,
-              datatype_or_lang: u32)
-              -> $name {
-        let subject = subject as u64;
-        let predicate = predicate as u64;
-        let object = object as u64;
-        let datatype_or_lang = datatype_or_lang as u64;
-        // check that the values are within the allowed range
-        assert!(subject & !BILMASK == 0, "subject out of range {}", subject);
-        assert!(predicate & !BILMASK == 0, "predicate out of range {}", predicate);
-        assert!(object & !BILMASK == 0, "object out of range {}", object);
-        assert!(datatype_or_lang & !DLMASK == 0,
-            "datatype_or_lang out of range {}", datatype_or_lang);
-
-        let mut s = (subject_is_iri as u64) << $subject_type_offset;
-        s += subject << $subject_offset;
-        let mut o = object << $object_offset;
-        let mut d = 0;
-        match object_type {
-            TripleObjectType::BlankNode => {}
-            TripleObjectType::IRI => {
-                o += 1 << $object_type_offset;
+        impl CompactTriple<u32> for $name {
+            fn max_subject_value() -> u32 {
+                2 ^ BIL as u32
             }
-            TripleObjectType::Literal => {
-                o += 3 << $object_type_offset;
-                d += datatype_or_lang;
+            fn max_datatype_value() -> u32 {
+                2 ^ DL as u32
             }
-            TripleObjectType::LiteralLang => {
-                o += 2 << $object_type_offset;
-                d += datatype_or_lang;
-            }
-        }
-        if $subject_offset > $object_offset { // subject is in v1
-            s += predicate >> $predicate_offset_1;
-            o += predicate << $predicate_offset_2;
-            o += d;
-        } else {
-            o += predicate >> $predicate_offset_1;
-            s += predicate << $predicate_offset_2;
-            s += d;
-        }
-        $name {
-            $subject_var: s,
-            $object_var: o
-        }
-    }
-    fn set_subject(&mut self, subject: u32) {
-        let subject = subject as u64;
-        assert!(subject & !BILMASK == 0, "subject out of range {}", subject);
-        self.$subject_var &= !(BILMASK << $subject_offset);
-        self.$subject_var += subject << $subject_offset;
-    }
-    fn set_predicate(&mut self, predicate: u32) {
-        let predicate = predicate as u64;
-        assert!(predicate & !BILMASK == 0, "predicate out of range {}", predicate);
-        self.v1 &= !(BILMASK >> $predicate_offset_1);
-        self.v1 += predicate >> $predicate_offset_1;
-        self.v2 &= !(BILMASK << $predicate_offset_2);
-        self.v2 += predicate << $predicate_offset_2;
-    }
-    fn set_object(&mut self, object: u32) {
-        let object = object as u64;
-        assert!(object & !BILMASK == 0, "object out of range {}", object);
-        self.$object_var &= !(BILMASK << $object_offset);
-        self.$object_var += object << $object_offset;
-    }
-    fn set_datatype_or_lang(&mut self, datatype_or_lang: u32) {
-        let datatype_or_lang = datatype_or_lang as u64;
-        assert!(datatype_or_lang & !DLMASK == 0,
-            "datatype_or_lang out of range {}", datatype_or_lang);
-        self.v2 &= !DLMASK;
-        self.v2 += datatype_or_lang;
-    }
-    fn subject_is_iri(&self) -> bool {
-        self.$subject_var & (1 << $subject_type_offset) == 1 << $subject_type_offset
-    }
-    fn object_is_iri(&self) -> bool {
-        self.$object_var & (3 << $object_type_offset) == 1 << $object_type_offset
-    }
-    fn object_is_blank_node(&self) -> bool {
-        self.$object_var & (3 << $object_type_offset) == 0
-    }
-    fn object_type(&self) -> TripleObjectType {
-        match (self.$object_var >> $object_type_offset) & 3 {
-            0 => TripleObjectType::BlankNode,
-            1 => TripleObjectType::IRI,
-            2 => TripleObjectType::Literal,
-            _ => TripleObjectType::LiteralLang,
-        }
-    }
-    fn has_language(&self) -> bool {
-        self.$object_var & (3 << $object_type_offset) == 2 << $object_type_offset
-    }
-    fn subject(&self) -> u32 {
-        ((self.$subject_var >> $subject_offset) & BILMASK) as u32
-    }
-    fn predicate(&self) -> u32 {
-        (((self.v1 << $predicate_offset_1) & BILMASK) as u32)+
-        (((self.v2 >> $predicate_offset_2) & BILMASK) as u32)
-    }
-    fn object(&self) -> u32 {
-        ((self.$object_var >> $object_offset) & BILMASK) as u32
-    }
-    fn datatype_or_lang(&self) -> u32 {
-        (self.v2 & DLMASK) as u32
-    }
-}
+            fn triple(
+                subject_is_iri: bool,
+                subject: u32,
+                predicate: u32,
+                object_type: TripleObjectType,
+                object: u32,
+                datatype_or_lang: u32,
+            ) -> $name {
+                let subject = subject as u64;
+                let predicate = predicate as u64;
+                let object = object as u64;
+                let datatype_or_lang = datatype_or_lang as u64;
+                // check that the values are within the allowed range
+                assert!(subject & !BILMASK == 0, "subject out of range {}", subject);
+                assert!(
+                    predicate & !BILMASK == 0,
+                    "predicate out of range {}",
+                    predicate
+                );
+                assert!(object & !BILMASK == 0, "object out of range {}", object);
+                assert!(
+                    datatype_or_lang & !DLMASK == 0,
+                    "datatype_or_lang out of range {}",
+                    datatype_or_lang
+                );
 
+                let mut s = (subject_is_iri as u64) << $subject_type_offset;
+                s += subject << $subject_offset;
+                let mut o = object << $object_offset;
+                let mut d = 0;
+                match object_type {
+                    TripleObjectType::BlankNode => {}
+                    TripleObjectType::IRI => {
+                        o += 1 << $object_type_offset;
+                    }
+                    TripleObjectType::Literal => {
+                        o += 3 << $object_type_offset;
+                        d += datatype_or_lang;
+                    }
+                    TripleObjectType::LiteralLang => {
+                        o += 2 << $object_type_offset;
+                        d += datatype_or_lang;
+                    }
+                }
+                if $subject_offset > $object_offset {
+                    // subject is in v1
+                    s += predicate >> $predicate_offset_1;
+                    o += predicate << $predicate_offset_2;
+                    o += d;
+                } else {
+                    o += predicate >> $predicate_offset_1;
+                    s += predicate << $predicate_offset_2;
+                    s += d;
+                }
+                $name {
+                    $subject_var: s,
+                    $object_var: o,
+                }
+            }
+            fn set_subject(&mut self, subject: u32) {
+                let subject = subject as u64;
+                assert!(subject & !BILMASK == 0, "subject out of range {}", subject);
+                self.$subject_var &= !(BILMASK << $subject_offset);
+                self.$subject_var += subject << $subject_offset;
+            }
+            fn set_predicate(&mut self, predicate: u32) {
+                let predicate = predicate as u64;
+                assert!(
+                    predicate & !BILMASK == 0,
+                    "predicate out of range {}",
+                    predicate
+                );
+                self.v1 &= !(BILMASK >> $predicate_offset_1);
+                self.v1 += predicate >> $predicate_offset_1;
+                self.v2 &= !(BILMASK << $predicate_offset_2);
+                self.v2 += predicate << $predicate_offset_2;
+            }
+            fn set_object(&mut self, object: u32) {
+                let object = object as u64;
+                assert!(object & !BILMASK == 0, "object out of range {}", object);
+                self.$object_var &= !(BILMASK << $object_offset);
+                self.$object_var += object << $object_offset;
+            }
+            fn set_datatype_or_lang(&mut self, datatype_or_lang: u32) {
+                let datatype_or_lang = datatype_or_lang as u64;
+                assert!(
+                    datatype_or_lang & !DLMASK == 0,
+                    "datatype_or_lang out of range {}",
+                    datatype_or_lang
+                );
+                self.v2 &= !DLMASK;
+                self.v2 += datatype_or_lang;
+            }
+            fn subject_is_iri(&self) -> bool {
+                self.$subject_var & (1 << $subject_type_offset) == 1 << $subject_type_offset
+            }
+            fn object_is_iri(&self) -> bool {
+                self.$object_var & (3 << $object_type_offset) == 1 << $object_type_offset
+            }
+            fn object_is_blank_node(&self) -> bool {
+                self.$object_var & (3 << $object_type_offset) == 0
+            }
+            fn object_type(&self) -> TripleObjectType {
+                match (self.$object_var >> $object_type_offset) & 3 {
+                    0 => TripleObjectType::BlankNode,
+                    1 => TripleObjectType::IRI,
+                    2 => TripleObjectType::Literal,
+                    _ => TripleObjectType::LiteralLang,
+                }
+            }
+            fn has_language(&self) -> bool {
+                self.$object_var & (3 << $object_type_offset) == 2 << $object_type_offset
+            }
+            fn subject(&self) -> u32 {
+                ((self.$subject_var >> $subject_offset) & BILMASK) as u32
+            }
+            fn predicate(&self) -> u32 {
+                (((self.v1 << $predicate_offset_1) & BILMASK) as u32)
+                    + (((self.v2 >> $predicate_offset_2) & BILMASK) as u32)
+            }
+            fn object(&self) -> u32 {
+                ((self.$object_var >> $object_offset) & BILMASK) as u32
+            }
+            fn datatype_or_lang(&self) -> u32 {
+                (self.v2 & DLMASK) as u32
+            }
+        }
     };
 }
 

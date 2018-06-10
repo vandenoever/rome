@@ -10,7 +10,7 @@ use std::string;
 pub type Result<T> = result::Result<T, Error>;
 
 /// The error type for this crate.
-#[derive (Debug)]
+#[derive(Debug)]
 pub enum Error {
     /// This error was caused by an IO error.
     IOError(io::Error),

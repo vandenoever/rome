@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use std::ops::Index;
 
-#[derive (Clone)]
+#[derive(Clone)]
 struct StringRef {
     start: u32,
     end: u32,
@@ -10,7 +10,7 @@ struct StringRef {
 
 // Within a StringCollection the strings are sorted, so sorting by StringId
 // is just like sorting by the underlying strings.
-#[derive (Debug,PartialEq,Eq,PartialOrd,Ord,Clone,Copy)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub struct StringId {
     pub id: u32,
 }
@@ -62,7 +62,7 @@ impl StringCollector {
         if refs.is_empty() {
             return Vec::new();
         }
-        let mut translation = vec![StringId{id:0}; refs.len()];
+        let mut translation = vec![StringId { id: 0 }; refs.len()];
         translation[refs[0].index as usize] = StringId { id: 0 };
         let mut to = 0;
         let mut prev_str = slice(buffer, &refs[0]);
@@ -112,7 +112,7 @@ impl StringCollector {
     }
 }
 
-#[derive (Clone,Debug)]
+#[derive(Clone, Debug)]
 pub struct StringCollection {
     buffer: String,
     starts: Vec<u32>,
@@ -125,8 +125,9 @@ impl StringCollection {
         &self.buffer[start..end]
     }
     pub fn find(&self, s: &str) -> Option<StringId> {
-        match binary_search_by_index(self.starts.len() - 1,
-                                     |i| self.get(StringId { id: i as u32 }).cmp(s)) {
+        match binary_search_by_index(self.starts.len() - 1, |i| {
+            self.get(StringId { id: i as u32 }).cmp(s)
+        }) {
             Ok(pos) => Some(StringId { id: pos as u32 }),
             Err(_) => None,
         }
@@ -134,7 +135,8 @@ impl StringCollection {
 }
 
 fn binary_search_by_index<F>(len: usize, mut f: F) -> Result<usize, usize>
-    where F: FnMut(usize) -> Ordering
+where
+    F: FnMut(usize) -> Ordering,
 {
     if len == 0 {
         return Err(0);
@@ -169,12 +171,31 @@ impl Index<StringId> for Vec<StringId> {
 #[test]
 fn test_string_collector() {
     let mut c = StringCollector::with_capacity(1000);
-    let refs = [c.add_string("xy"), c.add_string("1234"), c.add_string("xy"), c.add_string("abc")];
-    assert_eq!(refs,
-               [StringId { id: 0 }, StringId { id: 1 }, StringId { id: 2 }, StringId { id: 3 }]);
+    let refs = [
+        c.add_string("xy"),
+        c.add_string("1234"),
+        c.add_string("xy"),
+        c.add_string("abc"),
+    ];
+    assert_eq!(
+        refs,
+        [
+            StringId { id: 0 },
+            StringId { id: 1 },
+            StringId { id: 2 },
+            StringId { id: 3 },
+        ]
+    );
     let (translation, c) = c.collect();
-    assert_eq!(translation,
-               [StringId { id: 2 }, StringId { id: 0 }, StringId { id: 2 }, StringId { id: 1 }]);
+    assert_eq!(
+        translation,
+        [
+            StringId { id: 2 },
+            StringId { id: 0 },
+            StringId { id: 2 },
+            StringId { id: 1 },
+        ]
+    );
     assert_eq!(c.get(StringId { id: 0 }), "1234");
     assert_eq!(c.get(StringId { id: 1 }), "abc");
     assert_eq!(c.get(StringId { id: 2 }), "xy");

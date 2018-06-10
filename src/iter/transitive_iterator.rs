@@ -8,10 +8,11 @@ use std::iter::Peekable;
 /// For each iterated item, another iterator is created that is also iterated.
 /// This is needed for iterating through transitive properties.
 pub struct TransitiveIterator<I, J, F>
-    where I: SortedIterator,
-          I::Item: Ord + Clone,
-          J: SortedIterator<Item = I::Item>,
-          F: Fn(&J::Item) -> J
+where
+    I: SortedIterator,
+    I::Item: Ord + Clone,
+    J: SortedIterator<Item = I::Item>,
+    F: Fn(&J::Item) -> J,
 {
     iter: Peekable<I>,
     iters: BTreeMap<I::Item, Peekable<J>>,
@@ -19,11 +20,12 @@ pub struct TransitiveIterator<I, J, F>
 }
 
 impl<I, J, F> TransitiveIterator<I, J, F>
-    where I: SortedIterator,
-          I::Item: Ord + Clone,
-          J: SortedIterator<Item = I::Item>,
-          J::Item: Ord + Clone,
-          F: Fn(&J::Item) -> J
+where
+    I: SortedIterator,
+    I::Item: Ord + Clone,
+    J: SortedIterator<Item = I::Item>,
+    J::Item: Ord + Clone,
+    F: Fn(&J::Item) -> J,
 {
     /// Create a new TransitiveIterator.
     pub fn new(iter: I, f: F) -> TransitiveIterator<I, J, F> {
@@ -96,11 +98,12 @@ impl<I, J, F> TransitiveIterator<I, J, F>
 }
 
 impl<I, J, F> Iterator for TransitiveIterator<I, J, F>
-    where I: SortedIterator,
-          I::Item: Ord + Clone,
-          J: SortedIterator<Item = I::Item>,
-          J::Item: Ord + Clone,
-          F: Fn(&J::Item) -> J
+where
+    I: SortedIterator,
+    I::Item: Ord + Clone,
+    J: SortedIterator<Item = I::Item>,
+    J::Item: Ord + Clone,
+    F: Fn(&J::Item) -> J,
 {
     type Item = I::Item;
     fn next(&mut self) -> Option<Self::Item> {
@@ -115,10 +118,11 @@ impl<I, J, F> Iterator for TransitiveIterator<I, J, F>
 }
 
 impl<I, J, F> SortedIterator for TransitiveIterator<I, J, F>
-    where I: SortedIterator,
-          I::Item: Ord + Clone,
-          J: SortedIterator<Item = I::Item>,
-          J::Item: Ord + Clone,
-          F: Fn(&J::Item) -> J
+where
+    I: SortedIterator,
+    I::Item: Ord + Clone,
+    J: SortedIterator<Item = I::Item>,
+    J::Item: Ord + Clone,
+    F: Fn(&J::Item) -> J,
 {
 }

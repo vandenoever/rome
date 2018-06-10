@@ -1,5 +1,5 @@
 use std::fmt::Debug;
-#[derive (Debug,Clone)]
+#[derive(Debug, Clone)]
 pub enum TripleObjectType {
     BlankNode = 0,
     IRI = 1,
@@ -8,15 +8,17 @@ pub enum TripleObjectType {
 }
 
 pub trait CompactTriple<T>: Ord + Copy + Eq + Debug
-    where T: Ord + Copy
+where
+    T: Ord + Copy,
 {
-    fn triple(subject_is_iri: bool,
-              subject: T,
-              predicate: T,
-              object_type: TripleObjectType,
-              object: T,
-              datatype_or_lang: T)
-              -> Self;
+    fn triple(
+        subject_is_iri: bool,
+        subject: T,
+        predicate: T,
+        object_type: TripleObjectType,
+        object: T,
+        datatype_or_lang: T,
+    ) -> Self;
     fn max_subject_value() -> T;
     fn max_datatype_value() -> T;
     fn subject_is_iri(&self) -> bool;

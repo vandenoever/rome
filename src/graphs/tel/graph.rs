@@ -1,14 +1,15 @@
-use graph;
-use std::cmp;
-use std::marker::PhantomData;
 use super::compact_triple::*;
 use super::iter::*;
 use super::string_collector::*;
 use super::triple::*;
+use graph;
+use std::cmp;
+use std::marker::PhantomData;
 
 pub struct GraphData<SPO, OPS>
-    where SPO: CompactTriple<u32>,
-          OPS: CompactTriple<u32>
+where
+    SPO: CompactTriple<u32>,
+    OPS: CompactTriple<u32>,
 {
     pub graph_id: u32,
     pub strings: StringCollection,
@@ -20,30 +21,34 @@ pub struct GraphData<SPO, OPS>
 }
 
 pub struct Graph<SPO, OPS>
-    where SPO: CompactTriple<u32>,
-          OPS: CompactTriple<u32>
+where
+    SPO: CompactTriple<u32>,
+    OPS: CompactTriple<u32>,
 {
     pub d: GraphData<SPO, OPS>,
 }
 
 pub trait Index<SPO, OPS, T>
-    where SPO: CompactTriple<u32>,
-          OPS: CompactTriple<u32>,
-          T: CompactTriple<u32>
+where
+    SPO: CompactTriple<u32>,
+    OPS: CompactTriple<u32>,
+    T: CompactTriple<u32>,
 {
     fn index(graph: &GraphData<SPO, OPS>) -> &Vec<T>;
 }
 
 pub struct SPOIndex<SPO, OPS>
-    where SPO: CompactTriple<u32>,
-          OPS: CompactTriple<u32>
+where
+    SPO: CompactTriple<u32>,
+    OPS: CompactTriple<u32>,
 {
     phantom: PhantomData<Graph<SPO, OPS>>,
 }
 
 impl<SPO, OPS> Index<SPO, OPS, SPO> for SPOIndex<SPO, OPS>
-    where SPO: CompactTriple<u32>,
-          OPS: CompactTriple<u32>
+where
+    SPO: CompactTriple<u32>,
+    OPS: CompactTriple<u32>,
 {
     fn index(graph: &GraphData<SPO, OPS>) -> &Vec<SPO> {
         &graph.spo
@@ -51,15 +56,17 @@ impl<SPO, OPS> Index<SPO, OPS, SPO> for SPOIndex<SPO, OPS>
 }
 
 pub struct OPSIndex<SPO, OPS>
-    where SPO: CompactTriple<u32>,
-          OPS: CompactTriple<u32>
+where
+    SPO: CompactTriple<u32>,
+    OPS: CompactTriple<u32>,
 {
     phantom: PhantomData<Graph<SPO, OPS>>,
 }
 
 impl<SPO, OPS> Index<SPO, OPS, OPS> for OPSIndex<SPO, OPS>
-    where SPO: CompactTriple<u32>,
-          OPS: CompactTriple<u32>
+where
+    SPO: CompactTriple<u32>,
+    OPS: CompactTriple<u32>,
 {
     fn index(graph: &GraphData<SPO, OPS>) -> &Vec<OPS> {
         &graph.ops
@@ -68,94 +75,112 @@ impl<SPO, OPS> Index<SPO, OPS, OPS> for OPSIndex<SPO, OPS>
 
 // get the first possible triple with the given blank node subject id
 fn subject_blank_node<SPO>(subject: u32) -> SPO
-    where SPO: CompactTriple<u32>
+where
+    SPO: CompactTriple<u32>,
 {
     SPO::triple(false, subject, 0, TripleObjectType::BlankNode, 0, 0)
 }
 // get the first possible triple with the given iri subject id
 fn subject_iri<SPO>(subject: u32) -> SPO
-    where SPO: CompactTriple<u32>
+where
+    SPO: CompactTriple<u32>,
 {
     SPO::triple(true, subject, 0, TripleObjectType::BlankNode, 0, 0)
 }
 // get the first possible triple with the given blank node subject id and predicate
 fn subject_blank_node_predicate<SPO>(subject: u32, predicate: u32) -> SPO
-    where SPO: CompactTriple<u32>
+where
+    SPO: CompactTriple<u32>,
 {
     SPO::triple(false, subject, predicate, TripleObjectType::BlankNode, 0, 0)
 }
 // get the first possible triple with the given iri subject id and predicate
 fn subject_iri_predicate<SPO>(subject: u32, predicate: u32) -> SPO
-    where SPO: CompactTriple<u32>
+where
+    SPO: CompactTriple<u32>,
 {
     SPO::triple(true, subject, predicate, TripleObjectType::BlankNode, 0, 0)
 }
 // get the first possible triple with the given blank node object id
 fn object_blank_node<OPS>(object: u32) -> OPS
-    where OPS: CompactTriple<u32>
+where
+    OPS: CompactTriple<u32>,
 {
     OPS::triple(false, 0, 0, TripleObjectType::BlankNode, object, 0)
 }
 // get the first possible triple with the given iri object id
 fn object_iri<OPS>(object: u32) -> OPS
-    where OPS: CompactTriple<u32>
+where
+    OPS: CompactTriple<u32>,
 {
     OPS::triple(false, 0, 0, TripleObjectType::IRI, object, 0)
 }
 // get the first possible triple with the given literal object id and datatype
 fn object_literal<OPS>(object: u32, datatype: u32) -> OPS
-    where OPS: CompactTriple<u32>
+where
+    OPS: CompactTriple<u32>,
 {
     OPS::triple(false, 0, 0, TripleObjectType::Literal, object, datatype)
 }
 // get the first possible triple with the given literal object id and language
 fn object_literal_lang<OPS>(object: u32, lang: u32) -> OPS
-    where OPS: CompactTriple<u32>
+where
+    OPS: CompactTriple<u32>,
 {
     OPS::triple(false, 0, 0, TripleObjectType::LiteralLang, object, lang)
 }
 // get the first possible triple with the given blank node object id and predicate
 fn object_blank_node_predicate<OPS>(object: u32, predicate: u32) -> OPS
-    where OPS: CompactTriple<u32>
+where
+    OPS: CompactTriple<u32>,
 {
     OPS::triple(false, 0, predicate, TripleObjectType::BlankNode, object, 0)
 }
 // get the first possible triple with the given iri object id and predicate
 fn object_iri_predicate<OPS>(object: u32, predicate: u32) -> OPS
-    where OPS: CompactTriple<u32>
+where
+    OPS: CompactTriple<u32>,
 {
     OPS::triple(false, 0, predicate, TripleObjectType::IRI, object, 0)
 }
 // get the first possible triple with the given literal object id and datatype and predicate
 fn object_literal_predicate<OPS>(object: u32, datatype: u32, predicate: u32) -> OPS
-    where OPS: CompactTriple<u32>
+where
+    OPS: CompactTriple<u32>,
 {
-    OPS::triple(false,
-                0,
-                predicate,
-                TripleObjectType::Literal,
-                object,
-                datatype)
+    OPS::triple(
+        false,
+        0,
+        predicate,
+        TripleObjectType::Literal,
+        object,
+        datatype,
+    )
 }
 // get the first possible triple with the given literal object id and language and predicate
 fn object_literal_lang_predicate<OPS>(object: u32, lang: u32, predicate: u32) -> OPS
-    where OPS: CompactTriple<u32>
+where
+    OPS: CompactTriple<u32>,
 {
-    OPS::triple(false,
-                0,
-                predicate,
-                TripleObjectType::LiteralLang,
-                object,
-                lang)
+    OPS::triple(
+        false,
+        0,
+        predicate,
+        TripleObjectType::LiteralLang,
+        object,
+        lang,
+    )
 }
 
 impl<SPO, OPS> Graph<SPO, OPS>
-    where SPO: CompactTriple<u32>,
-          OPS: CompactTriple<u32>
+where
+    SPO: CompactTriple<u32>,
+    OPS: CompactTriple<u32>,
 {
     fn range_iter<T, F>(&self, start: T, end: T) -> TripleRangeIterator<SPO, OPS, T, F>
-        where T: CompactTriple<u32>,
-              F: Index<SPO, OPS, T>
+    where
+        T: CompactTriple<u32>,
+        F: Index<SPO, OPS, T>,
     {
         let pos = match F::index(&self.d).binary_search(&start) {
             Ok(pos) | Err(pos) => pos,
@@ -168,8 +193,9 @@ impl<SPO, OPS> Graph<SPO, OPS>
         }
     }
     fn empty_range_iter<T, F>(&self) -> TripleRangeIterator<SPO, OPS, T, F>
-        where T: CompactTriple<u32>,
-              F: Index<SPO, OPS, T>
+    where
+        T: CompactTriple<u32>,
+        F: Index<SPO, OPS, T>,
     {
         let end = T::triple(true, 0, 0, TripleObjectType::BlankNode, 0, 0);
         TripleRangeIterator {
@@ -185,9 +211,10 @@ impl<SPO, OPS> Graph<SPO, OPS>
         self.range_iter(triple, end)
     }
     /// iterator over all triples with the same subject
-    pub fn iter_subject_iri(&self,
-                            iri: &str)
-                            -> TripleRangeIterator<SPO, OPS, SPO, SPOIndex<SPO, OPS>> {
+    pub fn iter_subject_iri(
+        &self,
+        iri: &str,
+    ) -> TripleRangeIterator<SPO, OPS, SPO, SPOIndex<SPO, OPS>> {
         match self.d.strings.find(iri) {
             None => self.empty_range_iter(),
             Some(id) => {
@@ -203,9 +230,10 @@ impl<SPO, OPS> Graph<SPO, OPS>
         self.range_iter(triple, end)
     }
     /// iterator over all triples with the same object
-    pub fn iter_object_iri(&self,
-                           iri: &str)
-                           -> TripleRangeIterator<SPO, OPS, OPS, OPSIndex<SPO, OPS>> {
+    pub fn iter_object_iri(
+        &self,
+        iri: &str,
+    ) -> TripleRangeIterator<SPO, OPS, OPS, OPSIndex<SPO, OPS>> {
         match self.d.strings.find(iri) {
             None => self.empty_range_iter(),
             Some(id) => {
@@ -215,49 +243,52 @@ impl<SPO, OPS> Graph<SPO, OPS>
         }
     }
     /// iterator over all triples with the same object and predicate
-    fn iter_object_predicate(&self,
-                             triple: OPS)
-                             -> TripleRangeIterator<SPO, OPS, OPS, OPSIndex<SPO, OPS>> {
+    fn iter_object_predicate(
+        &self,
+        triple: OPS,
+    ) -> TripleRangeIterator<SPO, OPS, OPS, OPSIndex<SPO, OPS>> {
         let mut end = triple;
         end.set_predicate(triple.predicate() + 1);
         self.range_iter(triple, end)
     }
     /// iterator over all triples with the same object and predicate
-    pub fn iter_object_iri_predicate(&self,
-                                     object_iri: &str,
-                                     predicate: &str)
-                                     -> TripleRangeIterator<SPO, OPS, OPS, OPSIndex<SPO, OPS>> {
+    pub fn iter_object_iri_predicate(
+        &self,
+        object_iri: &str,
+        predicate: &str,
+    ) -> TripleRangeIterator<SPO, OPS, OPS, OPSIndex<SPO, OPS>> {
         match self.d.strings.find(object_iri) {
             None => self.empty_range_iter(),
-            Some(object) => {
-                match self.d.strings.find(predicate) {
-                    None => self.empty_range_iter(),
-                    Some(predicate) => {
-                        let triple = object_iri_predicate(object.id, predicate.id);
-                        self.iter_object_predicate(triple)
-                    }
+            Some(object) => match self.d.strings.find(predicate) {
+                None => self.empty_range_iter(),
+                Some(predicate) => {
+                    let triple = object_iri_predicate(object.id, predicate.id);
+                    self.iter_object_predicate(triple)
                 }
-            }
+            },
         }
     }
     /// iterator over all triples with the same subject and predicate
-    fn iter_subject_predicate(&self,
-                              triple: SPO)
-                              -> TripleRangeIterator<SPO, OPS, SPO, SPOIndex<SPO, OPS>> {
+    fn iter_subject_predicate(
+        &self,
+        triple: SPO,
+    ) -> TripleRangeIterator<SPO, OPS, SPO, SPOIndex<SPO, OPS>> {
         let mut end = triple;
         end.set_predicate(triple.predicate() + 1);
         self.range_iter(triple, end)
     }
     /// iterate over all triple with a blank node subject
-    pub fn iter_subject_blank_nodes(&self)
-                                    -> TripleRangeIterator<SPO, OPS, SPO, SPOIndex<SPO, OPS>> {
+    pub fn iter_subject_blank_nodes(
+        &self,
+    ) -> TripleRangeIterator<SPO, OPS, SPO, SPOIndex<SPO, OPS>> {
         let start = subject_blank_node(0);
         let end = subject_iri(0);
         self.range_iter(start, end)
     }
     /// iterate over all triple with a blank node object
-    pub fn iter_object_blank_nodes(&self)
-                                   -> TripleRangeIterator<SPO, OPS, OPS, OPSIndex<SPO, OPS>> {
+    pub fn iter_object_blank_nodes(
+        &self,
+    ) -> TripleRangeIterator<SPO, OPS, OPS, OPSIndex<SPO, OPS>> {
         let start = object_blank_node(0);
         let end = object_iri(0);
         self.range_iter(start, end)
@@ -298,7 +329,8 @@ impl<SPO, OPS> Graph<SPO, OPS>
         })
     }
     fn sort_blank_nodes_by<F>(&self, compare: F) -> Graph<SPO, OPS>
-        where F: FnMut(&BlankNodeInfo, &BlankNodeInfo) -> cmp::Ordering
+    where
+        F: FnMut(&BlankNodeInfo, &BlankNodeInfo) -> cmp::Ordering,
     {
         let len = self.d.highest_blank_node as usize + 1;
         let mut blank_info = Vec::with_capacity(len);
@@ -328,7 +360,7 @@ impl<SPO, OPS> Graph<SPO, OPS>
         }
         // sort the vector
         blank_info.sort_by(compare);
-        let mut translation = vec![0 as u32;len];
+        let mut translation = vec![0 as u32; len];
         for (i, b) in blank_info.iter().enumerate().take(len) {
             translation[b.blank_node as usize] = i as u32;
         }
@@ -365,7 +397,8 @@ impl<SPO, OPS> Graph<SPO, OPS>
 }
 
 fn translate_object<T>(t: &mut T, translation: &[u32])
-    where T: CompactTriple<u32>
+where
+    T: CompactTriple<u32>,
 {
     if !t.subject_is_iri() {
         let subject = t.subject() as usize;
@@ -378,7 +411,8 @@ fn translate_object<T>(t: &mut T, translation: &[u32])
 }
 
 fn zero_blank_nodes<T>(a: &mut T)
-    where T: CompactTriple<u32>
+where
+    T: CompactTriple<u32>,
 {
     if !a.subject_is_iri() {
         a.set_subject(0);
@@ -389,7 +423,8 @@ fn zero_blank_nodes<T>(a: &mut T)
 }
 
 fn compare_without_blank_nodes<T>(mut a: T, mut b: T) -> cmp::Ordering
-    where T: CompactTriple<u32>
+where
+    T: CompactTriple<u32>,
 {
     zero_blank_nodes(&mut a);
     zero_blank_nodes(&mut b);
@@ -405,8 +440,9 @@ struct BlankNodeInfo {
 }
 
 impl<'g, SPO: 'g, OPS: 'g> graph::Graph<'g> for Graph<SPO, OPS>
-    where SPO: CompactTriple<u32>,
-          OPS: CompactTriple<u32>
+where
+    SPO: CompactTriple<u32>,
+    OPS: CompactTriple<u32>,
 {
     type BlankNodePtr = BlankNodePtr<'g, SPO, OPS>;
     type IRIPtr = IRIPtr<'g, SPO, OPS>;
@@ -424,49 +460,40 @@ impl<'g, SPO: 'g, OPS: 'g> graph::Graph<'g> for Graph<SPO, OPS>
         }
     }
     fn find_iri(&'g self, iri: &str) -> Option<Self::IRIPtr> {
-        self.d.strings.find(iri).map(|s| {
-            IRIPtr {
-                graph: &self.d,
-                iri: s.id,
-            }
+        self.d.strings.find(iri).map(|s| IRIPtr {
+            graph: &self.d,
+            iri: s.id,
         })
     }
-    fn find_literal<'a>(&'g self,
-                        literal: &'a str,
-                        datatype: &'a str,
-                        language: Option<&'a str>)
-                        -> Option<Self::LiteralPtr> {
+    fn find_literal<'a>(
+        &'g self,
+        literal: &'a str,
+        datatype: &'a str,
+        language: Option<&'a str>,
+    ) -> Option<Self::LiteralPtr> {
         if let Some(l) = self.d.strings.find(literal) {
             match language.and_then(|l| self.d.datatype_or_lang.find(l)) {
-                Some(lang) => {
-                    Some(LiteralPtr {
-                        graph: &self.d,
-                        lexical: l.id,
-                        datatype: self.d.lang_string_datatype_id,
-                        language: Some(lang.id),
-                    })
-                }
-                None => {
-                    self.d.datatype_or_lang.find(datatype).map(|d| {
-                        LiteralPtr {
-                            graph: &self.d,
-                            lexical: l.id,
-                            datatype: d.id,
-                            language: None,
-                        }
-                    })
-                }
+                Some(lang) => Some(LiteralPtr {
+                    graph: &self.d,
+                    lexical: l.id,
+                    datatype: self.d.lang_string_datatype_id,
+                    language: Some(lang.id),
+                }),
+                None => self.d.datatype_or_lang.find(datatype).map(|d| LiteralPtr {
+                    graph: &self.d,
+                    lexical: l.id,
+                    datatype: d.id,
+                    language: None,
+                }),
             }
         } else {
             None
         }
     }
     fn find_datatype<'a>(&'g self, datatype: &'a str) -> Option<DatatypePtr<'g, SPO, OPS>> {
-        self.d.datatype_or_lang.find(datatype).map(|d| {
-            DatatypePtr {
-                graph: &self.d,
-                datatype: d.id,
-            }
+        self.d.datatype_or_lang.find(datatype).map(|d| DatatypePtr {
+            graph: &self.d,
+            datatype: d.id,
         })
     }
     fn iter_s(&'g self, subject: &BlankNodeOrIRI<'g, SPO, OPS>) -> Self::SPORangeIter {
@@ -476,10 +503,11 @@ impl<'g, SPO: 'g, OPS: 'g> graph::Graph<'g> for Graph<SPO, OPS>
         };
         self.iter_subject(spo)
     }
-    fn iter_s_p(&'g self,
-                subject: &BlankNodeOrIRI<'g, SPO, OPS>,
-                predicate: &IRIPtr<'g, SPO, OPS>)
-                -> Self::SPORangeIter {
+    fn iter_s_p(
+        &'g self,
+        subject: &BlankNodeOrIRI<'g, SPO, OPS>,
+        predicate: &IRIPtr<'g, SPO, OPS>,
+    ) -> Self::SPORangeIter {
         let spo = match *subject {
             graph::BlankNodeOrIRI::BlankNode(bn, _) => {
                 subject_blank_node_predicate(bn.node_id, predicate.iri)
@@ -492,30 +520,27 @@ impl<'g, SPO: 'g, OPS: 'g> graph::Graph<'g> for Graph<SPO, OPS>
         let ops = match *object {
             graph::Resource::BlankNode(bn, _) => object_blank_node(bn.node_id),
             graph::Resource::IRI(ref iri) => object_iri(iri.iri),
-            graph::Resource::Literal(ref l) => {
-                match l.language {
-                    Some(lang) => object_literal_lang(l.lexical, lang),
-                    None => object_literal(l.lexical, l.datatype),
-                }
-            }
+            graph::Resource::Literal(ref l) => match l.language {
+                Some(lang) => object_literal_lang(l.lexical, lang),
+                None => object_literal(l.lexical, l.datatype),
+            },
         };
         self.iter_object(ops)
     }
-    fn iter_o_p(&'g self,
-                object: &Resource<'g, SPO, OPS>,
-                predicate: &IRIPtr<'g, SPO, OPS>)
-                -> Self::OPSRangeIter {
+    fn iter_o_p(
+        &'g self,
+        object: &Resource<'g, SPO, OPS>,
+        predicate: &IRIPtr<'g, SPO, OPS>,
+    ) -> Self::OPSRangeIter {
         let ops = match *object {
             graph::Resource::BlankNode(bn, _) => {
                 object_blank_node_predicate(bn.node_id, predicate.iri)
             }
             graph::Resource::IRI(ref iri) => object_iri_predicate(iri.iri, predicate.iri),
-            graph::Resource::Literal(ref l) => {
-                match l.language {
-                    Some(lang) => object_literal_lang_predicate(l.lexical, lang, predicate.iri),
-                    None => object_literal_predicate(l.lexical, l.datatype, predicate.iri),
-                }
-            }
+            graph::Resource::Literal(ref l) => match l.language {
+                Some(lang) => object_literal_lang_predicate(l.lexical, lang, predicate.iri),
+                None => object_literal_predicate(l.lexical, l.datatype, predicate.iri),
+            },
         };
         self.iter_object_predicate(ops)
     }

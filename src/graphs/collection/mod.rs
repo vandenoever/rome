@@ -31,11 +31,13 @@ pub trait TripleCmpWrap<'g> {
     #[doc(hidden)]
     fn object_type(&self) -> Object;
 }
-fn compare_subject<'g, B: 'g, I: 'g>(a: &TripleCmpWrap,
-                                     b: BlankNodeOrIRI<'g, B, I>)
-                                     -> cmp::Ordering
-    where B: BlankNodePtr<'g>,
-          I: IRIPtr<'g>
+fn compare_subject<'g, B: 'g, I: 'g>(
+    a: &TripleCmpWrap,
+    b: BlankNodeOrIRI<'g, B, I>,
+) -> cmp::Ordering
+where
+    B: BlankNodePtr<'g>,
+    I: IRIPtr<'g>,
 {
     match b {
         // blank nodes from different graphs are different
@@ -44,12 +46,14 @@ fn compare_subject<'g, B: 'g, I: 'g>(a: &TripleCmpWrap,
         BlankNodeOrIRI::IRI(i) => a.cmp_subject_iri(i.as_str()),
     }
 }
-fn compare_object<'g, B: 'g, I: 'g, L: 'g>(a: &TripleCmpWrap,
-                                           b: Resource<'g, B, I, L>)
-                                           -> cmp::Ordering
-    where B: BlankNodePtr<'g>,
-          I: IRIPtr<'g>,
-          L: LiteralPtr<'g>
+fn compare_object<'g, B: 'g, I: 'g, L: 'g>(
+    a: &TripleCmpWrap,
+    b: Resource<'g, B, I, L>,
+) -> cmp::Ordering
+where
+    B: BlankNodePtr<'g>,
+    I: IRIPtr<'g>,
+    L: LiteralPtr<'g>,
 {
     match b {
         Resource::BlankNode(_, _) => cmp::Ordering::Less,
@@ -60,10 +64,11 @@ fn compare_object<'g, B: 'g, I: 'g, L: 'g>(a: &TripleCmpWrap,
 #[doc(hidden)]
 /// sort by subject, predicate, object
 pub fn compare_spo<'g, B: 'g, I: 'g, L: 'g, T: 'g>(a: &TripleCmpWrap, b: &T) -> cmp::Ordering
-    where B: BlankNodePtr<'g>,
-          I: IRIPtr<'g>,
-          L: LiteralPtr<'g>,
-          T: Triple<'g, B, I, L>
+where
+    B: BlankNodePtr<'g>,
+    I: IRIPtr<'g>,
+    L: LiteralPtr<'g>,
+    T: Triple<'g, B, I, L>,
 {
     let mut cmp = compare_subject(a, b.subject());
     if cmp == cmp::Ordering::Equal {
@@ -77,10 +82,11 @@ pub fn compare_spo<'g, B: 'g, I: 'g, L: 'g, T: 'g>(a: &TripleCmpWrap, b: &T) -> 
 #[doc(hidden)]
 /// sort by object, predicate, subject
 pub fn compare_ops<'g, B: 'g, I: 'g, L: 'g, T: 'g>(a: &TripleCmpWrap, b: &T) -> cmp::Ordering
-    where B: BlankNodePtr<'g>,
-          I: IRIPtr<'g>,
-          L: LiteralPtr<'g>,
-          T: Triple<'g, B, I, L>
+where
+    B: BlankNodePtr<'g>,
+    I: IRIPtr<'g>,
+    L: LiteralPtr<'g>,
+    T: Triple<'g, B, I, L>,
 {
     let mut cmp = compare_object(a, b.object());
     if cmp == cmp::Ordering::Less {
@@ -95,16 +101,18 @@ pub fn compare_ops<'g, B: 'g, I: 'g, L: 'g, T: 'g>(a: &TripleCmpWrap, b: &T) -> 
 /// get the triple that is equal to the given triple and if needed,
 /// advance the iterator
 /// the iterator is forwarded one position at most
-pub fn get_equal_spo<'g, K: 'g, T: 'g, B: 'g, I: 'g, L: 'g>(iter: &mut Peekable<K>,
-                                                            t: &TripleCmpWrap<'g>,
-                                                            n: &mut u8,
-                                                            min_n: u8)
-                                                            -> Option<T>
-    where K: Iterator<Item = T>,
-          B: BlankNodePtr<'g>,
-          I: IRIPtr<'g>,
-          L: LiteralPtr<'g>,
-          T: Triple<'g, B, I, L>
+pub fn get_equal_spo<'g, K: 'g, T: 'g, B: 'g, I: 'g, L: 'g>(
+    iter: &mut Peekable<K>,
+    t: &TripleCmpWrap<'g>,
+    n: &mut u8,
+    min_n: u8,
+) -> Option<T>
+where
+    K: Iterator<Item = T>,
+    B: BlankNodePtr<'g>,
+    I: IRIPtr<'g>,
+    L: LiteralPtr<'g>,
+    T: Triple<'g, B, I, L>,
 {
     *n += 1;
     if *n == min_n {
@@ -114,22 +122,28 @@ pub fn get_equal_spo<'g, K: 'g, T: 'g, B: 'g, I: 'g, L: 'g>(iter: &mut Peekable<
         Some(v) => compare_spo(t, v) == cmp::Ordering::Equal,
         None => false,
     };
-    if equal { iter.next() } else { None }
+    if equal {
+        iter.next()
+    } else {
+        None
+    }
 }
 #[doc(hidden)]
 // get the triple that is equal to the given triple and if needed,
 // advance the iterator
 // the iterator is forwarded one position at most
-pub fn get_equal_ops<'g, K: 'g, T: 'g, B: 'g, I: 'g, L: 'g>(iter: &mut Peekable<K>,
-                                                            t: &TripleCmpWrap<'g>,
-                                                            n: &mut u8,
-                                                            min_n: u8)
-                                                            -> Option<T>
-    where K: Iterator<Item = T>,
-          B: BlankNodePtr<'g>,
-          I: IRIPtr<'g>,
-          L: LiteralPtr<'g>,
-          T: Triple<'g, B, I, L>
+pub fn get_equal_ops<'g, K: 'g, T: 'g, B: 'g, I: 'g, L: 'g>(
+    iter: &mut Peekable<K>,
+    t: &TripleCmpWrap<'g>,
+    n: &mut u8,
+    min_n: u8,
+) -> Option<T>
+where
+    K: Iterator<Item = T>,
+    B: BlankNodePtr<'g>,
+    I: IRIPtr<'g>,
+    L: LiteralPtr<'g>,
+    T: Triple<'g, B, I, L>,
 {
     *n += 1;
     if *n == min_n {
@@ -139,31 +153,32 @@ pub fn get_equal_ops<'g, K: 'g, T: 'g, B: 'g, I: 'g, L: 'g>(iter: &mut Peekable<
         Some(v) => compare_ops(t, v) == cmp::Ordering::Equal,
         None => false,
     };
-    if equal { iter.next() } else { None }
+    if equal {
+        iter.next()
+    } else {
+        None
+    }
 }
 
 /// Graphs that are used in GraphCollection must implement TripleCmpWrap.
 /// This macro does that.
 #[macro_export]
-macro_rules!
-impl_triple_cmp_wrap {
+macro_rules! impl_triple_cmp_wrap {
     ($graph_type:path) => {
         impl_triple_cmp_wrap_spo_ops!(SPOTriple $graph_type);
         impl_triple_cmp_wrap_spo_ops!(OPSTriple $graph_type);
-    }
+    };
 }
 
 /// internal macro used by impl_triple_cmp_wrap
-macro_rules!
-impl_triple_cmp_wrap_spo_ops {
+macro_rules! impl_triple_cmp_wrap_spo_ops {
     ($name:ident $graph_type:path) => {
-
         impl<'g> TripleCmpWrap<'g> for <$graph_type as $crate::graph::Graph<'g>>::$name {
             fn cmp_subject_iri(&self, o: &str) -> cmp::Ordering {
                 use $crate::graph::{BlankNodeOrIRI, IRIPtr, Triple};
                 match self.subject() {
                     BlankNodeOrIRI::IRI(i) => i.as_str().cmp(o),
-                    _ => cmp::Ordering::Less
+                    _ => cmp::Ordering::Less,
                 }
             }
             fn cmp_predicate(&self, o: &str) -> cmp::Ordering {
@@ -173,12 +188,17 @@ impl_triple_cmp_wrap_spo_ops {
             fn cmp_object_iri(&self, o: &str) -> cmp::Ordering {
                 use graph::{IRIPtr, Resource, Triple};
                 match self.object() {
-                    Resource::BlankNode(_,_) => cmp::Ordering::Less,
+                    Resource::BlankNode(_, _) => cmp::Ordering::Less,
                     Resource::IRI(i) => i.as_str().cmp(o),
-                    Resource::Literal(_) => cmp::Ordering::Greater
+                    Resource::Literal(_) => cmp::Ordering::Greater,
                 }
             }
-            fn cmp_object_literal(&self, o: &str, datatype: &str, language: Option<&str>) -> cmp::Ordering {
+            fn cmp_object_literal(
+                &self,
+                o: &str,
+                datatype: &str,
+                language: Option<&str>,
+            ) -> cmp::Ordering {
                 use $crate::graph::{LiteralPtr, Resource, Triple};
                 match self.object() {
                     Resource::Literal(l) => {
@@ -190,28 +210,27 @@ impl_triple_cmp_wrap_spo_ops {
                             cmp = l.language().cmp(&language);
                         }
                         cmp
-                    },
+                    }
                     _ => cmp::Ordering::Less,
                 }
             }
             fn subject_is_blank_node(&self) -> bool {
                 use $crate::graph::{BlankNodeOrIRI, Triple};
                 match self.subject() {
-                    BlankNodeOrIRI::BlankNode(_,_) => true,
-                    _ => false
+                    BlankNodeOrIRI::BlankNode(_, _) => true,
+                    _ => false,
                 }
             }
             fn object_type(&self) -> Object {
                 use $crate::graph::{Resource, Triple};
                 match self.object() {
-                    Resource::BlankNode(_,_) => Object::BlankNode,
+                    Resource::BlankNode(_, _) => Object::BlankNode,
                     Resource::IRI(_) => Object::IRI,
                     Resource::Literal(_) => Object::Literal,
                 }
             }
         }
-
-    }
+    };
 }
 
 #[doc(hide)]
