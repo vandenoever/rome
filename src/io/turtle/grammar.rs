@@ -3,7 +3,7 @@ use super::grammar_helper::*;
 use super::grammar_structs::*;
 use constants;
 use nom::types::CompleteStr;
-use nom::{Context, Err, ErrorKind, IResult, Needed};
+use nom::{Err, ErrorKind, IResult, Needed};
 
 /// Take one character if it fits the function
 macro_rules! one_if (
@@ -22,19 +22,16 @@ macro_rules! one_if (
   );
 );
 
-fn comment(str: CompleteStr) -> IResult<CompleteStr, ()> {
-    if str.is_empty() {
-        return Err(::nom::Err::Incomplete(Needed::Size(2)));
-    }
-    if &str[0..1] != "#" {
-        return Err(::nom::Err::Error(Context::Code(str, ErrorKind::Custom(0))));
-    }
-    if let Some(pos) = str.find(|c| c == '\n' || c == '\r') {
-        Ok((CompleteStr(&str[pos + 1..]), ()))
-    } else {
-        Err(::nom::Err::Incomplete(Needed::Size(1)))
-    }
+fn not_eol(c: char) -> bool {
+    c != '\n' && c != '\r'
 }
+
+named!(comment<CompleteStr,&str>, do_parse!(
+    char!('#') >>
+    comment: take_while!(not_eol) >>
+    alt!(tag!("\n") | tag!("\r") | eof!()) >>
+    (&comment)
+));
 
 /// whitespace that may contain comments
 pub fn tws(mut str: CompleteStr) -> IResult<CompleteStr, ()> {
@@ -573,22 +570,16 @@ fn in_range(c: char, lower: u32, upper: u32) -> bool {
 
 #[test]
 fn test_comment() {
-    assert_eq!(
-        comment(CompleteStr("#\r\na")),
-        Ok((CompleteStr(&"\na"[..]), ()))
-    );
-    assert_eq!(
-        comment(CompleteStr("#\n\ra")),
-        Ok((CompleteStr(&"\ra"[..]), ()))
-    );
+    use nom::Context;
+    assert_eq!(comment(CompleteStr("#\r\na")), Ok((CompleteStr("\na"), "")));
+    assert_eq!(comment(CompleteStr("#\n\ra")), Ok((CompleteStr("\ra"), "")));
     assert_eq!(
         comment(CompleteStr("")),
-        Err(Err::Incomplete(Needed::Size(2)))
+        Err(Err::Error(Context::Code(CompleteStr(""), ErrorKind::Eof)))
     );
-    assert_eq!(
-        comment(CompleteStr("#")),
-        Err(Err::Incomplete(Needed::Size(1)))
-    );
+    assert_eq!(comment(CompleteStr("#")), Ok((CompleteStr(""), "")));
+    assert_eq!(comment(CompleteStr("#abc")), Ok((CompleteStr(""), "abc")));
+    assert_eq!(comment(CompleteStr("#\n\n")), Ok((CompleteStr("\n"), "")));
 }
 
 #[test]
