@@ -288,7 +288,7 @@ named!(blank_node<CompleteStr,BlankNode>, alt!(blank_node_label | anon));
 /// [18] `IRIREF ::= '<' ([^#x00-#x20<>"{}|^`\] | UCHAR)* '>'`
 /// #x00=NULL #01-#x1F=control codes #x20=space
 named!(iri_ref<CompleteStr,CompleteStr>, delimited!(
-    tag_s!("<"),take_while_s!(is_iri_ref),tag_s!(">")
+    tag_s!("<"),take_while!(is_iri_ref),tag_s!(">")
 ));
 
 /// [139s] `PNAME_NS ::= PN_PREFIX? ':'`
@@ -332,7 +332,7 @@ fn blank_node_label2(src: CompleteStr) -> IResult<CompleteStr, ()> {
     }
 }
 
-named!(blank_node_label3<CompleteStr,CompleteStr>, take_while_s!(is_pn_chars_or_dot));
+named!(blank_node_label3<CompleteStr,CompleteStr>, take_while!(is_pn_chars_or_dot));
 
 /// [144s] `LANGTAG ::= '@' [a-zA-Z]+ ('-' [a-zA-Z0-9]+)*`
 named!(langtag<CompleteStr,RDFLiteralType>, do_parse!(
@@ -476,10 +476,10 @@ fn is_pn_chars(c: char) -> bool {
 /// [167s] PN_PREFIX ::= PN_CHARS_BASE ((PN_CHARS | '.')* PN_CHARS)?
 named!(pn_prefix<CompleteStr,CompleteStr>, recognize!(tuple!(
     one_if!(is_pn_chars_base),
-    take_while_s!(is_pn_chars),
+    take_while!(is_pn_chars),
     fold_many0!(tuple!(
         tag_s!("."),
-        take_while1_s!(is_pn_chars)
+        take_while1!(is_pn_chars)
     ),(),|_,_|())
 )));
 
@@ -507,7 +507,7 @@ fn pn_local2(src: CompleteStr) -> IResult<CompleteStr, ()> {
 named!(pn_local3<CompleteStr,CompleteStr>,
     recognize!(many0!(alt!(pn_chars_colon | plx | tag_s!(".")))));
 
-named!(pn_chars_colon<CompleteStr,CompleteStr>, take_while1_s!(is_pn_chars_colon));
+named!(pn_chars_colon<CompleteStr,CompleteStr>, take_while1!(is_pn_chars_colon));
 
 fn is_pn_local_start(c: char) -> bool {
     c == ':' || is_digit(c) || is_pn_chars_u(c)
@@ -596,10 +596,10 @@ fn test_prefixed_name() {
     );
 }
 
-named!(alpha<CompleteStr,CompleteStr>, take_while1_s!(is_alpha));
-named!(alphanumeric<CompleteStr,CompleteStr>, take_while1_s!(is_alphanum));
-named!(digit<CompleteStr,CompleteStr>, take_while1_s!(is_digit));
-named!(opt_digit<CompleteStr,CompleteStr>, take_while_s!(is_digit));
+named!(alpha<CompleteStr,CompleteStr>, take_while1!(is_alpha));
+named!(alphanumeric<CompleteStr,CompleteStr>, take_while1!(is_alphanum));
+named!(digit<CompleteStr,CompleteStr>, take_while1!(is_digit));
+named!(opt_digit<CompleteStr,CompleteStr>, take_while!(is_digit));
 
 #[inline]
 fn is_iri_ref(chr: char) -> bool {
