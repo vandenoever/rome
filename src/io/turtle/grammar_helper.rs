@@ -57,7 +57,7 @@ fn hex_to_char(chars: &mut Chars, n: u8) -> Option<char> {
 
 /// [26] UCHAR ::= '\u' HEX HEX HEX HEX | '\U' HEX HEX HEX HEX HEX HEX HEX HEX
 /// [159s] ECHAR ::= '\' [tbnrf"'\]
-pub fn unescape<'a>(s: &str, result: &mut String) -> Result<()> {
+pub fn unescape(s: &str, result: &mut String) -> Result<()> {
     let mut chars = s.chars();
     while let Some(ch) = chars.next() {
         if ch == '\\' {
@@ -85,7 +85,7 @@ pub fn unescape<'a>(s: &str, result: &mut String) -> Result<()> {
     Ok(())
 }
 
-pub fn unescape_iri<'a>(s: &str, result: &mut String) -> Result<()> {
+pub fn unescape_iri(s: &str, result: &mut String) -> Result<()> {
     let mut chars = s.chars();
     while let Some(ch) = chars.next() {
         if ch == '\\' {
@@ -108,7 +108,7 @@ pub fn unescape_iri<'a>(s: &str, result: &mut String) -> Result<()> {
     Ok(())
 }
 
-pub fn pn_local_unescape<'a>(s: &str, result: &mut String) -> Result<()> {
+pub fn pn_local_unescape(s: &str, result: &mut String) -> Result<()> {
     let mut chars = s.chars();
     while let Some(ch) = chars.next() {
         if ch == '\\' {

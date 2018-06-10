@@ -30,7 +30,7 @@ where
 {
     let mut writer = NTriplesWriter::<_, G> {
         buffer: Vec::new(),
-        writer: writer,
+        writer,
         xsd_string: graph.find_datatype(constants::XSD_STRING),
         phantom: PhantomData,
     };

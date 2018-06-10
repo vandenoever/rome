@@ -29,7 +29,7 @@ where
             self.pos += 1;
             Some(Triple {
                 graph: self.graph,
-                triple: triple,
+                triple,
             })
         } else {
             None
@@ -72,7 +72,7 @@ where
             if triple < self.end {
                 Some(Triple {
                     graph: self.graph,
-                    triple: triple,
+                    triple,
                 })
             } else {
                 None

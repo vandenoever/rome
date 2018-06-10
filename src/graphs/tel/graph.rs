@@ -187,8 +187,8 @@ where
         };
         TripleRangeIterator {
             graph: &self.d,
-            pos: pos,
-            end: end,
+            pos,
+            end,
             phantom: PhantomData,
         }
     }
@@ -201,7 +201,7 @@ where
         TripleRangeIterator {
             graph: &self.d,
             pos: self.d.spo.len(),
-            end: end,
+            end,
             phantom: PhantomData,
         }
     }
@@ -384,8 +384,8 @@ where
                 graph_id: self.d.graph_id,
                 strings: self.d.strings.clone(),
                 datatype_or_lang: self.d.datatype_or_lang.clone(),
-                spo: spo,
-                ops: ops,
+                spo,
+                ops,
                 highest_blank_node: self.d.highest_blank_node,
                 lang_string_datatype_id: self.d.lang_string_datatype_id,
             },

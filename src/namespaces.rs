@@ -34,7 +34,7 @@ impl Namespaces {
             return;
         }
         self.namespaces.push(Namespace {
-            namespace: namespace,
+            namespace,
             prefix: Vec::from(prefix),
         });
     }

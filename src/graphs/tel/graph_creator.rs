@@ -57,14 +57,14 @@ where
             string_collector: StringCollector::with_capacity(capacity),
             datatype_lang_collector: dlc,
             triples: Vec::new(),
-            lang_string_datatype_id: lang_string_datatype_id,
+            lang_string_datatype_id,
             highest_blank_node: 0,
             phantom: PhantomData,
         }
     }
     fn add_s_iri(&mut self, s: StringId, p: StringId, ot: TripleObjectType, o: u32, d: u32) {
-        let t = SPO::triple(true, s.id, p.id, ot, o, d);
-        self.triples.push(t);
+        let triple = SPO::triple(true, s.id, p.id, ot, o, d);
+        self.triples.push(triple);
     }
     fn add_iri_blank(&mut self, s: StringId, p: StringId, o: u32) {
         self.highest_blank_node = cmp::max(self.highest_blank_node, o);
@@ -81,8 +81,8 @@ where
     }
     fn add_s_blank(&mut self, s: u32, p: StringId, ot: TripleObjectType, o: u32, d: u32) {
         self.highest_blank_node = cmp::max(self.highest_blank_node, s);
-        let t = SPO::triple(false, s, p.id, ot, o, d);
-        self.triples.push(t);
+        let triple = SPO::triple(false, s, p.id, ot, o, d);
+        self.triples.push(triple);
     }
     fn add_blank_blank(&mut self, s: u32, p: StringId, o: u32) {
         self.highest_blank_node = cmp::max(self.highest_blank_node, o);
@@ -229,8 +229,8 @@ where
                 graph_id: self.graph_id,
                 strings: string_collection,
                 datatype_or_lang: datatype_lang_collection,
-                spo: spo,
-                ops: ops,
+                spo,
+                ops,
                 lang_string_datatype_id: datatrans[self.lang_string_datatype_id].id,
                 highest_blank_node: self.highest_blank_node,
             },

@@ -18,8 +18,8 @@ where
     /// Create a new OntologyAdapter.
     pub fn new(graph: &'g G, preloaded_iris: Vec<Option<G::IRIPtr>>) -> OntologyAdapter<'g, G> {
         OntologyAdapter {
-            graph: graph,
-            preloaded_iris: preloaded_iris,
+            graph,
+            preloaded_iris,
         }
     }
     #[doc(hidden)]

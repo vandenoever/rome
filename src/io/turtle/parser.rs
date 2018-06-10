@@ -140,7 +140,7 @@ where
                 base: String::from(base),
                 prefixes: Namespaces::new(),
                 blank_nodes: HashMap::new(),
-                writer: writer,
+                writer,
                 buffer: String::new(),
                 iri: String::new(),
                 literal: String::new(),

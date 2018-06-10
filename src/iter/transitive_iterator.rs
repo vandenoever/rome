@@ -32,7 +32,7 @@ where
         TransitiveIterator {
             iter: iter.peekable(),
             iters: BTreeMap::new(),
-            f: f,
+            f,
         }
     }
     fn min_next(&mut self) -> Option<usize> {

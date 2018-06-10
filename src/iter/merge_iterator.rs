@@ -7,6 +7,7 @@ use std::iter::Peekable;
 ///
 /// Each unique value in the merged iterators is returned only once.
 /// The input iterators must be sorted.
+#[derive(Default)]
 pub struct MergeIterator<I>
 where
     I: SortedIterator,
@@ -20,10 +21,6 @@ where
     I: SortedIterator,
     I::Item: Ord,
 {
-    /// Create a new MergeIterator.
-    pub fn new() -> MergeIterator<I> {
-        MergeIterator { iters: Vec::new() }
-    }
     /// Create a new MergeIterator that expects `capacity` iterators.
     pub fn with_capacity(capacity: usize) -> MergeIterator<I> {
         MergeIterator {

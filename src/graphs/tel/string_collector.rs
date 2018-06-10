@@ -36,9 +36,9 @@ impl StringCollector {
         self.buffer.push_str(string);
         let index = self.refs.len() as u32;
         self.refs.push(StringRef {
-            start: start,
+            start,
             end: self.buffer.len() as u32,
-            index: index,
+            index,
         });
         StringId { id: index }
     }
@@ -104,7 +104,7 @@ impl StringCollector {
         starts.push(new_buffer.len() as u32);
         let collection = StringCollection {
             buffer: new_buffer,
-            starts: starts,
+            starts,
         };
         self.buffer.clear();
         self.refs.clear();

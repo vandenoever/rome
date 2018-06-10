@@ -44,7 +44,7 @@ where
     let mut writer = TurtleWriter::<_, G> {
         buffer: Vec::new(),
         base: String::new(),
-        writer: writer,
+        writer,
         xsd_string: graph.find_datatype(constants::XSD_STRING),
         xsd_boolean: graph.find_datatype(constants::XSD_BOOLEAN),
         xsd_integer: graph.find_datatype(constants::XSD_INTEGER),
@@ -54,7 +54,7 @@ where
         rdf_nil: graph.find_iri(constants::RDF_NIL),
         rdf_rest: graph.find_iri(constants::RDF_REST),
         rdf_type: graph.find_iri(constants::RDF_TYPE),
-        graph: graph,
+        graph,
     };
     for ns in namespaces.iter() {
         writer.write_prefix(ns)?;

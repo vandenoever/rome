@@ -103,8 +103,8 @@ named!(triples_subject<CompleteStr,Triples>, do_parse!(
     subject: subject >> tws >>
     predicated_objects_list: predicated_objects_list >>
     (Triples{
-        subject: subject,
-        predicated_objects_list: predicated_objects_list
+        subject,
+        predicated_objects_list
     })
 ));
 
@@ -170,8 +170,8 @@ named!(predicated_object<CompleteStr,PredicatedObjects>, do_parse!(
     tws >>
     objects: object_list >>
     (PredicatedObjects{
-        verb:verb,
-        objects:objects
+        verb,
+        objects
     })
 ));
 

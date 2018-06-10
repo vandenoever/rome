@@ -43,7 +43,7 @@ where
     let mut writer = TurtleWriter::<_, G> {
         buffer: Vec::new(),
         base: String::new(),
-        writer: writer,
+        writer,
         xsd_string: graph.find_datatype(constants::XSD_STRING),
         xsd_boolean: graph.find_datatype(constants::XSD_BOOLEAN),
         xsd_integer: graph.find_datatype(constants::XSD_INTEGER),

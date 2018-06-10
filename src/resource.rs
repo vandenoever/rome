@@ -59,10 +59,7 @@ pub trait ResourceBase<'g>: Clone + Ord {
             },
             None => adapter.empty_spo_range(),
         };
-        ObjectIter {
-            adapter: adapter,
-            iter: iter,
-        }
+        ObjectIter { adapter, iter }
     }
     /// Return this resource as an IRI, if it is an IRI.
     fn iri(&self) -> Option<IRI<'g, Self>> {

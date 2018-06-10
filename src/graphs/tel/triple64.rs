@@ -64,10 +64,10 @@ macro_rules! triple64_helper {
                 object: u32,
                 datatype_or_lang: u32,
             ) -> $name {
-                let subject = subject as u64;
-                let predicate = predicate as u64;
-                let object = object as u64;
-                let datatype_or_lang = datatype_or_lang as u64;
+                let subject = u64::from(subject);
+                let predicate = u64::from(predicate);
+                let object = u64::from(object);
+                let datatype_or_lang = u64::from(datatype_or_lang);
                 // check that the values are within the allowed range
                 assert!(subject & !BILMASK == 0, "subject out of range {}", subject);
                 assert!(
@@ -103,13 +103,13 @@ macro_rules! triple64_helper {
                 $name { value: val }
             }
             fn set_subject(&mut self, subject: u32) {
-                let subject = subject as u64;
+                let subject = u64::from(subject);
                 assert!(subject & !BILMASK == 0, "subject out of range {}", subject);
                 self.value &= !(BILMASK << $subject_offset);
                 self.value += subject << $subject_offset;
             }
             fn set_predicate(&mut self, predicate: u32) {
-                let predicate = predicate as u64;
+                let predicate = u64::from(predicate);
                 assert!(
                     predicate & !BILMASK == 0,
                     "predicate out of range {}",
@@ -119,13 +119,13 @@ macro_rules! triple64_helper {
                 self.value += predicate << $predicate_offset;
             }
             fn set_object(&mut self, object: u32) {
-                let object = object as u64;
+                let object = u64::from(object);
                 assert!(object & !BILMASK == 0, "object out of range {}", object);
                 self.value &= !(BILMASK << $object_offset);
                 self.value += object << $object_offset;
             }
             fn set_datatype_or_lang(&mut self, datatype_or_lang: u32) {
-                let datatype_or_lang = datatype_or_lang as u64;
+                let datatype_or_lang = u64::from(datatype_or_lang);
                 assert!(
                     datatype_or_lang & !DLMASK == 0,
                     "datatype_or_lang out of range {}",
