@@ -26,29 +26,19 @@ fn not_eol(c: char) -> bool {
     c != '\n' && c != '\r'
 }
 
-named!(comment<CompleteStr,&str>, do_parse!(
+named!(comment<CompleteStr,CompleteStr>, do_parse!(
     char!('#') >>
     comment: take_while!(not_eol) >>
     alt!(tag!("\n") | tag!("\r") | eof!()) >>
-    (&comment)
+    (comment)
 ));
 
 /// whitespace that may contain comments
-pub fn tws(mut str: CompleteStr) -> IResult<CompleteStr, ()> {
-    let mut last_len = str.len();
-    loop {
-        if let Ok((left, _)) = comment(str) {
-            str = left;
-        }
-        if let Ok((left, _)) = take_while_s!(str, is_ws) {
-            str = left;
-        }
-        if str.len() == last_len {
-            return Ok((str, ()));
-        }
-        last_len = str.len();
-    }
-}
+named!(pub tws<CompleteStr, ()>, fold_many0!(
+    alt!(map!(one_of!(" \t\n\r"),|_|())
+         | map!(comment,|_|())
+    ), (), |_,_|()
+));
 
 /// [2] `statement ::= directive | triples '.'`
 /// [3] `directive ::= prefixID | base | sparqlPrefix | sparqlBase`
@@ -451,9 +441,6 @@ fn find_long_quote(s: CompleteStr) -> Option<usize> {
 
 /// [161s] `WS ::= #x20 | #x9 | #xD | #xA`
 /// /* #x20=space #x9=character tabulation #xD=carriage return #xA=new line */
-fn is_ws(c: char) -> bool {
-    c == ' ' || c == '\t' || c == '\r' || c == '\n'
-}
 
 /// [162s] `ANON ::= '[' WS* ']'`
 named!(anon<CompleteStr,BlankNode>, do_parse!(
@@ -571,15 +558,30 @@ fn in_range(c: char, lower: u32, upper: u32) -> bool {
 #[test]
 fn test_comment() {
     use nom::Context;
-    assert_eq!(comment(CompleteStr("#\r\na")), Ok((CompleteStr("\na"), "")));
-    assert_eq!(comment(CompleteStr("#\n\ra")), Ok((CompleteStr("\ra"), "")));
+    assert_eq!(
+        comment(CompleteStr("#\r\na")),
+        Ok((CompleteStr("\na"), CompleteStr("")))
+    );
+    assert_eq!(
+        comment(CompleteStr("#\n\ra")),
+        Ok((CompleteStr("\ra"), CompleteStr("")))
+    );
     assert_eq!(
         comment(CompleteStr("")),
         Err(Err::Error(Context::Code(CompleteStr(""), ErrorKind::Eof)))
     );
-    assert_eq!(comment(CompleteStr("#")), Ok((CompleteStr(""), "")));
-    assert_eq!(comment(CompleteStr("#abc")), Ok((CompleteStr(""), "abc")));
-    assert_eq!(comment(CompleteStr("#\n\n")), Ok((CompleteStr("\n"), "")));
+    assert_eq!(
+        comment(CompleteStr("#")),
+        Ok((CompleteStr(""), CompleteStr("")))
+    );
+    assert_eq!(
+        comment(CompleteStr("#abc")),
+        Ok((CompleteStr(""), CompleteStr("abc")))
+    );
+    assert_eq!(
+        comment(CompleteStr("#\n\n")),
+        Ok((CompleteStr("\n"), CompleteStr("")))
+    );
 }
 
 #[test]
