@@ -2,6 +2,7 @@ use constants;
 use graph::*;
 use namespaces::*;
 use nom::IResult;
+use nom::types::CompleteStr;
 use std::fmt::Display;
 use std::io::{Result, Write};
 use super::grammar::{boolean, decimal, integer, double, pn_local};
@@ -75,7 +76,7 @@ impl<'a, 'g, W: 'a, G: 'g> TurtleWriter<'a, 'g, W, G>
         } else {
             match namespaces.find_prefix(iri) {
                 Some((prefix, local)) => {
-                    if let IResult::Done("", _) = pn_local(local) {
+                    if let Ok((CompleteStr(""), _)) = pn_local(CompleteStr(local)) {
                         self.write_prefixed_iri(prefix, local)
                     } else {
                         self.write_full_iri(iri)
@@ -127,12 +128,12 @@ impl<'a, 'g, W: 'a, G: 'g> TurtleWriter<'a, 'g, W, G>
         // if the literal matches the unquoted production for its datatype,
         // print without quotes
         let mut unquoted = false;
-        for i in &[(&self.xsd_boolean, boolean as fn(&str) -> IResult<&str, Literal>),
+        for i in &[(&self.xsd_boolean, boolean as fn(CompleteStr) -> IResult<CompleteStr, Literal>),
                    (&self.xsd_integer, integer),
                    (&self.xsd_decimal, decimal),
                    (&self.xsd_double, double)] {
             if &d == i.0 {
-                if let IResult::Done("", _) = (i.1)(v) {
+                if let Ok((CompleteStr(""), _)) = (i.1)(CompleteStr(v)) {
                     unquoted = true;
                     break;
                 }

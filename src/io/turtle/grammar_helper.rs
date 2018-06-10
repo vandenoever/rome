@@ -1,25 +1,26 @@
 use error::{Error, Result};
 use nom::ErrorKind;
-use nom::IResult;
+use nom::{IResult, Context, Err};
+use nom::types::CompleteStr;
 use nom::Needed;
 use std::char;
 use std::str::Chars;
 
-pub fn string_literal(str: &str,
+pub fn string_literal(str: CompleteStr,
                       ql: usize,
-                      starts_with: fn(&str) -> bool,
-                      find: fn(&str) -> Option<usize>)
-                      -> IResult<&str, &str> {
+                      starts_with: fn(CompleteStr) -> bool,
+                      find: fn(CompleteStr) -> Option<usize>)
+                      -> IResult<CompleteStr, &str> {
     if !starts_with(str) {
-        return IResult::Error(ErrorKind::Custom(0));
+        return Err(Err::Error(Context::Code(str, ErrorKind::Custom(0))));
     }
-    let hay = &str[ql..];
+    let hay = CompleteStr(&str[ql..]);
     if starts_with(hay) {
-        return IResult::Done(&hay[ql..], "");
+        return Ok((CompleteStr(&hay[ql..]), ""));
     }
     let mut offset = 0;
     loop {
-        let left = &hay[offset..];
+        let left = CompleteStr(&hay[offset..]);
         if let Some(i) = find(left) {
             offset += i;
             if !escaped(hay.as_bytes(), offset) {
@@ -27,10 +28,10 @@ pub fn string_literal(str: &str,
             }
             offset += 1;
         } else {
-            return IResult::Incomplete(Needed::Unknown);
+            return Err(Err::Incomplete(Needed::Unknown));
         }
     }
-    IResult::Done(&hay[offset + ql..], &hay[..offset])
+    Ok((CompleteStr(&hay[offset + ql..]), &hay[..offset]))
 }
 
 fn escaped(hay: &[u8], offset: usize) -> bool {
@@ -54,7 +55,7 @@ fn hex_to_char(chars: &mut Chars, n: u8) -> Option<char> {
 
 /// [26] UCHAR ::= '\u' HEX HEX HEX HEX | '\U' HEX HEX HEX HEX HEX HEX HEX HEX
 /// [159s] ECHAR ::= '\' [tbnrf"'\]
-pub fn unescape(s: &str, result: &mut String) -> Result<()> {
+pub fn unescape<'a>(s: &str, result: &mut String) -> Result<()> {
     let mut chars = s.chars();
     while let Some(ch) = chars.next() {
         if ch == '\\' {
@@ -82,7 +83,7 @@ pub fn unescape(s: &str, result: &mut String) -> Result<()> {
     Ok(())
 }
 
-pub fn unescape_iri(s: &str, result: &mut String) -> Result<()> {
+pub fn unescape_iri<'a>(s: &str, result: &mut String) -> Result<()> {
     let mut chars = s.chars();
     while let Some(ch) = chars.next() {
         if ch == '\\' {
@@ -105,7 +106,7 @@ pub fn unescape_iri(s: &str, result: &mut String) -> Result<()> {
     Ok(())
 }
 
-pub fn pn_local_unescape(s: &str, result: &mut String) -> Result<()> {
+pub fn pn_local_unescape<'a>(s: &str, result: &mut String) -> Result<()> {
     let mut chars = s.chars();
     while let Some(ch) = chars.next() {
         if ch == '\\' {

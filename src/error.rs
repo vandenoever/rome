@@ -15,7 +15,7 @@ pub enum Error {
     /// This error was caused by an IO error.
     IOError(io::Error),
     /// This error was caused by the nom parser.
-    NomError(nom::ErrorKind),
+    NomError(String),
     /// A custom error from `&'static str`.
     Custom(&'static str),
     /// A custom error from `String`.
@@ -38,9 +38,9 @@ impl From<io::Error> for Error {
         Error::IOError(io_error)
     }
 }
-impl From<nom::ErrorKind> for Error {
-    fn from(error: nom::ErrorKind) -> Error {
-        Error::NomError(error)
+impl<T: ::std::fmt::Debug> From<nom::Context<T>> for Error {
+    fn from(error: nom::Context<T>) -> Error {
+        Error::NomError(format!("{:?}", error))
     }
 }
 impl From<String> for Error {

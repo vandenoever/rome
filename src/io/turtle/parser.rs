@@ -2,7 +2,8 @@ use constants::*;
 use error::{Error, Result};
 use graph;
 use namespaces::*;
-use nom::IResult;
+use nom::Err;
+use nom::types::CompleteStr;
 use regex::Regex;
 use std::collections::HashMap;
 use std::marker::PhantomData;
@@ -11,26 +12,26 @@ use super::grammar_helper::*;
 use super::grammar_structs::*;
 
 struct StatementIterator<'a> {
-    src: &'a str,
+    src: CompleteStr<'a>,
     done: bool,
 }
 
 impl<'a> StatementIterator<'a> {
     pub fn new(src: &str) -> Result<StatementIterator> {
-        match tws(src) {
-            IResult::Done(left, _) => {
+        match tws(CompleteStr(src)) {
+            Ok((left, _)) => {
                 Ok(StatementIterator {
                     src: left,
                     done: false,
                 })
             }
-            IResult::Error(_) => Err(Error::Custom("cannot start parsing")),
-            IResult::Incomplete(_) => {
+            Err(Err::Incomplete(_)) => {
                 Ok(StatementIterator {
-                    src: src,
+                    src: CompleteStr(src),
                     done: false,
                 })
             }
+            Err(_) => Err(Error::Custom("cannot start parsing")),
         }
     }
 }
@@ -44,28 +45,28 @@ impl<'a> Iterator for StatementIterator<'a> {
         }
         let mut r;
         match statement(self.src) {
-            IResult::Done(left, s) => {
+            Ok((left, s)) => {
                 r = Some(Ok(s));
                 self.src = left;
             }
-            IResult::Error(e) => {
-                r = Some(Err(Error::from(e)));
-                self.done = true;
-            }
-            IResult::Incomplete(_) => {
+            Err(Err::Incomplete(_)) => {
                 self.done = true;
                 r = None;
             }
-        }
-        match tws(self.src) {
-            IResult::Done(left, _) => {
-                self.src = left;
-            }
-            IResult::Error(_) => {
-                r = Some(Err(Error::Custom("error parsing whitespace")));
+            Err(Err::Error(e)) | Err(Err::Failure(e)) => {
+                r = Some(Err(Error::from(e)));
                 self.done = true;
             }
-            IResult::Incomplete(_) => {
+        }
+        match tws(self.src) {
+            Ok((left, _)) => {
+                self.src = left;
+            }
+            Err(Err::Incomplete(_)) => {
+                self.done = true;
+            }
+            Err(_) => {
+                r = Some(Err(Error::Custom("error parsing whitespace")));
                 self.done = true;
             }
         }
