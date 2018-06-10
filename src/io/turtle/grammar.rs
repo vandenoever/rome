@@ -47,37 +47,37 @@ named!(pub statement<CompleteStr,Statement>, alt!(statement_triples
 
 named!(statement_triples<CompleteStr,Statement>, do_parse!(
     triples: triples >> tws >>
-    tag_s!(".") >>
+    char!('.') >>
     (Statement::Triples(triples))
 ));
 
 /// [4] `prefixID ::= '@prefix' PNAME_NS IRIREF '.'`
 named!(prefix_id<CompleteStr,Statement>, do_parse!(
-    tag_s!("@prefix") >> tws >>
+    tag!("@prefix") >> tws >>
     pname_ns: pname_ns >> tws >>
     iri_ref: iri_ref >> tws >>
-    tag_s!(".") >>
+    char!('.') >>
     (Statement::Prefix(pname_ns.0, iri_ref.0))
 ));
 
 /// [5] `base ::= '@base' IRIREF '.'`
 named!(base<CompleteStr,Statement>, do_parse!(
-    tag_s!("@base") >> tws >>
+    tag!("@base") >> tws >>
     iri_ref: iri_ref >> tws >>
-    tag_s!(".") >>
+    char!('.') >>
     (Statement::Base(iri_ref.0))
 ));
 
 /// [5s] `sparqlBase ::= "BASE" IRIREF`
 named!(sparql_base<CompleteStr,Statement>, do_parse!(
-    tag_no_case_s!("BASE") >> tws >>
+    tag_no_case!("BASE") >> tws >>
     iri_ref: iri_ref >>
     (Statement::Base(iri_ref.0))
 ));
 
 /// [6s] `sparqlPrefix ::= "PREFIX" PNAME_NS IRIREF`
 named!(sparql_prefix<CompleteStr,Statement>, do_parse!(
-    tag_no_case_s!("PREFIX") >> tws >>
+    tag_no_case!("PREFIX") >> tws >>
     pname_ns: pname_ns >> tws >>
     iri_ref: iri_ref >>
     (Statement::Prefix(pname_ns.0, iri_ref.0))
@@ -149,7 +149,7 @@ fn predicated_objects_list(mut str: CompleteStr) -> IResult<CompleteStr, Vec<Pre
 }
 
 named!(predicated_object_sep<CompleteStr,()>,
-    fold_many1!(tuple!(tws, tag_s!(";"), tws),(),|_,_|())
+    fold_many1!(tuple!(tws, char!(';'), tws),(),|_,_|())
 );
 
 named!(predicated_object<CompleteStr,PredicatedObjects>, do_parse!(
@@ -164,7 +164,7 @@ named!(predicated_object<CompleteStr,PredicatedObjects>, do_parse!(
 
 /// [8] `objectList ::= object (',' object)*`
 named!(object_list<CompleteStr,Vec<Object> >, separated_nonempty_list!(
-    tuple!(tws, tag_s!(","), tws),
+    tuple!(tws, char!(','), tws),
     object
 ));
 
@@ -173,7 +173,7 @@ named!(verb<CompleteStr,IRI>, alt!(iri|a));
 
 named!(a<CompleteStr,IRI>, value!(
     IRI::IRI(constants::RDF_TYPE),
-    tag_s!("a")
+    char!('a')
 ));
 
 /// [10] `subject ::= iri | BlankNode | collection`
@@ -199,18 +199,18 @@ named!(literal<CompleteStr,Literal>, alt!(rdfliteral | boolean | double | decima
 
 /// [14] `blankNodePropertyList ::= '[' predicateObjectList ']'`
 named!(blank_node_property_list<CompleteStr,Vec<PredicatedObjects> >, do_parse!(
-    tag_s!("[") >> tws >>
+    char!('[') >> tws >>
     pol: predicated_objects_list >> tws >>
-    tag_s!("]") >> (pol)
+    char!(']') >> (pol)
 ));
 
 /// [15] `collection ::= '(' object* ')'`
 named!(collection<CompleteStr,Vec<Object> >, do_parse!(
-    tag_s!("(") >> tws >>
+    char!('(') >> tws >>
     objects: many0!(do_parse!(
         object: object >> tws >>
         (object))) >>
-    tag_s!(")") >> (objects)
+    char!(')') >> (objects)
 ));
 
 /// [16] `NumericLiteral ::= INTEGER | DECIMAL | DOUBLE`
@@ -247,14 +247,14 @@ named!(rdfliteral<CompleteStr,Literal>, do_parse!(
 ));
 
 named!(iri_ref_literal<CompleteStr,RDFLiteralType>, do_parse!(
-    tag_s!("^^") >>
+    tag!("^^") >>
     iri: iri >>
     (RDFLiteralType::DataType(iri))
 ));
 
 /// [133s] `BooleanLiteral ::= 'true' | 'false'`
 named!(pub boolean<CompleteStr,Literal>, do_parse!(
-    b: alt!(tag_s!("true") | tag_s!("false")) >>
+    b: alt!(tag!("true") | tag!("false")) >>
     (Literal {
         lexical: b.0,
         datatype: Datatype::XSDBoolean,
@@ -274,7 +274,7 @@ named!(iri<CompleteStr,IRI>, alt!(iri_iri|prefixed_name));
 /// [136s]  `PrefixedName ::= PNAME_LN | PNAME_NS`
 named!(prefixed_name<CompleteStr,IRI>, do_parse!(
     pn_prefix: opt!(pn_prefix) >>
-    tag_s!(":") >>
+    char!(':') >>
     pn_local: opt!(pn_local) >>
     (IRI::PrefixedName(
         pn_prefix.map(|p|p.0).unwrap_or(""),
@@ -288,13 +288,13 @@ named!(blank_node<CompleteStr,BlankNode>, alt!(blank_node_label | anon));
 /// [18] `IRIREF ::= '<' ([^#x00-#x20<>"{}|^`\] | UCHAR)* '>'`
 /// #x00=NULL #01-#x1F=control codes #x20=space
 named!(iri_ref<CompleteStr,CompleteStr>, delimited!(
-    tag_s!("<"),take_while!(is_iri_ref),tag_s!(">")
+    char!('<'),take_while!(is_iri_ref),char!('>')
 ));
 
 /// [139s] `PNAME_NS ::= PN_PREFIX? ':'`
 named!(pname_ns<CompleteStr,CompleteStr>, do_parse!(
     pn_prefix: opt!(pn_prefix) >>
-    tag_s!(":") >>
+    char!(':') >>
     (pn_prefix.unwrap_or(CompleteStr("")))
 ));
 
@@ -336,17 +336,17 @@ named!(blank_node_label3<CompleteStr,CompleteStr>, take_while!(is_pn_chars_or_do
 
 /// [144s] `LANGTAG ::= '@' [a-zA-Z]+ ('-' [a-zA-Z0-9]+)*`
 named!(langtag<CompleteStr,RDFLiteralType>, do_parse!(
-    tag_s!("@") >>
+    char!('@') >>
     langtag: recognize!(tuple!(
         alpha,
-        opt!(tuple!(tag_s!("-"), alphanumeric))
+        opt!(tuple!(char!('-'), alphanumeric))
     )) >>
     (RDFLiteralType::LangTag(langtag.0))
 ));
 
 /// [19] `INTEGER ::= [+-]? [0-9]+`
 named!(pub integer<CompleteStr,Literal>, map!(recognize!(tuple!(
-    opt!(alt!(tag_s!("+") | tag_s!("-"))), digit)),
+    opt!(one_of!("+-")), digit)),
     (|integer|{
         Literal {
             lexical: integer.0,
@@ -358,7 +358,7 @@ named!(pub integer<CompleteStr,Literal>, map!(recognize!(tuple!(
 
 /// [20] `DECIMAL ::= [+-]? [0-9]* '.' [0-9]+`
 named!(pub decimal<CompleteStr,Literal>, map!(recognize!(tuple!(
-    opt!(alt!(tag_s!("+") | tag_s!("-"))), opt_digit, tag_s!("."), digit)),
+    opt!(one_of!("+-")), opt_digit, char!('.'), digit)),
     (|decimal|{
         Literal {
             lexical: decimal.0,
@@ -370,10 +370,10 @@ named!(pub decimal<CompleteStr,Literal>, map!(recognize!(tuple!(
 
 /// [21] `DOUBLE ::= [+-]? ([0-9]+ '.' [0-9]* EXPONENT | '.' [0-9]+ EXPONENT | [0-9]+ EXPONENT)`
 named!(pub double<CompleteStr,Literal>, map!(recognize!(tuple!(
-    opt!(alt!(tag_s!("+") | tag_s!("-"))),
+    opt!(one_of!("+-")),
     alt!(
-        recognize!(tuple!(digit,tag_s!("."), opt_digit, exponent)) |
-        recognize!(tuple!(opt!(tag_s!(".")), digit, exponent))
+        recognize!(tuple!(digit,char!('.'), opt_digit, exponent)) |
+        recognize!(tuple!(opt!(char!('.')), digit, exponent))
     ))),
     (|double|{
         Literal {
@@ -386,7 +386,7 @@ named!(pub double<CompleteStr,Literal>, map!(recognize!(tuple!(
 
 /// [154s] `EXPONENT ::= [eE] [+-]? [0-9]+`
 named!(exponent<CompleteStr,()>, map!(tuple!(
-    alt!(tag_s!("E") | tag_s!("e")),opt!(alt!(tag_s!("+") | tag_s!("-"))), digit),
+    one_of!("Ee"),opt!(one_of!("+-")), digit),
     (|_|())
 ));
 
@@ -444,9 +444,9 @@ fn find_long_quote(s: CompleteStr) -> Option<usize> {
 
 /// [162s] `ANON ::= '[' WS* ']'`
 named!(anon<CompleteStr,BlankNode>, do_parse!(
-    tag_s!("[") >>
+    char!('[') >>
     tws >>
-    tag_s!("]") >> (BlankNode::Anon)
+    char!(']') >> (BlankNode::Anon)
 ));
 
 /// `[163s] PN_CHARS_BASE ::= [A-Z] | [a-z] | [#x00C0-#x00D6] | [#x00D8-#x00F6]`
@@ -478,7 +478,7 @@ named!(pn_prefix<CompleteStr,CompleteStr>, recognize!(tuple!(
     one_if!(is_pn_chars_base),
     take_while!(is_pn_chars),
     fold_many0!(tuple!(
-        tag_s!("."),
+        char!('.'),
         take_while1!(is_pn_chars)
     ),(),|_,_|())
 )));
@@ -505,7 +505,7 @@ fn pn_local2(src: CompleteStr) -> IResult<CompleteStr, ()> {
 }
 
 named!(pn_local3<CompleteStr,CompleteStr>,
-    recognize!(many0!(alt!(pn_chars_colon | plx | tag_s!(".")))));
+    recognize!(many0!(alt!(pn_chars_colon | plx | tag!(".")))));
 
 named!(pn_chars_colon<CompleteStr,CompleteStr>, take_while1!(is_pn_chars_colon));
 
@@ -523,7 +523,7 @@ named!(plx<CompleteStr,CompleteStr>, alt!(percent | pn_local_esc));
 /// [170s] PERCENT ::= '%' HEX HEX
 /// [171s] HEX ::= [0-9] | [A-F] | [a-f]
 named!(percent<CompleteStr,CompleteStr>, recognize!(tuple!(
-    tag_s!("%"),
+    char!('%'),
     one_if!(is_hex),
     one_if!(is_hex)
 )));
@@ -531,7 +531,7 @@ named!(percent<CompleteStr,CompleteStr>, recognize!(tuple!(
 /// [172s] PN_LOCAL_ESC ::= '\' ('_' | '~' | '.' | '-' | '!' | '$' | '&' | "'"
 /// | '(' | ')' | '*' | '+' | ',' | ';' | '=' | '/' | '?' | '#' | '@' | '%')
 named!(pn_local_esc<CompleteStr,CompleteStr>, recognize!(tuple!(
-    tag_s!("\\"),
+    char!('\\'),
     one_if!(|c| "_~.-!$&'()*+,;=/?#@%".contains(c))
 )));
 
