@@ -586,11 +586,11 @@ fn test_comment() {
 fn test_prefixed_name() {
     assert_eq!(
         prefixed_name(CompleteStr("a:a ")),
-        Ok((CompleteStr(&" "[..]), IRI::PrefixedName("a", "a")))
+        Ok((CompleteStr(" "), IRI::PrefixedName("a", "a")))
     );
     assert_eq!(
         prefixed_name(CompleteStr(": ")),
-        Ok((CompleteStr(&" "[..]), IRI::PrefixedName("", "")))
+        Ok((CompleteStr(" "), IRI::PrefixedName("", "")))
     );
 }
 
@@ -610,7 +610,7 @@ named!(iri_iri<CompleteStr,IRI>, map!(iri_ref, |v| IRI::IRI(v.0)));
 fn test_iri() {
     assert_eq!(
         iri(CompleteStr("<urn:123>")),
-        Ok((CompleteStr(&""[..]), IRI::IRI("urn:123")))
+        Ok((CompleteStr(""), IRI::IRI("urn:123")))
     );
 }
 
@@ -618,7 +618,7 @@ fn test_iri() {
 fn test_string_literal_quote() {
     assert_eq!(
         string_literal_quote(CompleteStr("\"\\\\\"")),
-        Ok((CompleteStr(&""[..]), "\\\\"))
+        Ok((CompleteStr(""), "\\\\"))
     );
 }
 
@@ -626,7 +626,7 @@ fn test_string_literal_quote() {
 fn test_string_literal_single_quote() {
     assert_eq!(
         string_literal_single_quote(CompleteStr("''")),
-        Ok((CompleteStr(&""[..]), ""))
+        Ok((CompleteStr(""), ""))
     );
 }
 
@@ -634,7 +634,7 @@ fn test_string_literal_single_quote() {
 fn test_string_literal_long_single_quote() {
     assert_eq!(
         string_literal_long_single_quote(CompleteStr("''''''")),
-        Ok((CompleteStr(&""[..]), ""))
+        Ok((CompleteStr(""), ""))
     );
 }
 
@@ -642,11 +642,11 @@ fn test_string_literal_long_single_quote() {
 fn test_string_literal_long_quote() {
     assert_eq!(
         string_literal_long_quote(CompleteStr("\"\"\"\\U0001f435\"\"\"")),
-        Ok((CompleteStr(&""[..]), "\\U0001f435"))
+        Ok((CompleteStr(""), "\\U0001f435"))
     );
     assert_eq!(
         string_literal_long_quote(CompleteStr("\"\"\"first long literal\"\"\"")),
-        Ok((CompleteStr(&""[..]), "first long literal"))
+        Ok((CompleteStr(""), "first long literal"))
     );
 }
 
@@ -654,11 +654,11 @@ fn test_string_literal_long_quote() {
 fn test_langtag() {
     assert_eq!(
         langtag(CompleteStr("@nl ")),
-        Ok((CompleteStr(&" "[..]), RDFLiteralType::LangTag("nl")))
+        Ok((CompleteStr(" "), RDFLiteralType::LangTag("nl")))
     );
     assert_eq!(
         langtag(CompleteStr("@nl-NL ")),
-        Ok((CompleteStr(&" "[..]), RDFLiteralType::LangTag("nl-NL")))
+        Ok((CompleteStr(" "), RDFLiteralType::LangTag("nl-NL")))
     );
 }
 
@@ -669,10 +669,7 @@ fn test_rdfliteral() {
         datatype: Datatype::XSDString,
         language: None,
     };
-    assert_eq!(
-        rdfliteral(CompleteStr("'' ")),
-        Ok((CompleteStr(&" "[..]), r))
-    );
+    assert_eq!(rdfliteral(CompleteStr("'' ")), Ok((CompleteStr(" "), r)));
 }
 #[cfg(test)]
 fn literal_true<'a>() -> Literal<'a> {
@@ -711,12 +708,12 @@ fn literal_d11<'a>() -> Literal<'a> {
 fn test_integer() {
     assert_eq!(
         literal(CompleteStr("11 ")),
-        Ok((CompleteStr(&" "[..]), literal_11()))
+        Ok((CompleteStr(" "), literal_11()))
     );
     assert_eq!(
         literal(CompleteStr("+1 ")),
         Ok((
-            CompleteStr(&" "[..]),
+            CompleteStr(" "),
             Literal {
                 lexical: "+1",
                 datatype: Datatype::XSDInteger,
@@ -727,7 +724,7 @@ fn test_integer() {
     assert_eq!(
         integer(CompleteStr("-1 ")),
         Ok((
-            CompleteStr(&" "[..]),
+            CompleteStr(" "),
             Literal {
                 lexical: "-1",
                 datatype: Datatype::XSDInteger,
@@ -741,12 +738,12 @@ fn test_integer() {
 fn test_decimal() {
     assert_eq!(
         literal(CompleteStr("11.1 ")),
-        Ok((CompleteStr(&" "[..]), literal_d11()))
+        Ok((CompleteStr(" "), literal_d11()))
     );
     assert_eq!(
         literal(CompleteStr("+1.1 ")),
         Ok((
-            CompleteStr(&" "[..]),
+            CompleteStr(" "),
             Literal {
                 lexical: "+1.1",
                 datatype: Datatype::XSDDecimal,
@@ -757,7 +754,7 @@ fn test_decimal() {
     assert_eq!(
         literal(CompleteStr("-1.1 ")),
         Ok((
-            CompleteStr(&" "[..]),
+            CompleteStr(" "),
             Literal {
                 lexical: "-1.1",
                 datatype: Datatype::XSDDecimal,
@@ -768,7 +765,7 @@ fn test_decimal() {
     assert_eq!(
         literal(CompleteStr(".1 ")),
         Ok((
-            CompleteStr(&" "[..]),
+            CompleteStr(" "),
             Literal {
                 lexical: ".1",
                 datatype: Datatype::XSDDecimal,
@@ -782,11 +779,11 @@ fn test_decimal() {
 fn test_boolean() {
     assert_eq!(
         boolean(CompleteStr("true")),
-        Ok((CompleteStr(&""[..]), literal_true()))
+        Ok((CompleteStr(""), literal_true()))
     );
     assert_eq!(
         boolean(CompleteStr("false")),
-        Ok((CompleteStr(&""[..]), literal_false()))
+        Ok((CompleteStr(""), literal_false()))
     );
 }
 
@@ -794,11 +791,11 @@ fn test_boolean() {
 fn test_literal() {
     assert_eq!(
         literal(CompleteStr("true")),
-        Ok((CompleteStr(&""[..]), literal_true()))
+        Ok((CompleteStr(""), literal_true()))
     );
     assert_eq!(
         literal(CompleteStr("false")),
-        Ok((CompleteStr(&""[..]), literal_false()))
+        Ok((CompleteStr(""), literal_false()))
     );
 }
 
@@ -807,7 +804,7 @@ fn test_object() {
     assert_eq!(
         object(CompleteStr("_:b1 ")),
         Ok((
-            CompleteStr(&" "[..]),
+            CompleteStr(" "),
             Object::BlankNode(BlankNode::BlankNode("b1"))
         ))
     );
@@ -818,7 +815,7 @@ fn test_object() {
     });
     assert_eq!(
         object(CompleteStr("\"\"\"first long literal\"\"\" ")),
-        Ok((CompleteStr(&" "[..]), long))
+        Ok((CompleteStr(" "), long))
     );
 }
 
@@ -826,11 +823,11 @@ fn test_object() {
 fn test_blank_node_label() {
     assert_eq!(
         blank_node_label(CompleteStr("_:b1 ")),
-        Ok((CompleteStr(&" "[..]), BlankNode::BlankNode("b1")))
+        Ok((CompleteStr(" "), BlankNode::BlankNode("b1")))
     );
     assert_eq!(
         blank_node_label(CompleteStr("_:b1. ")),
-        Ok((CompleteStr(&". "[..]), BlankNode::BlankNode("b1")))
+        Ok((CompleteStr(". "), BlankNode::BlankNode("b1")))
     );
 }
 
@@ -843,7 +840,7 @@ fn test_object_list() {
     ];
     assert_eq!(
         object_list(CompleteStr("true, 11 , false ")),
-        Ok((CompleteStr(&" "[..]), v))
+        Ok((CompleteStr(" "), v))
     );
 }
 
@@ -860,7 +857,7 @@ fn test_predicated_objects() {
     };
     assert_eq!(
         predicated_objects_list(CompleteStr("<urn:123> 1 ")),
-        Ok((CompleteStr(&" "[..]), vec![po]))
+        Ok((CompleteStr(" "), vec![po]))
     );
 }
 
@@ -883,7 +880,7 @@ fn test_triples() {
     };
     assert_eq!(
         triples(CompleteStr("<urn:123> <urn:123> 1 ")),
-        Ok((CompleteStr(&" "[..]), t))
+        Ok((CompleteStr(" "), t))
     );
 }
 
@@ -902,7 +899,7 @@ fn test_statement_triples() {
     let s = Statement::Triples(t);
     assert_eq!(
         statement_triples(CompleteStr(": : :.")),
-        Ok((CompleteStr(&""[..]), s))
+        Ok((CompleteStr(""), s))
     );
 }
 
@@ -910,11 +907,11 @@ fn test_statement_triples() {
 fn test_prefix_id() {
     assert_eq!(
         prefix_id(CompleteStr("@prefix a.b.c: <urn> .")),
-        Ok((CompleteStr(&""[..]), Statement::Prefix("a.b.c", "urn")))
+        Ok((CompleteStr(""), Statement::Prefix("a.b.c", "urn")))
     );
     assert_eq!(
         prefix_id(CompleteStr("@prefix : <urn> .")),
-        Ok((CompleteStr(&""[..]), Statement::Prefix("", "urn")))
+        Ok((CompleteStr(""), Statement::Prefix("", "urn")))
     );
 }
 
@@ -922,7 +919,7 @@ fn test_prefix_id() {
 fn test_base() {
     assert_eq!(
         base(CompleteStr("@base <urn> .")),
-        Ok((CompleteStr(&""[..]), Statement::Base("urn")))
+        Ok((CompleteStr(""), Statement::Base("urn")))
     );
 }
 
@@ -930,7 +927,7 @@ fn test_base() {
 fn test_sparql_base() {
     assert_eq!(
         sparql_base(CompleteStr("BASE <urn>")),
-        Ok((CompleteStr(&""[..]), Statement::Base("urn")))
+        Ok((CompleteStr(""), Statement::Base("urn")))
     );
 }
 
@@ -938,7 +935,7 @@ fn test_sparql_base() {
 fn test_sparql_prefix() {
     assert_eq!(
         sparql_prefix(CompleteStr("PREFIX a.b.c: <urn>")),
-        Ok((CompleteStr(&""[..]), Statement::Prefix("a.b.c", "urn")))
+        Ok((CompleteStr(""), Statement::Prefix("a.b.c", "urn")))
     );
 }
 
@@ -947,6 +944,6 @@ fn test_pn_local() {
     // dot does not belong in the pn_local
     assert_eq!(
         pn_local(CompleteStr("c. ")),
-        Ok((CompleteStr(&". "[..]), CompleteStr("c")))
+        Ok((CompleteStr(". "), CompleteStr("c")))
     );
 }
