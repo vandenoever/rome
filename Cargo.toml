@@ -10,14 +10,14 @@ documentation = "https://www.vandenoever.info/rust/rome/"
 
 [dependencies]
 # for the library
-lazy_static = "^0.2.8"
-nom = "^4.0"
-rand = "0.3.16"
-regex = "0.2.2"
-clippy = {version = "0.0.158", optional = true}
+lazy_static = "1"
+nom = "4"
+rand = "0.5"
+regex = "1"
+clippy = {version = "0.0.302", optional = true}
 
 # for the examples
-time = "0.1.38"
+time = "0.1"
 
 [features]
 default = []
