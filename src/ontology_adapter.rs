@@ -29,18 +29,18 @@ where
     #[doc(hidden)]
     pub fn iter_s_p(
         &self,
-        subject: BlankNodeOrIRI<'g, G::BlankNodePtr, G::IRIPtr>,
-        predicate: G::IRIPtr,
+        subject: &BlankNodeOrIRI<'g, G::BlankNodePtr, G::IRIPtr>,
+        predicate: &G::IRIPtr,
     ) -> G::SPORangeIter {
-        self.graph.iter_s_p(&subject, &predicate)
+        self.graph.iter_s_p(subject, predicate)
     }
     #[doc(hidden)]
     pub fn iter_o_p(
         &self,
-        object: Resource<'g, G::BlankNodePtr, G::IRIPtr, G::LiteralPtr>,
-        predicate: G::IRIPtr,
+        object: &Resource<'g, G::BlankNodePtr, G::IRIPtr, G::LiteralPtr>,
+        predicate: &G::IRIPtr,
     ) -> G::OPSRangeIter {
-        self.graph.iter_o_p(&object, &predicate)
+        self.graph.iter_o_p(object, predicate)
     }
     #[doc(hidden)]
     pub fn empty_spo_range(&self) -> G::SPORangeIter {

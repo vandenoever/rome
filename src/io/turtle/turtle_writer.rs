@@ -127,7 +127,7 @@ where
         }
         self.writer.write_all(&self.buffer[..])
     }
-    fn write_literal(&mut self, literal: G::LiteralPtr, namespaces: &Namespaces) -> Result<()> {
+    fn write_literal(&mut self, literal: &G::LiteralPtr, namespaces: &Namespaces) -> Result<()> {
         let d = Some(literal.datatype());
         let v = literal.as_str();
         // if the literal matches the unquoted production for its datatype,
@@ -186,7 +186,7 @@ where
         match object {
             Resource::BlankNode(blank_node, _) => self.write_blank_node(blank_node),
             Resource::IRI(iri) => self.write_iri(iri.as_str(), namespaces),
-            Resource::Literal(literal) => self.write_literal(literal, namespaces),
+            Resource::Literal(literal) => self.write_literal(&literal, namespaces),
         }
     }
     fn write_triple<T>(&mut self, triple: &T, namespaces: &Namespaces) -> Result<()>

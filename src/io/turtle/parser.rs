@@ -262,10 +262,10 @@ where
         }
         Ok(())
     }
-    fn get_datatype(&mut self, datatype: Datatype) -> Result<W::Datatype> {
+    fn get_datatype(&mut self, datatype: &Datatype) -> Result<W::Datatype> {
         Ok(match datatype {
             Datatype::IRI(iri) => {
-                self.resolve_iri(iri)?;
+                self.resolve_iri(*iri)?;
                 self.writer.create_datatype(&self.iri)
             }
             Datatype::RDFLangString => {
@@ -314,7 +314,7 @@ where
     cache.clone().unwrap()
 }
 
-fn make_blank<'a, W: 'a>(blank_node: BlankNode<'a>, state: &mut ParserState<'a, W>) -> W::BlankNode
+fn make_blank<'a, W: 'a>(blank_node: &BlankNode<'a>, state: &mut ParserState<'a, W>) -> W::BlankNode
 where
     W: graph::GraphWriter<'a>,
 {
@@ -381,7 +381,7 @@ where
 {
     Ok(match subject {
         Subject::BlankNode(blank) => {
-            graph::WriterBlankNodeOrIRI::BlankNode(make_blank(blank, state), PhantomData)
+            graph::WriterBlankNodeOrIRI::BlankNode(make_blank(&blank, state), PhantomData)
         }
         Subject::IRI(iri) => {
             state.resolve_iri(iri)?;
@@ -404,7 +404,7 @@ where
             graph::WriterResource::IRI(state.writer.create_iri(&state.iri))
         }
         Object::BlankNode(blank) => {
-            graph::WriterResource::BlankNode(make_blank(blank, state), PhantomData)
+            graph::WriterResource::BlankNode(make_blank(&blank, state), PhantomData)
         }
         Object::Collection(collection) => s2o(make_collection(collection, state)?),
         Object::Literal(l) => {
@@ -415,7 +415,7 @@ where
                     .writer
                     .create_literal_language(&state.literal, &language)
             } else {
-                let datatype = state.get_datatype(l.datatype)?;
+                let datatype = state.get_datatype(&l.datatype)?;
                 state
                     .writer
                     .create_literal_datatype(&state.literal, &datatype)
@@ -424,14 +424,14 @@ where
         Object::BlankNodePropertyList(predicated_objects_list) => {
             let blank = state.new_blank();
             let subject = graph::WriterBlankNodeOrIRI::BlankNode(blank.clone(), PhantomData);
-            add_predicated_objects(subject, predicated_objects_list, state)?;
+            add_predicated_objects(&subject, predicated_objects_list, state)?;
             graph::WriterResource::BlankNode(blank, PhantomData)
         }
     })
 }
 
 fn add_predicated_objects<'a, W>(
-    subject: graph::WriterBlankNodeOrIRI<'a, W>,
+    subject: &graph::WriterBlankNodeOrIRI<'a, W>,
     predicated_objects_list: Vec<PredicatedObjects<'a>>,
     state: &mut ParserState<'a, W>,
 ) -> Result<()>
@@ -443,7 +443,7 @@ where
         let predicate = state.writer.create_iri(&state.iri);
         for o in po.objects {
             let object = make_object(o, state)?;
-            state.writer.add(&subject, &predicate, &object);
+            state.writer.add(subject, &predicate, &object);
         }
     }
     Ok(())
@@ -454,7 +454,7 @@ where
     W: graph::GraphWriter<'a>,
 {
     let subject = make_subject(new_triples.subject, state)?;
-    add_predicated_objects(subject, new_triples.predicated_objects_list, state)
+    add_predicated_objects(&subject, new_triples.predicated_objects_list, state)
 }
 
 #[test]

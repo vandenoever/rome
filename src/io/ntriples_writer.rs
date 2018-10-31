@@ -74,7 +74,7 @@ where
         }
         self.writer.write_all(&self.buffer[..])
     }
-    fn write_literal(&mut self, literal: G::LiteralPtr) -> Result<()> {
+    fn write_literal(&mut self, literal: &G::LiteralPtr) -> Result<()> {
         self.writer.write_all(b"\"")?;
         self.write_literal_value(literal.as_str())?;
         self.writer.write_all(b"\"")?;
@@ -106,7 +106,7 @@ where
         match object {
             Resource::BlankNode(blank_node, _) => self.write_blank_node(blank_node),
             Resource::IRI(iri) => self.write_iri(iri.as_str()),
-            Resource::Literal(literal) => self.write_literal(literal),
+            Resource::Literal(literal) => self.write_literal(&literal),
         }
     }
     fn write_ntriple<T: 'g>(&mut self, triple: &T) -> Result<()>

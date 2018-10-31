@@ -54,7 +54,7 @@ pub trait ResourceBase<'g>: Clone + Ord {
         let adapter = self.adapter();
         let iter = match predicate {
             Some(predicate) => match self.this().to_blank_node_or_iri() {
-                Some(subject) => adapter.iter_s_p(subject, (*predicate).clone()),
+                Some(subject) => adapter.iter_s_p(&subject, predicate),
                 None => adapter.empty_spo_range(),
             },
             None => adapter.empty_spo_range(),
@@ -370,7 +370,7 @@ impl<'g, G: 'g> resource::ResourceBase<'g> for $name<'g, G>
         let rdf_type = adapter.preloaded_iri(0);
         let class = adapter.preloaded_iri($pos);
         let iter = match (rdf_type, class) {
-            (Some(rdf_type),Some(class)) => adapter.iter_o_p(class.to_resource(), rdf_type.clone()),
+            (Some(rdf_type),Some(class)) => adapter.iter_o_p(&class.to_resource(), rdf_type),
             _ => adapter.empty_ops_range()
         };
         resource::SubjectIter {

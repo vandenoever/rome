@@ -97,7 +97,7 @@ where
     fn add_blank_lit_lang(&mut self, s: u32, p: StringId, o: StringId, lang: StringId) {
         self.add_s_blank(s, p, TripleObjectType::LiteralLang, o.id, lang.id);
     }
-    fn check_blank_node(&self, blank_node: &BlankNodePtr<SPO, OPS>) {
+    fn check_blank_node(&self, blank_node: BlankNodePtr<SPO, OPS>) {
         assert_eq!(
             self.graph_id, blank_node.graph_id,
             "Blank node is not associated with this graph creator."
@@ -242,8 +242,8 @@ where
         predicate: &CreateIRI,
         object: &BlankNodePtr<SPO, OPS>,
     ) {
-        self.check_blank_node(subject);
-        self.check_blank_node(object);
+        self.check_blank_node(*subject);
+        self.check_blank_node(*object);
         GraphCreator::add_blank_blank(self, subject.node_id, predicate.iri, object.node_id);
     }
     fn add_blank_iri(
@@ -252,7 +252,7 @@ where
         predicate: &CreateIRI,
         object: &CreateIRI,
     ) {
-        self.check_blank_node(subject);
+        self.check_blank_node(*subject);
         GraphCreator::add_blank_iri(self, subject.node_id, predicate.iri, object.iri);
     }
     fn add_blank_literal(
@@ -261,7 +261,7 @@ where
         predicate: &CreateIRI,
         object: &CreateLiteral,
     ) {
-        self.check_blank_node(subject);
+        self.check_blank_node(*subject);
         match object.language {
             Some(lang) => GraphCreator::add_blank_lit_lang(
                 self,
@@ -285,7 +285,7 @@ where
         predicate: &CreateIRI,
         object: &BlankNodePtr<SPO, OPS>,
     ) {
-        self.check_blank_node(object);
+        self.check_blank_node(*object);
         GraphCreator::add_iri_blank(self, subject.iri, predicate.iri, object.node_id);
     }
     fn add_iri_iri(&mut self, subject: &CreateIRI, predicate: &CreateIRI, object: &CreateIRI) {

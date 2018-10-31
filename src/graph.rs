@@ -428,12 +428,7 @@ pub trait ResourceTranslator<'g> {
     fn translate_resource(
         &mut self,
         w: &mut Self::GraphWriter,
-        resource: &Resource<
-            'g,
-            <Self::Graph as Graph<'g>>::BlankNodePtr,
-            <Self::Graph as Graph<'g>>::IRIPtr,
-            <Self::Graph as Graph<'g>>::LiteralPtr,
-        >,
+        resource: &R<'g, Self::Graph>,
     ) -> WriterResource<'g, Self::GraphWriter>
     where
         Self: 'g,
@@ -447,6 +442,13 @@ pub trait ResourceTranslator<'g> {
         }
     }
 }
+
+type R<'g, G> = Resource<
+    'g,
+    <G as Graph<'g>>::BlankNodePtr,
+    <G as Graph<'g>>::IRIPtr,
+    <G as Graph<'g>>::LiteralPtr,
+>;
 
 /// Trait for writing into a graph.
 pub trait GraphWriter<'g> {

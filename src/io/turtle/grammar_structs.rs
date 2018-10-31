@@ -1,4 +1,4 @@
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum IRI<'a> {
     IRI(&'a str),
     PrefixedName(&'a str, &'a str),
