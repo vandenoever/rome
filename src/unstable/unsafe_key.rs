@@ -36,11 +36,7 @@ where
         self.get().partial_cmp(other.get())
     }
 }
-impl<T> Eq for UnsafeKey<T>
-where
-    T: Eq,
-{
-}
+impl<T> Eq for UnsafeKey<T> where T: Eq {}
 impl<T> Ord for UnsafeKey<T>
 where
     T: Ord,

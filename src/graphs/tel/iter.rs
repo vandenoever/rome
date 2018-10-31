@@ -42,8 +42,7 @@ where
     OPS: CompactTriple<u32>,
     T: CompactTriple<u32>,
     F: Index<SPO, OPS, T>,
-{
-}
+{}
 
 pub struct TripleRangeIterator<'g, SPO: 'g, OPS: 'g, T, F>
 where
@@ -88,5 +87,4 @@ where
     OPS: CompactTriple<u32>,
     T: CompactTriple<u32>,
     F: Index<SPO, OPS, T>,
-{
-}
+{}

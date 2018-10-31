@@ -40,8 +40,7 @@ impl<'g, SPO, OPS> graph::BlankNodePtr<'g> for BlankNodePtr<'g, SPO, OPS>
 where
     SPO: CompactTriple<u32>,
     OPS: CompactTriple<u32>,
-{
-}
+{}
 impl<'g, SPO, OPS> fmt::Debug for BlankNodePtr<'g, SPO, OPS>
 where
     SPO: CompactTriple<u32>,
@@ -113,8 +112,7 @@ impl<'g, SPO, OPS> Eq for IRIPtr<'g, SPO, OPS>
 where
     SPO: CompactTriple<u32>,
     OPS: CompactTriple<u32>,
-{
-}
+{}
 impl<'g, SPO, OPS> PartialOrd for IRIPtr<'g, SPO, OPS>
 where
     SPO: CompactTriple<u32>,
@@ -239,11 +237,13 @@ where
 {
     fn eq(&self, other: &Self) -> bool {
         if self.graph.graph_id == other.graph.graph_id {
-            self.lexical == other.lexical && self.datatype == other.datatype
+            self.lexical == other.lexical
+                && self.datatype == other.datatype
                 && self.language == other.language
         } else {
             use graph::LiteralPtr;
-            self.as_str() == other.as_str() && self.datatype_str() == other.datatype_str()
+            self.as_str() == other.as_str()
+                && self.datatype_str() == other.datatype_str()
                 && self.language() == other.language()
         }
     }
@@ -252,8 +252,7 @@ impl<'g, SPO, OPS> Eq for LiteralPtr<'g, SPO, OPS>
 where
     SPO: CompactTriple<u32>,
     OPS: CompactTriple<u32>,
-{
-}
+{}
 impl<'g, SPO, OPS> PartialOrd for LiteralPtr<'g, SPO, OPS>
 where
     SPO: CompactTriple<u32>,
@@ -361,7 +360,8 @@ where
         // the numeric value of the triple, when Rc::ptr_eq becomes stable,
         // we can use that.
         use graph::Triple;
-        self.subject().eq(&other.subject()) && self.predicate().eq(&other.predicate())
+        self.subject().eq(&other.subject())
+            && self.predicate().eq(&other.predicate())
             && self.object().eq(&other.object())
     }
 }
@@ -370,8 +370,7 @@ where
     SPO: CompactTriple<u32>,
     OPS: CompactTriple<u32>,
     T: CompactTriple<u32>,
-{
-}
+{}
 impl<'g, SPO, OPS, T> PartialOrd for Triple<'g, SPO, OPS, T>
 where
     SPO: CompactTriple<u32>,

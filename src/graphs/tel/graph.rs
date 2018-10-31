@@ -298,21 +298,24 @@ where
         self.sort_blank_nodes_by(|b1, b2| {
             let mut cmp = b2.times_a_subject.cmp(&b1.times_a_subject);
             if cmp == cmp::Ordering::Equal {
-                cmp = b2.times_a_subject_with_blank_object
+                cmp = b2
+                    .times_a_subject_with_blank_object
                     .cmp(&b1.times_a_subject_with_blank_object);
             }
             if cmp == cmp::Ordering::Equal {
                 cmp = b2.times_an_object.cmp(&b1.times_an_object);
             }
             if cmp == cmp::Ordering::Equal {
-                cmp = b2.times_an_object_with_blank_subject
+                cmp = b2
+                    .times_an_object_with_blank_subject
                     .cmp(&b1.times_an_object_with_blank_subject);
             }
             // if usage is equal compare the triples that the nodes are in
             if cmp == cmp::Ordering::Equal {
                 let s1 = self.iter_subject(subject_blank_node(b1.blank_node));
                 let s2 = self.iter_subject(subject_blank_node(b2.blank_node));
-                cmp = s1.zip(s2)
+                cmp = s1
+                    .zip(s2)
                     .map(|(a, b)| compare_without_blank_nodes(a.triple, b.triple))
                     .find(|cmp| *cmp != cmp::Ordering::Equal)
                     .unwrap_or(cmp::Ordering::Equal);
@@ -320,7 +323,8 @@ where
             if cmp == cmp::Ordering::Equal {
                 let o1 = self.iter_object(object_blank_node(b1.blank_node));
                 let o2 = self.iter_object(object_blank_node(b2.blank_node));
-                cmp = o1.zip(o2)
+                cmp = o1
+                    .zip(o2)
                     .map(|(a, b)| compare_without_blank_nodes(a.triple, b.triple))
                     .find(|cmp| *cmp != cmp::Ordering::Equal)
                     .unwrap_or(cmp::Ordering::Equal);

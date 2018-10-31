@@ -105,7 +105,11 @@ fn down_use(iri: &mut StringUsage, which: Which) {
 }
 
 fn use_count(u: &StringUsage) -> usize {
-    u.subject_count + u.predicate_count + u.object_count + u.datatype_count + u.literal_count
+    u.subject_count
+        + u.predicate_count
+        + u.object_count
+        + u.datatype_count
+        + u.literal_count
         + u.langtag_count
 }
 
@@ -188,7 +192,8 @@ impl MemGraph {
             graph::Object::Literal(ref l) => Object::Literal(Literal {
                 lexical: self.register_string(&l.lexical, Which::Literal),
                 datatype: self.register_string(&l.datatype, Which::Datatype),
-                language: l.language
+                language: l
+                    .language
                     .as_ref()
                     .map(|l| self.register_string(l, Which::LangTag)),
             }),

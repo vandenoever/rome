@@ -134,11 +134,7 @@ where
         self.resource.eq(&rhs.resource)
     }
 }
-impl<'g, R> Eq for IRI<'g, R>
-where
-    R: ResourceBase<'g>,
-{
-}
+impl<'g, R> Eq for IRI<'g, R> where R: ResourceBase<'g> {}
 
 impl<'g, R> PartialOrd for IRI<'g, R>
 where
@@ -210,11 +206,7 @@ where
     }
 }
 
-impl<'g, R> iter::SortedIterator for ObjectIter<'g, R>
-where
-    R: ResourceBase<'g>,
-{
-}
+impl<'g, R> iter::SortedIterator for ObjectIter<'g, R> where R: ResourceBase<'g> {}
 
 /// Iterate over all subjects for the given object and predicate.
 pub struct SubjectIter<'g, R: 'g>
@@ -244,11 +236,7 @@ where
     }
 }
 
-impl<'g, R> iter::SortedIterator for SubjectIter<'g, R>
-where
-    R: ResourceBase<'g>,
-{
-}
+impl<'g, R> iter::SortedIterator for SubjectIter<'g, R> where R: ResourceBase<'g> {}
 
 /// Iterate over all subjects that are an IRI for the given object and predicate.
 /// In other words: no blank nodes are returned.
@@ -430,36 +418,12 @@ mod tests {
     property!(:"http://www.w3.org/2000/01/rdf-schema#range", Range, range, Class<'g, G>, 6);
     property!(:"http://www.w3.org/2000/01/rdf-schema#subClassOf", SubClassOf, sub_class_of, Class<'g, G>, 7);
 
-    impl<'g, G> SubClassOf<'g> for Class<'g, G>
-    where
-        G: graph::Graph<'g>,
-    {
-    }
-    impl<'g, G> Comment<'g> for Class<'g, G>
-    where
-        G: graph::Graph<'g>,
-    {
-    }
-    impl<'g, G> Domain<'g> for Property<'g, G>
-    where
-        G: graph::Graph<'g>,
-    {
-    }
-    impl<'g, G> Range<'g> for Property<'g, G>
-    where
-        G: graph::Graph<'g>,
-    {
-    }
-    impl<'g, G> Comment<'g> for Property<'g, G>
-    where
-        G: graph::Graph<'g>,
-    {
-    }
-    impl<'g, G> Comment<'g> for Literal<'g, G>
-    where
-        G: graph::Graph<'g>,
-    {
-    }
+    impl<'g, G> SubClassOf<'g> for Class<'g, G> where G: graph::Graph<'g> {}
+    impl<'g, G> Comment<'g> for Class<'g, G> where G: graph::Graph<'g> {}
+    impl<'g, G> Domain<'g> for Property<'g, G> where G: graph::Graph<'g> {}
+    impl<'g, G> Range<'g> for Property<'g, G> where G: graph::Graph<'g> {}
+    impl<'g, G> Comment<'g> for Property<'g, G> where G: graph::Graph<'g> {}
+    impl<'g, G> Comment<'g> for Literal<'g, G> where G: graph::Graph<'g> {}
 
     #[test]
     fn instantiate_ontology_classes() {

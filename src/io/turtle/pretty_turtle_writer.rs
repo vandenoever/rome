@@ -191,7 +191,8 @@ where
         loop {
             // write rdf:first value
             self.write_object(triple.object(), namespaces)?;
-            let rest = iter.next()
+            let rest = iter
+                .next()
                 .ok_or_else(|| Error::Custom("An rdf:rest triple was expected."))?;
             if Some(rest.predicate()) != self.rdf_rest {
                 return Err(Error::Custom("An rdf:rest triple was expected."));
@@ -205,7 +206,8 @@ where
                 self.writer.write_all(b")")?;
                 return Ok(());
             }
-            let rest = rest.object()
+            let rest = rest
+                .object()
                 .as_blank_node()
                 .ok_or_else(|| Error::Custom("A blank node was expected."))?
                 .clone();

@@ -454,12 +454,19 @@ named!(anon<CompleteStr,BlankNode>, do_parse!(
 /// `| [#x2070-#x218F] | [#x2C00-#x2FEF] | [#x3001-#xD7FF] | [#xF900-#xFDCF]`
 /// `| [#xFDF0-#xFFFD] | [#x10000-#xEFFFF]`
 fn is_pn_chars_base(c: char) -> bool {
-    is_alpha(c) || in_range(c, 0xC0, 0x00D6) || in_range(c, 0x00D8, 0x00F6)
-        || in_range(c, 0x00F8, 0x02FF) || in_range(c, 0x0370, 0x037D)
-        || in_range(c, 0x037F, 0x1FFF) || in_range(c, 0x200C, 0x200D)
-        || in_range(c, 0x2070, 0x218F) || in_range(c, 0x2C00, 0x2FEF)
-        || in_range(c, 0x3001, 0xD7FF) || in_range(c, 0xF900, 0xFDCF)
-        || in_range(c, 0xFDF0, 0xFFFD) || in_range(c, 0x10000, 0xEFFFF)
+    is_alpha(c)
+        || in_range(c, 0xC0, 0x00D6)
+        || in_range(c, 0x00D8, 0x00F6)
+        || in_range(c, 0x00F8, 0x02FF)
+        || in_range(c, 0x0370, 0x037D)
+        || in_range(c, 0x037F, 0x1FFF)
+        || in_range(c, 0x200C, 0x200D)
+        || in_range(c, 0x2070, 0x218F)
+        || in_range(c, 0x2C00, 0x2FEF)
+        || in_range(c, 0x3001, 0xD7FF)
+        || in_range(c, 0xF900, 0xFDCF)
+        || in_range(c, 0xFDF0, 0xFFFD)
+        || in_range(c, 0x10000, 0xEFFFF)
 }
 
 /// [164s] `PN_CHARS_U ::= PN_CHARS_BASE | '_'`
@@ -469,7 +476,11 @@ fn is_pn_chars_u(c: char) -> bool {
 
 /// [166s] `PN_CHARS ::= PN_CHARS_U | '-' | [0-9] | #x00B7 | [#x0300-#x036F] | [#x203F-#x2040]`
 fn is_pn_chars(c: char) -> bool {
-    is_pn_chars_u(c) || c == '-' || is_digit(c) || c == 0xB7 as char || in_range(c, 0x0300, 0x036F)
+    is_pn_chars_u(c)
+        || c == '-'
+        || is_digit(c)
+        || c == 0xB7 as char
+        || in_range(c, 0x0300, 0x036F)
         || in_range(c, 0x203F, 0x2040)
 }
 

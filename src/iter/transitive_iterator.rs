@@ -124,5 +124,4 @@ where
     J: SortedIterator<Item = I::Item>,
     J::Item: Ord + Clone,
     F: Fn(&J::Item) -> J,
-{
-}
+{}
