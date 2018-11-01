@@ -70,7 +70,7 @@ use std::marker::PhantomData;
 /// Instances of this trait point to a blank node in a graph.
 ///
 /// Different graph implementations can represent blank nodes in a different
-/// way. The essense of the blank node is the same in all graphs and is capured
+/// way. The essence of the blank node is the same in all graphs and is captured
 /// by this trait.
 ///
 /// Blank nodes are tied to their graph. Their lifetime `'g` is the same as the
@@ -389,10 +389,15 @@ where
     Literal(W::Literal),
 }
 
-/// translate from one graph to another
-/// useful for inferencing
-/// there can be a general implemenation as wel as an optimized one that's
-/// used when extending a graph by inferencing from its own content
+/// Translate resources from one graph to another.
+///
+/// Structures with this trait are useful for inferencing. In inferencing
+/// new Triples are created. If the Triples go into a new Graph, the
+/// new blank nodes should not clash with existing blank nodes.
+/// The translator takes care of the mapping of blank nodes between graphs.
+///
+/// There can be a general implemenation as wel as an optimized one that's
+/// used when extending a graph by inferencing from its own content.
 pub trait ResourceTranslator<'g> {
     /// The source graph from which this translator translates.
     type Graph: Graph<'g>;
