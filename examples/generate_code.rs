@@ -1,8 +1,9 @@
 /// Generate rust code from a set of ontologies
 ///
 extern crate rome;
-use rome::graph::{Graph, GraphWriter, IRIPtr, LiteralPtr, ResourceTranslator, Triple,
-                  WriterResource};
+use rome::graph::{
+    Graph, GraphWriter, IRIPtr, LiteralPtr, ResourceTranslator, Triple, WriterResource,
+};
 use rome::graphs::tel;
 use rome::io::TurtleParser;
 use rome::iter::TransitiveIterator;
@@ -13,7 +14,7 @@ use rome::ontology::classes::rdfs::Class;
 use rome::ontology::properties::rdfs::{Comment, Domain, Range, SubClassOf};
 use rome::ontology_adapter;
 use rome::resource::{ObjectIter, ResourceBase, IRI};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, btree_map};
 use std::collections::HashSet;
 use std::env::args;
 use std::fs;
@@ -184,12 +185,16 @@ impl<'g> ResourceTranslator<'g> for Translator<'g> {
         w: &mut Self::GraphWriter,
         blank_node: &<Self::Graph as Graph<'g>>::BlankNodePtr,
     ) -> <Self::GraphWriter as GraphWriter<'g>>::BlankNode {
-        if let Some(blank_node) = self.blank_nodes.get(blank_node) {
-            return *blank_node;
+        match self.blank_nodes.entry(blank_node.clone()) {
+            btree_map::Entry::Occupied(entry) => {
+                *entry.get()
+            }
+            btree_map::Entry::Vacant(entry) => {
+                let new_blank_node = w.create_blank_node();
+                entry.insert(new_blank_node);
+                new_blank_node
+            }
         }
-        let new_blank_node = w.create_blank_node();
-        self.blank_nodes.insert(*blank_node, new_blank_node);
-        new_blank_node
     }
 }
 
@@ -228,11 +233,13 @@ fn infer(graph: &MyGraph) -> rome::Result<MyGraph> {
             let i = TransitiveIterator::new(class.sub_class_of(), closure);
             let c1 = translator
                 .translate_blank_node_or_iri(&mut w, &class.this().to_blank_node_or_iri().unwrap());
+            /*
             for parent in i {
                 let o = parent.this().as_iri().unwrap();
                 let iri = w.create_iri(o);
                 w.add(&c1, &rdfs_sub_class_of, &WriterResource::IRI(iri));
             }
+            */
         }
     }
 
