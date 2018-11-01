@@ -223,9 +223,8 @@ fn infer(graph: &MyGraph) -> rome::Result<MyGraph> {
     // make subClassOf entailment concrete
     let rdfs_sub_class_of = w.create_iri(&RDFS_SUB_CLASS_OF);
     for class in Class::iter(&oa) {
-        let i = TransitiveIterator::new(class.sub_class_of(), |class: &Class<MyGraph>| {
-            class.sub_class_of()
-        });
+        let i = TransitiveIterator::new(class.sub_class_of(),
+                                        |class: &Class<MyGraph>| class.sub_class_of());
         let c1 = translator
             .translate_blank_node_or_iri(&mut w, &class.this().to_blank_node_or_iri().unwrap());
         for parent in i {
@@ -371,23 +370,28 @@ fn generate_properties(d: &OntoData, iris: &mut Vec<String>) -> rome::Result<()>
 }
 
 fn uses(o: &Output, classes: bool) -> String {
-    let mut uses = String::new();
-    uses.push_str("use std;\n");
+    let mut uses: Vec<&str> = Vec::new();
+    uses.push("std".into());
     if o.internal {
-        uses.push_str("use graph;\n");
-        uses.push_str("use resource;\n");
+        uses.push("graph");
+        uses.push("resource");
         if classes {
-            uses.push_str("use ontology_adapter;\n");
+            uses.push("ontology_adapter");
         }
     } else {
-        uses.push_str("use rome::graph;\n");
-        uses.push_str("use rome::resource;\n");
+        uses.push("rome::graph");
+        uses.push("rome::resource");
         if classes {
-            uses.push_str("use rome::ontology_adapter;\n");
+            uses.push("rome::ontology_adapter");
         }
     }
-    uses.push_str(&format!("use {};\n", o.mod_name));
-    uses
+    uses.push(&o.mod_name);
+    uses.sort();
+    let mut s = String::new();
+    for u in uses {
+        s.push_str(&format!("use {};\n", u));
+    }
+    s
 }
 
 fn write_files(o: &Output, writers: &Writers, folder: &str, classes: bool) -> rome::Result<()> {
