@@ -392,7 +392,7 @@ mod tests {
     const RDFS_COMMENT: &'static str = "http://www.w3.org/2000/01/rdf-schema#comment";
     const RDFS_DOMAIN: &'static str = "http://www.w3.org/2000/01/rdf-schema#domain";
     const RDFS_RANGE: &'static str = "http://www.w3.org/2000/01/rdf-schema#range";
-    const RDFS_SUB_CLASS_OF: &'static str = "http://www.w3.org/2000/01/rdf-schema#subClassOF";
+    const RDFS_SUB_CLASS_OF: &'static str = "http://www.w3.org/2000/01/rdf-schema#subClassOf";
 
     pub fn adapter<'g, G: 'g>(graph: &'g G) -> ontology_adapter::OntologyAdapter<'g, G>
     where
