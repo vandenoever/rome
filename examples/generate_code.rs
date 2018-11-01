@@ -13,7 +13,7 @@ use rome::ontology::classes::rdf::Property;
 use rome::ontology::classes::rdfs::Class;
 use rome::ontology::properties::rdfs::{Comment, Domain, Range, SubClassOf};
 use rome::ontology_adapter;
-use rome::resource::{ObjectIter, ResourceBase, IRI};
+use rome::resource::{ResourceBase, IRI};
 use std::collections::HashSet;
 use std::collections::{btree_map, BTreeMap};
 use std::env::args;
@@ -158,10 +158,6 @@ const RDFS_SUB_CLASS_OF: &'static str = "http://www.w3.org/2000/01/rdf-schema#su
 const RDFS_CLASS: &'static str = "http://www.w3.org/2000/01/rdf-schema#Class";
 const RDF_TYPE: &'static str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 
-fn closure<'g>(class: &Class<'g, MyGraph>) -> ObjectIter<'g, Class<'g, MyGraph>> {
-    class.sub_class_of()
-}
-
 struct Translator<'g> {
     blank_nodes: BTreeMap<
         <MyGraph as Graph<'g>>::BlankNodePtr,
@@ -224,22 +220,17 @@ fn infer(graph: &MyGraph) -> rome::Result<MyGraph> {
         let object = translator.translate_resource(&mut w, &triple.object());
         w.add(&subject, &predicate, &object);
     }
-    {
-        // make subClassOf entailment concrete
-        let rdfs_sub_class_of = w.create_iri(&RDFS_SUB_CLASS_OF);
-        for class in Class::iter(&oa) {
-            // let i = TransitiveIterator::new(class.sub_class_of(),
-            //                                |class: &Class<MyGraph>| class.sub_class_of());
-            let i = TransitiveIterator::new(class.sub_class_of(), closure);
-            let c1 = translator
-                .translate_blank_node_or_iri(&mut w, &class.this().to_blank_node_or_iri().unwrap());
-            /*
-            for parent in i {
-                let o = parent.this().as_iri().unwrap();
-                let iri = w.create_iri(o);
-                w.add(&c1, &rdfs_sub_class_of, &WriterResource::IRI(iri));
-            }
-            */
+    // make subClassOf entailment concrete
+    let rdfs_sub_class_of = w.create_iri(&RDFS_SUB_CLASS_OF);
+    for class in Class::iter(&oa) {
+        let i = TransitiveIterator::new(class.sub_class_of(), |class: &Class<MyGraph>| {
+            class.sub_class_of()
+        });
+        let c1 = translator
+            .translate_blank_node_or_iri(&mut w, &class.this().to_blank_node_or_iri().unwrap());
+        for parent in i {
+            let r = translator.translate_resource(&mut w, parent.this());
+            w.add(&c1, &rdfs_sub_class_of, &r);
         }
     }
 

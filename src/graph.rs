@@ -191,7 +191,7 @@ pub trait DatatypePtr<'g> {
 pub trait LiteralPtr<'g> {
     /// The type of pointer for the datatype of the literal.
     type DatatypePtr: DatatypePtr<'g> + PartialEq;
-    /// Get the value of the literal (without datattype or language)
+    /// Get the value of the literal (without datatype or language)
     fn as_str(&self) -> &str;
     /// Get the datatype of the literal.
     fn datatype(&self) -> Self::DatatypePtr;
