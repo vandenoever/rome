@@ -14,8 +14,8 @@ use rome::ontology::classes::rdfs::Class;
 use rome::ontology::properties::rdfs::{Comment, Domain, Range, SubClassOf};
 use rome::ontology_adapter;
 use rome::resource::{ObjectIter, ResourceBase, IRI};
-use std::collections::{BTreeMap, btree_map};
 use std::collections::HashSet;
+use std::collections::{btree_map, BTreeMap};
 use std::env::args;
 use std::fs;
 use std::io;
@@ -186,9 +186,7 @@ impl<'g> ResourceTranslator<'g> for Translator<'g> {
         blank_node: &<Self::Graph as Graph<'g>>::BlankNodePtr,
     ) -> <Self::GraphWriter as GraphWriter<'g>>::BlankNode {
         match self.blank_nodes.entry(blank_node.clone()) {
-            btree_map::Entry::Occupied(entry) => {
-                *entry.get()
-            }
+            btree_map::Entry::Occupied(entry) => *entry.get(),
             btree_map::Entry::Vacant(entry) => {
                 let new_blank_node = w.create_blank_node();
                 entry.insert(new_blank_node);
@@ -206,16 +204,18 @@ fn infer(graph: &MyGraph) -> rome::Result<MyGraph> {
     let mut translator = Translator::new();
     let rdf_type = w.create_iri(&RDF_TYPE);
     let rdfs_class = WriterResource::IRI(w.create_iri(&RDFS_CLASS));
-    let rdfs_sub_class_of = graph.find_iri(RDFS_SUB_CLASS_OF).unwrap();
-    for triple in graph
-        .iter()
-        .filter(|triple| !triple.object().is_literal() && triple.predicate() == rdfs_sub_class_of)
-    {
-        let class = translator.translate_blank_node_or_iri(&mut w, &triple.subject());
-        w.add(&class, &rdf_type, &rdfs_class);
-        let class = translator
-            .translate_blank_node_or_iri(&mut w, &triple.object().to_blank_node_or_iri().unwrap());
-        w.add(&class, &rdf_type, &rdfs_class);
+    if let Some(rdfs_sub_class_of) = graph.find_iri(RDFS_SUB_CLASS_OF) {
+        for triple in graph.iter().filter(|triple| {
+            !triple.object().is_literal() && triple.predicate() == rdfs_sub_class_of
+        }) {
+            let class = translator.translate_blank_node_or_iri(&mut w, &triple.subject());
+            w.add(&class, &rdf_type, &rdfs_class);
+            let class = translator.translate_blank_node_or_iri(
+                &mut w,
+                &triple.object().to_blank_node_or_iri().unwrap(),
+            );
+            w.add(&class, &rdf_type, &rdfs_class);
+        }
     }
     // copy all triples
     for triple in graph.iter() {
