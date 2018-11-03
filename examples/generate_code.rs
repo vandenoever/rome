@@ -192,47 +192,74 @@ impl<'g> ResourceTranslator<'g> for Translator<'g> {
     }
 }
 
-fn infer(graph: &MyGraph) -> rome::Result<MyGraph> {
-    // for every triple with rdfs:subClassOf infer that the subject and the
-    // object are rdfs:Class instances
-    let oa: ontology_adapter::OntologyAdapter<MyGraph> = ontology::adapter(graph);
-    let mut w = tel::GraphCreator::with_capacity(65000);
-    let mut translator = Translator::new();
+// for every triple with rdfs:subClassOf infer that the subject and the
+// object are rdfs:Class instances
+fn infer_class_from_sub_class_of<'g, T, G, W>(graph: &'g G, w: &mut W, translator: &mut T)
+where
+    G: Graph<'g>,
+    W: GraphWriter<'g>,
+    T: ResourceTranslator<'g, Graph = G, GraphWriter = W> + 'g,
+{
     let rdf_type = w.create_iri(&RDF_TYPE);
     let rdfs_class = WriterResource::IRI(w.create_iri(&RDFS_CLASS));
     if let Some(rdfs_sub_class_of) = graph.find_iri(RDFS_SUB_CLASS_OF) {
         for triple in graph.iter().filter(|triple| {
             !triple.object().is_literal() && triple.predicate() == rdfs_sub_class_of
         }) {
-            let class = translator.translate_blank_node_or_iri(&mut w, &triple.subject());
+            let class = translator.translate_blank_node_or_iri(w, &triple.subject());
             w.add(&class, &rdf_type, &rdfs_class);
-            let class = translator.translate_blank_node_or_iri(
-                &mut w,
-                &triple.object().to_blank_node_or_iri().unwrap(),
-            );
+            let class = translator
+                .translate_blank_node_or_iri(w, &triple.object().to_blank_node_or_iri().unwrap());
             w.add(&class, &rdf_type, &rdfs_class);
         }
     }
-    // copy all triples
+}
+
+fn copy_triples<'g, T, G, W>(graph: &'g G, w: &mut W, translator: &mut T)
+where
+    G: Graph<'g>,
+    W: GraphWriter<'g>,
+    T: ResourceTranslator<'g, Graph = G, GraphWriter = W> + 'g,
+{
     for triple in graph.iter() {
-        let subject = translator.translate_blank_node_or_iri(&mut w, &triple.subject());
+        let subject = translator.translate_blank_node_or_iri(w, &triple.subject());
         let predicate = w.create_iri(&triple.predicate());
-        let object = translator.translate_resource(&mut w, &triple.object());
+        let object = translator.translate_resource(w, &triple.object());
         w.add(&subject, &predicate, &object);
     }
+}
+
+fn make_sub_class_of_entailment_concrete<'g, T, G, W>(
+    w: &mut W,
+    translator: &mut T,
+    oa: &'g ontology_adapter::OntologyAdapter<'g, G>,
+) where
+    G: Graph<'g>,
+    W: GraphWriter<'g>,
+    T: ResourceTranslator<'g, Graph = G, GraphWriter = W> + 'g,
+{
     // make subClassOf entailment concrete
     let rdfs_sub_class_of = w.create_iri(&RDFS_SUB_CLASS_OF);
     for class in Class::iter(&oa) {
-        let i = TransitiveIterator::new(class.sub_class_of(),
-                                        |class: &Class<MyGraph>| class.sub_class_of());
+        let i = TransitiveIterator::new(class.sub_class_of(), |class: &Class<G>| {
+            class.sub_class_of()
+        });
         let c1 = translator
-            .translate_blank_node_or_iri(&mut w, &class.this().to_blank_node_or_iri().unwrap());
+            .translate_blank_node_or_iri(w, &class.this().to_blank_node_or_iri().unwrap());
         for parent in i {
-            let r = translator.translate_resource(&mut w, parent.this());
+            let r = translator.translate_resource(w, parent.this());
             w.add(&c1, &rdfs_sub_class_of, &r);
         }
     }
+}
 
+fn infer<'g>(graph: &'g MyGraph) -> rome::Result<MyGraph> {
+    let mut w = tel::GraphCreator::with_capacity(65000);
+    let oa = ontology::adapter(graph);
+    let mut translator = Translator::new();
+    infer_class_from_sub_class_of(graph, &mut w, &mut translator);
+    copy_triples(graph, &mut w, &mut translator);
+    make_sub_class_of_entailment_concrete(&mut w, &mut translator, &oa);
     Ok(w.collect().sort_blank_nodes())
 }
 
