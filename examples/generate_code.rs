@@ -192,8 +192,15 @@ impl<'g> ResourceTranslator<'g> for Translator<'g> {
     }
 }
 
-// for every triple with rdfs:subClassOf infer that the subject and the
-// object are rdfs:Class instances
+/// For every triple with rdfs:subClassOf infer that the subject and the
+/// object are rdfs:Class instances
+///
+/// CONSTRUCT {
+///     ?a a rdfs:Class .
+///     ?b a rdfs:Class
+/// } WHERE {
+///     ?a rdfs:subClassOf ?b
+/// }
 fn infer_class_from_sub_class_of<'g, T, G, W>(graph: &'g G, w: &mut W, translator: &mut T)
 where
     G: Graph<'g>,
@@ -229,6 +236,11 @@ where
     }
 }
 
+/// CONSTRUCT {
+///     ?a rdfs:subClassOf ?b
+/// } WHERE {
+///     ?a rdfs:subClassOf+ ?b
+/// }
 fn make_sub_class_of_entailment_concrete<'g, T, G, W>(
     w: &mut W,
     translator: &mut T,
@@ -261,6 +273,24 @@ fn infer<'g>(graph: &'g MyGraph) -> rome::Result<MyGraph> {
     copy_triples(graph, &mut w, &mut translator);
     make_sub_class_of_entailment_concrete(&mut w, &mut translator, &oa);
     Ok(w.collect().sort_blank_nodes())
+}
+
+/// Infer new triples until no new triples can be inferred
+fn infer_all<'g>(graph: &'g MyGraph) -> rome::Result<MyGraph> {
+    let mut len_before = graph.iter().count();
+    let mut new_graph = infer(graph)?;
+    let mut len_after = new_graph.iter().count();
+    if len_after == len_before {
+        return Ok(new_graph);
+    }
+    loop {
+        len_before = len_after;
+        new_graph = infer(&new_graph)?;
+        len_after = new_graph.iter().count();
+        if len_before == len_after {
+            return Ok(new_graph);
+        }
+    }
 }
 
 fn write_mod(o: &Output, iris: &[String]) -> rome::Result<()> {
@@ -308,7 +338,7 @@ fn load_files(inputs: &[String]) -> rome::Result<(Namespaces, MyGraph)> {
         }
     }
     let graph = writer.collect();
-    let graph = infer(&graph)?;
+    let graph = infer_all(&graph)?;
     Ok((prefixes, graph))
 }
 
