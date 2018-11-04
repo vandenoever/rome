@@ -86,6 +86,11 @@ impl<'g, G: 'g> ontology::properties::owl::Members<'g> for Class<'g, G> where G:
 impl<'g, G: 'g> ontology::properties::owl::Members<'g> for resource::IRI<'g, Class<'g, G>> where
     G: graph::Graph<'g>
 {}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for Class<'g, G> where G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g, Class<'g, G>> where
+    G: graph::Graph<'g>
+{}
 
 class!(
 /// **rdfs:Container**
@@ -154,6 +159,12 @@ where
 impl<'g, G: 'g> ontology::properties::owl::Members<'g> for Container<'g, G> where G: graph::Graph<'g>
 {}
 impl<'g, G: 'g> ontology::properties::owl::Members<'g> for resource::IRI<'g, Container<'g, G>> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for Container<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g, Container<'g, G>> where
     G: graph::Graph<'g>
 {}
 
@@ -300,6 +311,14 @@ impl<'g, G: 'g> ontology::properties::owl::Members<'g>
 where
     G: graph::Graph<'g>,
 {}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for ContainerMembershipProperty<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g>
+    for resource::IRI<'g, ContainerMembershipProperty<'g, G>>
+where
+    G: graph::Graph<'g>,
+{}
 
 class!(
 /// **rdfs:Datatype**
@@ -416,6 +435,12 @@ impl<'g, G: 'g> ontology::properties::owl::Members<'g> for Datatype<'g, G> where
 impl<'g, G: 'g> ontology::properties::owl::Members<'g> for resource::IRI<'g, Datatype<'g, G>> where
     G: graph::Graph<'g>
 {}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for Datatype<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g, Datatype<'g, G>> where
+    G: graph::Graph<'g>
+{}
 
 class!(
 /// **rdfs:Literal**
@@ -474,6 +499,12 @@ impl<'g, G: 'g> ontology::properties::owl::AnnotatedTarget<'g> for resource::IRI
 {}
 impl<'g, G: 'g> ontology::properties::owl::Members<'g> for Literal<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::owl::Members<'g> for resource::IRI<'g, Literal<'g, G>> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for Literal<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g, Literal<'g, G>> where
     G: graph::Graph<'g>
 {}
 
@@ -540,5 +571,11 @@ where
 {}
 impl<'g, G: 'g> ontology::properties::owl::Members<'g> for Resource<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::owl::Members<'g> for resource::IRI<'g, Resource<'g, G>> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for Resource<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g, Resource<'g, G>> where
     G: graph::Graph<'g>
 {}

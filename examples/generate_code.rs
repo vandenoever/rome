@@ -2,7 +2,8 @@
 ///
 extern crate rome;
 use rome::graph::{
-    Graph, GraphWriter, IRIPtr, LiteralPtr, ResourceTranslator, Triple, WriterResource,
+    Graph, GraphWriter, IRIPtr, LiteralPtr, ResourceTranslator, Triple, WriterBlankNodeOrIRI,
+    WriterResource,
 };
 use rome::graphs::tel;
 use rome::io::TurtleParser;
@@ -154,8 +155,9 @@ where
     Ok(())
 }
 
-const RDFS_SUB_CLASS_OF: &'static str = "http://www.w3.org/2000/01/rdf-schema#subClassOf";
 const RDFS_CLASS: &'static str = "http://www.w3.org/2000/01/rdf-schema#Class";
+const RDFS_SUB_CLASS_OF: &'static str = "http://www.w3.org/2000/01/rdf-schema#subClassOf";
+const RDF_PROPERTY: &'static str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#Property";
 const RDF_TYPE: &'static str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 
 struct Translator<'g> {
@@ -221,19 +223,21 @@ where
         }
     }
 }
-/*
+
 /// Infer properties
-fn infer_properties<'g, T, G, W>(graph: &'g G, w: &mut W, translator: &mut T)
+fn infer_properties<'g, G, W>(graph: &'g G, w: &mut W)
 where
     G: Graph<'g>,
     W: GraphWriter<'g>,
-    T: ResourceTranslator<'g, Graph = G, GraphWriter = W> + 'g,
 {
+    let rdf_type = w.create_iri(&RDF_TYPE);
+    let rdf_property = WriterResource::IRI(w.create_iri(&RDF_PROPERTY));
     for triple in graph.iter() {
-        w.add(triple.predicate(), rdf_type, rdf_property);
+        let predicate = WriterBlankNodeOrIRI::IRI(w.create_iri(&triple.predicate()));
+        w.add(&predicate, &rdf_type, &rdf_property);
     }
 }
-*/
+
 fn copy_triples<'g, T, G, W>(graph: &'g G, w: &mut W, translator: &mut T)
 where
     G: Graph<'g>,
@@ -282,6 +286,7 @@ fn infer<'g>(graph: &'g MyGraph) -> rome::Result<MyGraph> {
     let oa = ontology::adapter(graph);
     let mut translator = Translator::new();
     infer_class_from_sub_class_of(graph, &mut w, &mut translator);
+    infer_properties(graph, &mut w);
     copy_triples(graph, &mut w, &mut translator);
     make_sub_class_of_entailment_concrete(&mut w, &mut translator, &oa);
     Ok(w.collect().sort_blank_nodes())

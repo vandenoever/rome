@@ -9,7 +9,7 @@ pub fn adapter<'g, G>(graph: &'g G) -> ontology_adapter::OntologyAdapter<'g, G>
 where
     G: graph::Graph<'g>,
 {
-    let mut iris = Vec::with_capacity(141);
+    let mut iris = Vec::with_capacity(147);
     iris.push(graph.find_iri("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"));
     iris.push(graph.find_iri("http://www.w3.org/1999/02/22-rdf-syntax-ns#Alt"));
     iris.push(graph.find_iri("http://www.w3.org/1999/02/22-rdf-syntax-ns#Bag"));
@@ -95,6 +95,8 @@ where
     iris.push(graph.find_iri("http://www.w3.org/2002/07/owl#SymmetricProperty"));
     iris.push(graph.find_iri("http://www.w3.org/2002/07/owl#Thing"));
     iris.push(graph.find_iri("http://www.w3.org/2002/07/owl#TransitiveProperty"));
+    iris.push(graph.find_iri("http://purl.org/dc/elements/1.1/description"));
+    iris.push(graph.find_iri("http://purl.org/dc/elements/1.1/title"));
     iris.push(graph.find_iri("http://www.w3.org/1999/02/22-rdf-syntax-ns#first"));
     iris.push(graph.find_iri("http://www.w3.org/1999/02/22-rdf-syntax-ns#object"));
     iris.push(graph.find_iri("http://www.w3.org/1999/02/22-rdf-syntax-ns#predicate"));
@@ -128,6 +130,7 @@ where
     iris.push(graph.find_iri("http://www.w3.org/2002/07/owl#hasKey"));
     iris.push(graph.find_iri("http://www.w3.org/2002/07/owl#hasSelf"));
     iris.push(graph.find_iri("http://www.w3.org/2002/07/owl#hasValue"));
+    iris.push(graph.find_iri("http://www.w3.org/2002/07/owl#imports"));
     iris.push(graph.find_iri("http://www.w3.org/2002/07/owl#intersectionOf"));
     iris.push(graph.find_iri("http://www.w3.org/2002/07/owl#inverseOf"));
     iris.push(graph.find_iri("http://www.w3.org/2002/07/owl#maxCardinality"));
@@ -150,6 +153,9 @@ where
     iris.push(graph.find_iri("http://www.w3.org/2002/07/owl#targetIndividual"));
     iris.push(graph.find_iri("http://www.w3.org/2002/07/owl#targetValue"));
     iris.push(graph.find_iri("http://www.w3.org/2002/07/owl#unionOf"));
+    iris.push(graph.find_iri("http://www.w3.org/2002/07/owl#versionIRI"));
+    iris.push(graph.find_iri("http://www.w3.org/2002/07/owl#versionInfo"));
     iris.push(graph.find_iri("http://www.w3.org/2002/07/owl#withRestrictions"));
+    iris.push(graph.find_iri("http://www.w3.org/2003/g/data-view#namespaceTransformation"));
     ontology_adapter::OntologyAdapter::new(graph, iris)
 }

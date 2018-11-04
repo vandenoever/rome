@@ -90,6 +90,14 @@ impl<'g, G: 'g> ontology::properties::owl::Members<'g> for AllDifferent<'g, G> w
 impl<'g, G: 'g> ontology::properties::owl::Members<'g> for resource::IRI<'g, AllDifferent<'g, G>> where
     G: graph::Graph<'g>
 {}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for AllDifferent<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g>
+    for resource::IRI<'g, AllDifferent<'g, G>>
+where
+    G: graph::Graph<'g>,
+{}
 
 class!(
 /// **owl:AllDisjointClasses**
@@ -178,6 +186,14 @@ impl<'g, G: 'g> ontology::properties::owl::Members<'g> for AllDisjointClasses<'g
     G: graph::Graph<'g>
 {}
 impl<'g, G: 'g> ontology::properties::owl::Members<'g>
+    for resource::IRI<'g, AllDisjointClasses<'g, G>>
+where
+    G: graph::Graph<'g>,
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for AllDisjointClasses<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g>
     for resource::IRI<'g, AllDisjointClasses<'g, G>>
 where
     G: graph::Graph<'g>,
@@ -276,6 +292,14 @@ impl<'g, G: 'g> ontology::properties::owl::Members<'g>
 where
     G: graph::Graph<'g>,
 {}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for AllDisjointProperties<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g>
+    for resource::IRI<'g, AllDisjointProperties<'g, G>>
+where
+    G: graph::Graph<'g>,
+{}
 
 class!(
 /// **owl:Annotation**
@@ -347,6 +371,12 @@ impl<'g, G: 'g> ontology::properties::owl::Members<'g> for Annotation<'g, G> whe
     G: graph::Graph<'g>
 {}
 impl<'g, G: 'g> ontology::properties::owl::Members<'g> for resource::IRI<'g, Annotation<'g, G>> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for Annotation<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g, Annotation<'g, G>> where
     G: graph::Graph<'g>
 {}
 
@@ -477,6 +507,14 @@ impl<'g, G: 'g> ontology::properties::owl::Members<'g> for AnnotationProperty<'g
     G: graph::Graph<'g>
 {}
 impl<'g, G: 'g> ontology::properties::owl::Members<'g>
+    for resource::IRI<'g, AnnotationProperty<'g, G>>
+where
+    G: graph::Graph<'g>,
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for AnnotationProperty<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g>
     for resource::IRI<'g, AnnotationProperty<'g, G>>
 where
     G: graph::Graph<'g>,
@@ -613,6 +651,14 @@ impl<'g, G: 'g> ontology::properties::owl::Members<'g>
 where
     G: graph::Graph<'g>,
 {}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for AsymmetricProperty<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g>
+    for resource::IRI<'g, AsymmetricProperty<'g, G>>
+where
+    G: graph::Graph<'g>,
+{}
 impl<'g, G: 'g> ontology::properties::owl::InverseOf<'g> for AsymmetricProperty<'g, G> where
     G: graph::Graph<'g>
 {}
@@ -685,6 +731,11 @@ impl<'g, G: 'g> ontology::properties::owl::AnnotatedTarget<'g> for resource::IRI
 {}
 impl<'g, G: 'g> ontology::properties::owl::Members<'g> for Axiom<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::owl::Members<'g> for resource::IRI<'g, Axiom<'g, G>> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for Axiom<'g, G> where G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g, Axiom<'g, G>> where
     G: graph::Graph<'g>
 {}
 
@@ -792,6 +843,11 @@ impl<'g, G: 'g> ontology::properties::owl::Members<'g> for Class<'g, G> where G:
 impl<'g, G: 'g> ontology::properties::owl::Members<'g> for resource::IRI<'g, Class<'g, G>> where
     G: graph::Graph<'g>
 {}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for Class<'g, G> where G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g, Class<'g, G>> where
+    G: graph::Graph<'g>
+{}
 
 class!(
 /// **owl:DataRange**
@@ -891,6 +947,12 @@ where
 impl<'g, G: 'g> ontology::properties::owl::Members<'g> for DataRange<'g, G> where G: graph::Graph<'g>
 {}
 impl<'g, G: 'g> ontology::properties::owl::Members<'g> for resource::IRI<'g, DataRange<'g, G>> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for DataRange<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g, DataRange<'g, G>> where
     G: graph::Graph<'g>
 {}
 impl<'g, G: 'g> ontology::properties::owl::DatatypeComplementOf<'g> for DataRange<'g, G> where
@@ -1041,6 +1103,14 @@ impl<'g, G: 'g> ontology::properties::owl::Members<'g>
 where
     G: graph::Graph<'g>,
 {}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for DatatypeProperty<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g>
+    for resource::IRI<'g, DatatypeProperty<'g, G>>
+where
+    G: graph::Graph<'g>,
+{}
 
 class!(
 /// **owl:DeprecatedClass**
@@ -1160,6 +1230,14 @@ impl<'g, G: 'g> ontology::properties::owl::Members<'g> for DeprecatedClass<'g, G
 {}
 impl<'g, G: 'g> ontology::properties::owl::Members<'g> for resource::IRI<'g, DeprecatedClass<'g, G>> where
     G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for DeprecatedClass<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g>
+    for resource::IRI<'g, DeprecatedClass<'g, G>>
+where
+    G: graph::Graph<'g>,
 {}
 
 class!(
@@ -1293,6 +1371,14 @@ impl<'g, G: 'g> ontology::properties::owl::Members<'g>
 where
     G: graph::Graph<'g>,
 {}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for DeprecatedProperty<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g>
+    for resource::IRI<'g, DeprecatedProperty<'g, G>>
+where
+    G: graph::Graph<'g>,
+{}
 
 class!(
 /// **owl:FunctionalProperty**
@@ -1421,6 +1507,14 @@ impl<'g, G: 'g> ontology::properties::owl::Members<'g> for FunctionalProperty<'g
     G: graph::Graph<'g>
 {}
 impl<'g, G: 'g> ontology::properties::owl::Members<'g>
+    for resource::IRI<'g, FunctionalProperty<'g, G>>
+where
+    G: graph::Graph<'g>,
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for FunctionalProperty<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g>
     for resource::IRI<'g, FunctionalProperty<'g, G>>
 where
     G: graph::Graph<'g>,
@@ -1561,6 +1655,14 @@ impl<'g, G: 'g> ontology::properties::owl::Members<'g> for InverseFunctionalProp
     G: graph::Graph<'g>
 {}
 impl<'g, G: 'g> ontology::properties::owl::Members<'g>
+    for resource::IRI<'g, InverseFunctionalProperty<'g, G>>
+where
+    G: graph::Graph<'g>,
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for InverseFunctionalProperty<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g>
     for resource::IRI<'g, InverseFunctionalProperty<'g, G>>
 where
     G: graph::Graph<'g>,
@@ -1713,6 +1815,14 @@ impl<'g, G: 'g> ontology::properties::owl::Members<'g> for IrreflexiveProperty<'
     G: graph::Graph<'g>
 {}
 impl<'g, G: 'g> ontology::properties::owl::Members<'g>
+    for resource::IRI<'g, IrreflexiveProperty<'g, G>>
+where
+    G: graph::Graph<'g>,
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for IrreflexiveProperty<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g>
     for resource::IRI<'g, IrreflexiveProperty<'g, G>>
 where
     G: graph::Graph<'g>,
@@ -1883,6 +1993,14 @@ impl<'g, G: 'g> ontology::properties::owl::Members<'g>
 where
     G: graph::Graph<'g>,
 {}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for NegativePropertyAssertion<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g>
+    for resource::IRI<'g, NegativePropertyAssertion<'g, G>>
+where
+    G: graph::Graph<'g>,
+{}
 
 class!(
 /// **owl:Nothing**
@@ -2031,12 +2149,30 @@ impl<'g, G: 'g> ontology::properties::owl::Members<'g> for ObjectProperty<'g, G>
 impl<'g, G: 'g> ontology::properties::owl::Members<'g> for resource::IRI<'g, ObjectProperty<'g, G>> where
     G: graph::Graph<'g>
 {}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for ObjectProperty<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g>
+    for resource::IRI<'g, ObjectProperty<'g, G>>
+where
+    G: graph::Graph<'g>,
+{}
 
 class!(
 /// **owl:Ontology**
 /// The class of ontologies.
 :"http://www.w3.org/2002/07/owl#Ontology", Ontology,
 78);
+impl<'g, G: 'g> ontology::properties::owl::Imports<'g> for Ontology<'g, G> where G: graph::Graph<'g> {}
+impl<'g, G: 'g> ontology::properties::owl::Imports<'g> for resource::IRI<'g, Ontology<'g, G>> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionIRI<'g> for Ontology<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionIRI<'g> for resource::IRI<'g, Ontology<'g, G>> where
+    G: graph::Graph<'g>
+{}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for Ontology<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, Ontology<'g, G>> where
     G: graph::Graph<'g>
@@ -2095,6 +2231,12 @@ where
 {}
 impl<'g, G: 'g> ontology::properties::owl::Members<'g> for Ontology<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::owl::Members<'g> for resource::IRI<'g, Ontology<'g, G>> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for Ontology<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g, Ontology<'g, G>> where
     G: graph::Graph<'g>
 {}
 
@@ -2219,6 +2361,14 @@ impl<'g, G: 'g> ontology::properties::owl::Members<'g> for OntologyProperty<'g, 
     G: graph::Graph<'g>
 {}
 impl<'g, G: 'g> ontology::properties::owl::Members<'g>
+    for resource::IRI<'g, OntologyProperty<'g, G>>
+where
+    G: graph::Graph<'g>,
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for OntologyProperty<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g>
     for resource::IRI<'g, OntologyProperty<'g, G>>
 where
     G: graph::Graph<'g>,
@@ -2349,6 +2499,14 @@ impl<'g, G: 'g> ontology::properties::owl::Members<'g> for ReflexiveProperty<'g,
     G: graph::Graph<'g>
 {}
 impl<'g, G: 'g> ontology::properties::owl::Members<'g>
+    for resource::IRI<'g, ReflexiveProperty<'g, G>>
+where
+    G: graph::Graph<'g>,
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for ReflexiveProperty<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g>
     for resource::IRI<'g, ReflexiveProperty<'g, G>>
 where
     G: graph::Graph<'g>,
@@ -2579,6 +2737,12 @@ impl<'g, G: 'g> ontology::properties::owl::Members<'g> for Restriction<'g, G> wh
 impl<'g, G: 'g> ontology::properties::owl::Members<'g> for resource::IRI<'g, Restriction<'g, G>> where
     G: graph::Graph<'g>
 {}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for Restriction<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g, Restriction<'g, G>> where
+    G: graph::Graph<'g>
+{}
 impl<'g, G: 'g> ontology::properties::owl::ComplementOf<'g> for Restriction<'g, G> where
     G: graph::Graph<'g>
 {}
@@ -2735,6 +2899,14 @@ impl<'g, G: 'g> ontology::properties::owl::Members<'g> for SymmetricProperty<'g,
     G: graph::Graph<'g>
 {}
 impl<'g, G: 'g> ontology::properties::owl::Members<'g>
+    for resource::IRI<'g, SymmetricProperty<'g, G>>
+where
+    G: graph::Graph<'g>,
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for SymmetricProperty<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g>
     for resource::IRI<'g, SymmetricProperty<'g, G>>
 where
     G: graph::Graph<'g>,
@@ -2899,6 +3071,14 @@ impl<'g, G: 'g> ontology::properties::owl::Members<'g> for TransitiveProperty<'g
     G: graph::Graph<'g>
 {}
 impl<'g, G: 'g> ontology::properties::owl::Members<'g>
+    for resource::IRI<'g, TransitiveProperty<'g, G>>
+where
+    G: graph::Graph<'g>,
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for TransitiveProperty<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g>
     for resource::IRI<'g, TransitiveProperty<'g, G>>
 where
     G: graph::Graph<'g>,
