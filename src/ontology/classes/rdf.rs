@@ -37,6 +37,28 @@ impl<'g, G: 'g> ontology::properties::rdfs::SeeAlso<'g> for Alt<'g, G> where G: 
 impl<'g, G: 'g> ontology::properties::rdfs::SeeAlso<'g> for resource::IRI<'g, Alt<'g, G>> where
     G: graph::Graph<'g>
 {}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedProperty<'g> for Alt<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedProperty<'g> for resource::IRI<'g, Alt<'g, G>> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedSource<'g> for Alt<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedSource<'g> for resource::IRI<'g, Alt<'g, G>> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedTarget<'g> for Alt<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedTarget<'g> for resource::IRI<'g, Alt<'g, G>> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::Members<'g> for Alt<'g, G> where G: graph::Graph<'g> {}
+impl<'g, G: 'g> ontology::properties::owl::Members<'g> for resource::IRI<'g, Alt<'g, G>> where
+    G: graph::Graph<'g>
+{}
 
 class!(
 /// **rdf:Bag**
@@ -69,6 +91,28 @@ impl<'g, G: 'g> ontology::properties::rdfs::Member<'g> for resource::IRI<'g, Bag
 {}
 impl<'g, G: 'g> ontology::properties::rdfs::SeeAlso<'g> for Bag<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdfs::SeeAlso<'g> for resource::IRI<'g, Bag<'g, G>> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedProperty<'g> for Bag<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedProperty<'g> for resource::IRI<'g, Bag<'g, G>> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedSource<'g> for Bag<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedSource<'g> for resource::IRI<'g, Bag<'g, G>> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedTarget<'g> for Bag<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedTarget<'g> for resource::IRI<'g, Bag<'g, G>> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::Members<'g> for Bag<'g, G> where G: graph::Graph<'g> {}
+impl<'g, G: 'g> ontology::properties::owl::Members<'g> for resource::IRI<'g, Bag<'g, G>> where
     G: graph::Graph<'g>
 {}
 
@@ -104,6 +148,28 @@ impl<'g, G: 'g> ontology::properties::rdfs::Member<'g> for resource::IRI<'g, HTM
 {}
 impl<'g, G: 'g> ontology::properties::rdfs::SeeAlso<'g> for HTML<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdfs::SeeAlso<'g> for resource::IRI<'g, HTML<'g, G>> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedProperty<'g> for HTML<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedProperty<'g> for resource::IRI<'g, HTML<'g, G>> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedSource<'g> for HTML<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedSource<'g> for resource::IRI<'g, HTML<'g, G>> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedTarget<'g> for HTML<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedTarget<'g> for resource::IRI<'g, HTML<'g, G>> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::Members<'g> for HTML<'g, G> where G: graph::Graph<'g> {}
+impl<'g, G: 'g> ontology::properties::owl::Members<'g> for resource::IRI<'g, HTML<'g, G>> where
     G: graph::Graph<'g>
 {}
 
@@ -147,6 +213,28 @@ impl<'g, G: 'g> ontology::properties::rdfs::Member<'g> for resource::IRI<'g, Lis
 {}
 impl<'g, G: 'g> ontology::properties::rdfs::SeeAlso<'g> for List<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdfs::SeeAlso<'g> for resource::IRI<'g, List<'g, G>> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedProperty<'g> for List<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedProperty<'g> for resource::IRI<'g, List<'g, G>> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedSource<'g> for List<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedSource<'g> for resource::IRI<'g, List<'g, G>> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedTarget<'g> for List<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedTarget<'g> for resource::IRI<'g, List<'g, G>> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::Members<'g> for List<'g, G> where G: graph::Graph<'g> {}
+impl<'g, G: 'g> ontology::properties::owl::Members<'g> for resource::IRI<'g, List<'g, G>> where
     G: graph::Graph<'g>
 {}
 
@@ -198,6 +286,36 @@ impl<'g, G: 'g> ontology::properties::rdfs::SeeAlso<'g> for PlainLiteral<'g, G> 
 impl<'g, G: 'g> ontology::properties::rdfs::SeeAlso<'g> for resource::IRI<'g, PlainLiteral<'g, G>> where
     G: graph::Graph<'g>
 {}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedProperty<'g> for PlainLiteral<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedProperty<'g>
+    for resource::IRI<'g, PlainLiteral<'g, G>>
+where
+    G: graph::Graph<'g>,
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedSource<'g> for PlainLiteral<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedSource<'g>
+    for resource::IRI<'g, PlainLiteral<'g, G>>
+where
+    G: graph::Graph<'g>,
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedTarget<'g> for PlainLiteral<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedTarget<'g>
+    for resource::IRI<'g, PlainLiteral<'g, G>>
+where
+    G: graph::Graph<'g>,
+{}
+impl<'g, G: 'g> ontology::properties::owl::Members<'g> for PlainLiteral<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::Members<'g> for resource::IRI<'g, PlainLiteral<'g, G>> where
+    G: graph::Graph<'g>
+{}
 
 class!(
 /// **rdf:Property**
@@ -217,6 +335,22 @@ impl<'g, G: 'g> ontology::properties::rdfs::SubPropertyOf<'g> for Property<'g, G
 {}
 impl<'g, G: 'g> ontology::properties::rdfs::SubPropertyOf<'g> for resource::IRI<'g, Property<'g, G>> where
     G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::EquivalentProperty<'g> for Property<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::EquivalentProperty<'g>
+    for resource::IRI<'g, Property<'g, G>>
+where
+    G: graph::Graph<'g>,
+{}
+impl<'g, G: 'g> ontology::properties::owl::PropertyDisjointWith<'g> for Property<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::PropertyDisjointWith<'g>
+    for resource::IRI<'g, Property<'g, G>>
+where
+    G: graph::Graph<'g>,
 {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for Property<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, Property<'g, G>> where
@@ -248,6 +382,34 @@ impl<'g, G: 'g> ontology::properties::rdfs::Member<'g> for resource::IRI<'g, Pro
 impl<'g, G: 'g> ontology::properties::rdfs::SeeAlso<'g> for Property<'g, G> where G: graph::Graph<'g>
 {}
 impl<'g, G: 'g> ontology::properties::rdfs::SeeAlso<'g> for resource::IRI<'g, Property<'g, G>> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedProperty<'g> for Property<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedProperty<'g>
+    for resource::IRI<'g, Property<'g, G>>
+where
+    G: graph::Graph<'g>,
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedSource<'g> for Property<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedSource<'g>
+    for resource::IRI<'g, Property<'g, G>>
+where
+    G: graph::Graph<'g>,
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedTarget<'g> for Property<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedTarget<'g>
+    for resource::IRI<'g, Property<'g, G>>
+where
+    G: graph::Graph<'g>,
+{}
+impl<'g, G: 'g> ontology::properties::owl::Members<'g> for Property<'g, G> where G: graph::Graph<'g> {}
+impl<'g, G: 'g> ontology::properties::owl::Members<'g> for resource::IRI<'g, Property<'g, G>> where
     G: graph::Graph<'g>
 {}
 
@@ -282,6 +444,28 @@ impl<'g, G: 'g> ontology::properties::rdfs::Member<'g> for resource::IRI<'g, Seq
 {}
 impl<'g, G: 'g> ontology::properties::rdfs::SeeAlso<'g> for Seq<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdfs::SeeAlso<'g> for resource::IRI<'g, Seq<'g, G>> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedProperty<'g> for Seq<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedProperty<'g> for resource::IRI<'g, Seq<'g, G>> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedSource<'g> for Seq<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedSource<'g> for resource::IRI<'g, Seq<'g, G>> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedTarget<'g> for Seq<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedTarget<'g> for resource::IRI<'g, Seq<'g, G>> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::Members<'g> for Seq<'g, G> where G: graph::Graph<'g> {}
+impl<'g, G: 'g> ontology::properties::owl::Members<'g> for resource::IRI<'g, Seq<'g, G>> where
     G: graph::Graph<'g>
 {}
 
@@ -340,6 +524,35 @@ impl<'g, G: 'g> ontology::properties::rdfs::SeeAlso<'g> for Statement<'g, G> whe
 impl<'g, G: 'g> ontology::properties::rdfs::SeeAlso<'g> for resource::IRI<'g, Statement<'g, G>> where
     G: graph::Graph<'g>
 {}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedProperty<'g> for Statement<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedProperty<'g>
+    for resource::IRI<'g, Statement<'g, G>>
+where
+    G: graph::Graph<'g>,
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedSource<'g> for Statement<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedSource<'g>
+    for resource::IRI<'g, Statement<'g, G>>
+where
+    G: graph::Graph<'g>,
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedTarget<'g> for Statement<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedTarget<'g>
+    for resource::IRI<'g, Statement<'g, G>>
+where
+    G: graph::Graph<'g>,
+{}
+impl<'g, G: 'g> ontology::properties::owl::Members<'g> for Statement<'g, G> where G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::Members<'g> for resource::IRI<'g, Statement<'g, G>> where
+    G: graph::Graph<'g>
+{}
 
 class!(
 /// **rdf:XMLLiteral**
@@ -383,6 +596,36 @@ impl<'g, G: 'g> ontology::properties::rdfs::SeeAlso<'g> for XMLLiteral<'g, G> wh
 impl<'g, G: 'g> ontology::properties::rdfs::SeeAlso<'g> for resource::IRI<'g, XMLLiteral<'g, G>> where
     G: graph::Graph<'g>
 {}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedProperty<'g> for XMLLiteral<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedProperty<'g>
+    for resource::IRI<'g, XMLLiteral<'g, G>>
+where
+    G: graph::Graph<'g>,
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedSource<'g> for XMLLiteral<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedSource<'g>
+    for resource::IRI<'g, XMLLiteral<'g, G>>
+where
+    G: graph::Graph<'g>,
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedTarget<'g> for XMLLiteral<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedTarget<'g>
+    for resource::IRI<'g, XMLLiteral<'g, G>>
+where
+    G: graph::Graph<'g>,
+{}
+impl<'g, G: 'g> ontology::properties::owl::Members<'g> for XMLLiteral<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::Members<'g> for resource::IRI<'g, XMLLiteral<'g, G>> where
+    G: graph::Graph<'g>
+{}
 
 class!(
 /// **rdf:langString**
@@ -424,5 +667,35 @@ impl<'g, G: 'g> ontology::properties::rdfs::SeeAlso<'g> for LangString<'g, G> wh
     G: graph::Graph<'g>
 {}
 impl<'g, G: 'g> ontology::properties::rdfs::SeeAlso<'g> for resource::IRI<'g, LangString<'g, G>> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedProperty<'g> for LangString<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedProperty<'g>
+    for resource::IRI<'g, LangString<'g, G>>
+where
+    G: graph::Graph<'g>,
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedSource<'g> for LangString<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedSource<'g>
+    for resource::IRI<'g, LangString<'g, G>>
+where
+    G: graph::Graph<'g>,
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedTarget<'g> for LangString<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::AnnotatedTarget<'g>
+    for resource::IRI<'g, LangString<'g, G>>
+where
+    G: graph::Graph<'g>,
+{}
+impl<'g, G: 'g> ontology::properties::owl::Members<'g> for LangString<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::Members<'g> for resource::IRI<'g, LangString<'g, G>> where
     G: graph::Graph<'g>
 {}

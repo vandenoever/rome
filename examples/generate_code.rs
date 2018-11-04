@@ -221,7 +221,19 @@ where
         }
     }
 }
-
+/*
+/// Infer properties
+fn infer_properties<'g, T, G, W>(graph: &'g G, w: &mut W, translator: &mut T)
+where
+    G: Graph<'g>,
+    W: GraphWriter<'g>,
+    T: ResourceTranslator<'g, Graph = G, GraphWriter = W> + 'g,
+{
+    for triple in graph.iter() {
+        w.add(triple.predicate(), rdf_type, rdf_property);
+    }
+}
+*/
 fn copy_triples<'g, T, G, W>(graph: &'g G, w: &mut W, translator: &mut T)
 where
     G: Graph<'g>,

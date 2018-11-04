@@ -1,0 +1,52 @@
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+
+# hierarchy of XSD types
+# source: http://www.w3.org/TR/xmlschema-2/type-hierarchy.gif
+xsd:anySimpleType rdfs:subClassOf rdfs:Literal .
+xsd:duration rdfs:subClassOf xsd:anySimpleType .
+xsd:dateTime rdfs:subClassOf xsd:anySimpleType .
+xsd:time rdfs:subClassOf xsd:anySimpleType .
+xsd:date rdfs:subClassOf xsd:anySimpleType .
+xsd:gYearMonth rdfs:subClassOf xsd:anySimpleType .
+xsd:gYear rdfs:subClassOf xsd:anySimpleType .
+xsd:gMonthDay rdfs:subClassOf xsd:anySimpleType .
+xsd:gDay rdfs:subClassOf xsd:anySimpleType .
+xsd:gMonth rdfs:subClassOf xsd:anySimpleType .
+xsd:string rdfs:subClassOf xsd:anySimpleType .
+xsd:boolean rdfs:subClassOf xsd:anySimpleType .
+xsd:base64Binary rdfs:subClassOf xsd:anySimpleType .
+xsd:hexBinary rdfs:subClassOf xsd:anySimpleType .
+xsd:float rdfs:subClassOf xsd:anySimpleType .
+xsd:decimal rdfs:subClassOf xsd:anySimpleType .
+xsd:double rdfs:subClassOf xsd:anySimpleType .
+xsd:anyURI rdfs:subClassOf xsd:anySimpleType .
+xsd:QName rdfs:subClassOf xsd:anySimpleType .
+xsd:NOTATION rdfs:subClassOf xsd:anySimpleType .
+
+xsd:normalizedString rdfs:subClassOf xsd:string .
+xsd:token rdfs:subClassOf xsd:normalizedString .
+xsd:language rdfs:subClassOf xsd:token .
+xsd:Name rdfs:subClassOf xsd:token .
+xsd:NMTOKEN rdfs:subClassOf xsd:token .
+xsd:NCName rdfs:subClassOf xsd:Name .
+xsd:ID rdfs:subClassOf xsd:NCName .
+xsd:IDREF rdfs:subClassOf xsd:NCName .
+xsd:ENTITY rdfs:subClassOf xsd:NCName .
+
+xsd:integer rdfs:subClassOf xsd:decimal .
+xsd:nonPositiveInteger rdfs:subClassOf xsd:integer .
+xsd:long rdfs:subClassOf xsd:integer .
+xsd:int rdfs:subClassOf xsd:long .
+xsd:short rdfs:subClassOf xsd:int .
+xsd:byte rdfs:subClassOf xsd:short .
+xsd:nonNegativeInteger rdfs:subClassOf xsd:integer .
+xsd:negativeInteger rdfs:subClassOf xsd:nonPositiveInteger .
+xsd:positiveInteger rdfs:subClassOf xsd:nonNegativeInteger .
+xsd:unsignedLong rdfs:subClassOf xsd:nonNegativeInteger .
+xsd:unsignedInt rdfs:subClassOf xsd:unsignedLong .
+xsd:unsignedShort rdfs:subClassOf xsd:unsignedInt .
+xsd:unsignedByte rdfs:subClassOf xsd:unsignedShort .
+
+rdf:langString rdfs:subClassOf xsd:string .
