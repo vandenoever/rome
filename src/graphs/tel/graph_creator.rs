@@ -4,8 +4,8 @@ use super::string_collector::*;
 use super::triple::*;
 #[cfg(test)]
 use super::triple64::*;
-use constants;
 use graph;
+use ontology::iri::rdf;
 use rand;
 use std::cmp;
 use std::marker::PhantomData;
@@ -51,7 +51,7 @@ where
 {
     pub fn with_capacity(capacity: usize) -> GraphCreator<SPO, OPS> {
         let mut dlc = StringCollector::with_capacity(capacity);
-        let lang_string_datatype_id = dlc.add_string(constants::RDF_LANG_STRING);
+        let lang_string_datatype_id = dlc.add_string(rdf::LANG_STRING);
         GraphCreator {
             graph_id: rand::random::<u32>(),
             string_collector: StringCollector::with_capacity(capacity),

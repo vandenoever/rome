@@ -16,7 +16,7 @@ impl Namespaces {
         }
     }
     /// Append a new mapping from prefix to namespace.
-    pub fn set(&mut self, prefix: &[u8], namespace: &str) {
+    pub fn set(&mut self, prefix: &str, namespace: &str) {
         if let Some(ns) = self.namespaces.iter_mut().find(|ns| ns.prefix == prefix) {
             ns.namespace.clear();
             ns.namespace.push_str(namespace);
@@ -24,33 +24,33 @@ impl Namespaces {
         }
         self.namespaces.push(Namespace {
             namespace: String::from(namespace),
-            prefix: Vec::from(prefix),
+            prefix: String::from(prefix),
         });
     }
     /// Append a new mapping from prefix to namespace.
-    pub fn insert(&mut self, prefix: &[u8], namespace: String) {
+    pub fn insert(&mut self, prefix: &str, namespace: String) {
         if let Some(ns) = self.namespaces.iter_mut().find(|ns| ns.prefix == prefix) {
             ns.namespace = namespace;
             return;
         }
         self.namespaces.push(Namespace {
             namespace,
-            prefix: Vec::from(prefix),
+            prefix: String::from(prefix),
         });
     }
     /// Find the first prefix in this Namespaces that matches the given string.
     ///
     /// The prefix is returned and the remainder of the string is also also returned.
-    pub fn find_prefix<'a>(&self, iri: &'a str) -> Option<(&[u8], &'a str)> {
+    pub fn find_prefix<'a>(&self, iri: &'a str) -> Option<(&str, &'a str)> {
         for ns in &self.namespaces {
             if iri.starts_with(&ns.namespace) {
-                return Some((ns.prefix.as_slice(), &iri[ns.namespace.len()..]));
+                return Some((&ns.prefix, &iri[ns.namespace.len()..]));
             }
         }
         None
     }
     /// Find the namespace for the given prefix.
-    pub fn find_namespace(&self, prefix: &[u8]) -> Option<&str> {
+    pub fn find_namespace(&self, prefix: &str) -> Option<&str> {
         for ns in &self.namespaces {
             if ns.prefix == prefix {
                 return Some(ns.namespace.as_str());
@@ -74,16 +74,16 @@ impl Default for Namespaces {
 #[derive(Clone)]
 pub struct Namespace {
     namespace: String,
-    prefix: Vec<u8>,
+    prefix: String,
 }
 
 impl Namespace {
     /// Get the namespace.
-    pub fn namespace(&self) -> &String {
+    pub fn namespace(&self) -> &str {
         &self.namespace
     }
     /// Get the prefix.
-    pub fn prefix(&self) -> &[u8] {
-        self.prefix.as_slice()
+    pub fn prefix(&self) -> &str {
+        &self.prefix
     }
 }

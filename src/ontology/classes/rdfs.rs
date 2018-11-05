@@ -1,5 +1,6 @@
 use graph;
 use ontology;
+use ontology::iri::rdfs;
 use ontology_adapter;
 use resource;
 use std;
@@ -7,7 +8,7 @@ use std;
 class!(
 /// **rdfs:Class**
 /// The class of classes.
-:"http://www.w3.org/2000/01/rdf-schema#Class", Class,
+:rdfs::CLASS, Class,
 11);
 impl<'g, G: 'g> ontology::properties::rdfs::SubClassOf<'g> for Class<'g, G> where G: graph::Graph<'g>
 {}
@@ -95,7 +96,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 class!(
 /// **rdfs:Container**
 /// The class of RDF containers.
-:"http://www.w3.org/2000/01/rdf-schema#Container", Container,
+:rdfs::CONTAINER, Container,
 12);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for Container<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, Container<'g, G>> where
@@ -171,7 +172,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 class!(
 /// **rdfs:ContainerMembershipProperty**
 /// The class of container membership properties, rdf:_1, rdf:_2, ...,                    all of which are sub-properties of 'member'.
-:"http://www.w3.org/2000/01/rdf-schema#ContainerMembershipProperty", ContainerMembershipProperty,
+:rdfs::CONTAINER_MEMBERSHIP_PROPERTY, ContainerMembershipProperty,
 13);
 impl<'g, G: 'g> ontology::properties::rdfs::Domain<'g> for ContainerMembershipProperty<'g, G> where
     G: graph::Graph<'g>
@@ -323,7 +324,7 @@ where
 class!(
 /// **rdfs:Datatype**
 /// The class of RDF datatypes.
-:"http://www.w3.org/2000/01/rdf-schema#Datatype", Datatype,
+:rdfs::DATATYPE, Datatype,
 14);
 impl<'g, G: 'g> ontology::properties::owl::DatatypeComplementOf<'g> for Datatype<'g, G> where
     G: graph::Graph<'g>
@@ -445,7 +446,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 class!(
 /// **rdfs:Literal**
 /// The class of literal values, eg. textual strings and integers.
-:"http://www.w3.org/2000/01/rdf-schema#Literal", Literal,
+:rdfs::LITERAL, Literal,
 15);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for Literal<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, Literal<'g, G>> where
@@ -511,7 +512,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 class!(
 /// **rdfs:Resource**
 /// The class resource, everything.
-:"http://www.w3.org/2000/01/rdf-schema#Resource", Resource,
+:rdfs::RESOURCE, Resource,
 16);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for Resource<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, Resource<'g, G>> where

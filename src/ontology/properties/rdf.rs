@@ -1,53 +1,54 @@
 use graph;
 use ontology;
+use ontology::iri::rdf;
 use resource;
 use std;
 
 property!(
 /// **rdf:first**
 /// The first item in the subject RDF list.
-:"http://www.w3.org/1999/02/22-rdf-syntax-ns#first", First, first,
+:rdf::FIRST, First, first,
 ontology::classes::rdfs::Resource<'g, G>,
 87);
 
 property!(
 /// **rdf:object**
 /// The object of the subject RDF statement.
-:"http://www.w3.org/1999/02/22-rdf-syntax-ns#object", Object, object,
+:rdf::OBJECT, Object, object,
 ontology::classes::rdfs::Resource<'g, G>,
 88);
 
 property!(
 /// **rdf:predicate**
 /// The predicate of the subject RDF statement.
-:"http://www.w3.org/1999/02/22-rdf-syntax-ns#predicate", Predicate, predicate,
+:rdf::PREDICATE, Predicate, predicate,
 ontology::classes::rdfs::Resource<'g, G>,
 89);
 
 property!(
 /// **rdf:rest**
 /// The rest of the subject RDF list after the first item.
-:"http://www.w3.org/1999/02/22-rdf-syntax-ns#rest", Rest, rest,
+:rdf::REST, Rest, rest,
 ontology::classes::rdf::List<'g, G>,
 90);
 
 property!(
 /// **rdf:subject**
 /// The subject of the subject RDF statement.
-:"http://www.w3.org/1999/02/22-rdf-syntax-ns#subject", Subject, subject,
+:rdf::SUBJECT, Subject, subject,
 ontology::classes::rdfs::Resource<'g, G>,
 91);
 
 property!(
 /// **rdf:type**
 /// The subject is an instance of a class.
-:"http://www.w3.org/1999/02/22-rdf-syntax-ns#type", Type, a,
+:rdf::TYPE, Type, a,
 ontology::classes::rdfs::Class<'g, G>,
 92);
 
 property!(
 /// **rdf:value**
 /// Idiomatic property used for structured values.
-:"http://www.w3.org/1999/02/22-rdf-syntax-ns#value", Value, value,
+:rdf::VALUE, Value, value,
 ontology::classes::rdfs::Resource<'g, G>,
 93);

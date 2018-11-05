@@ -1,12 +1,13 @@
 use super::grammar::{statement, tws};
 use super::grammar_helper::*;
 use super::grammar_structs::*;
-use constants::*;
+use constants;
 use error::{Error, Result};
 use graph;
 use namespaces::*;
 use nom::types::CompleteStr;
 use nom::Err;
+use ontology::iri::{rdf, xsd};
 use regex::Regex;
 use std::collections::HashMap;
 use std::marker::PhantomData;
@@ -161,7 +162,7 @@ where
         &self.state.prefixes
     }
     fn set_prefix(&mut self, prefix: &'a str, value: String) {
-        self.state.prefixes.insert(prefix.as_bytes(), value);
+        self.state.prefixes.insert(prefix, value);
     }
     /// return Ok(true) when done
     fn parse_statement(&mut self) -> Result<bool> {
@@ -250,15 +251,13 @@ where
                 unescape_iri(iri, &mut self.buffer)?;
                 join_iri(&self.base, self.buffer.as_str(), &mut self.iri)?;
             }
-            IRI::PrefixedName(prefix, local) => {
-                match self.prefixes.find_namespace(prefix.as_bytes()) {
-                    Some(ns) => {
-                        self.iri.push_str(ns);
-                        pn_local_unescape(local, &mut self.iri)?;
-                    }
-                    None => return Err(Error::Custom("Cannot find prefix.")),
+            IRI::PrefixedName(prefix, local) => match self.prefixes.find_namespace(&prefix) {
+                Some(ns) => {
+                    self.iri.push_str(ns);
+                    pn_local_unescape(local, &mut self.iri)?;
                 }
-            }
+                None => return Err(Error::Custom("Cannot find prefix.")),
+            },
         }
         Ok(())
     }
@@ -269,22 +268,22 @@ where
                 self.writer.create_datatype(&self.iri)
             }
             Datatype::RDFLangString => {
-                get_cached_datatype(&mut self.rdf_lang_string, self.writer, RDF_LANG_STRING)
+                get_cached_datatype(&mut self.rdf_lang_string, self.writer, rdf::LANG_STRING)
             }
             Datatype::XSDBoolean => {
-                get_cached_datatype(&mut self.xsd_boolean, self.writer, XSD_BOOLEAN)
+                get_cached_datatype(&mut self.xsd_boolean, self.writer, xsd::BOOLEAN)
             }
             Datatype::XSDDecimal => {
-                get_cached_datatype(&mut self.xsd_decimal, self.writer, XSD_DECIMAL)
+                get_cached_datatype(&mut self.xsd_decimal, self.writer, xsd::DECIMAL)
             }
             Datatype::XSDDouble => {
-                get_cached_datatype(&mut self.xsd_double, self.writer, XSD_DOUBLE)
+                get_cached_datatype(&mut self.xsd_double, self.writer, xsd::DOUBLE)
             }
             Datatype::XSDInteger => {
-                get_cached_datatype(&mut self.xsd_integer, self.writer, XSD_INTEGER)
+                get_cached_datatype(&mut self.xsd_integer, self.writer, xsd::INTEGER)
             }
             Datatype::XSDString => {
-                get_cached_datatype(&mut self.xsd_string, self.writer, XSD_STRING)
+                get_cached_datatype(&mut self.xsd_string, self.writer, xsd::STRING)
             }
         })
     }
@@ -341,12 +340,15 @@ fn make_collection<'a, W>(
 where
     W: graph::GraphWriter<'a>,
 {
-    let mut head =
-        graph::WriterBlankNodeOrIRI::IRI(get_cached_iri(&mut state.rdf_nil, state.writer, RDF_NIL));
+    let mut head = graph::WriterBlankNodeOrIRI::IRI(get_cached_iri(
+        &mut state.rdf_nil,
+        state.writer,
+        constants::RDF_NIL,
+    ));
     for object in collection.into_iter().rev() {
         let this = state.new_blank();
-        let rdf_first = get_cached_iri(&mut state.rdf_first, state.writer, RDF_FIRST);
-        let rdf_rest = get_cached_iri(&mut state.rdf_rest, state.writer, RDF_REST);
+        let rdf_first = get_cached_iri(&mut state.rdf_first, state.writer, rdf::FIRST);
+        let rdf_rest = get_cached_iri(&mut state.rdf_rest, state.writer, rdf::REST);
         let o = make_object(object, state)?;
         match o {
             graph::WriterResource::BlankNode(o, _) => {

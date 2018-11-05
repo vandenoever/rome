@@ -62,8 +62,8 @@
 //!
 //!
 
-use constants;
 use iter::SortedIterator;
+use ontology::iri::xsd;
 use std::cmp::Ordering;
 use std::marker::PhantomData;
 
@@ -653,10 +653,10 @@ impl<'g> LiteralPtr<'g> for &'g str {
         *self
     }
     fn datatype(&self) -> &'g str {
-        constants::XSD_STRING
+        xsd::STRING
     }
     fn datatype_str(&self) -> &str {
-        constants::XSD_STRING
+        xsd::STRING
     }
     fn language(&self) -> Option<&str> {
         None
@@ -668,10 +668,10 @@ impl<'g> LiteralPtr<'g> for String {
         self.as_str()
     }
     fn datatype(&self) -> &'g str {
-        constants::XSD_STRING
+        xsd::STRING
     }
     fn datatype_str(&self) -> &str {
-        constants::XSD_STRING
+        xsd::STRING
     }
     fn language(&self) -> Option<&str> {
         None

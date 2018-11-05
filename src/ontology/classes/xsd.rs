@@ -1,12 +1,13 @@
 use graph;
 use ontology;
+use ontology::iri::xsd;
 use ontology_adapter;
 use resource;
 use std;
 
 class!(
 /// **xsd:ENTITY**
-:"http://www.w3.org/2001/XMLSchema#ENTITY", ENTITY,
+:xsd::ENTITY, ENTITY,
 17);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for ENTITY<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, ENTITY<'g, G>> where
@@ -71,7 +72,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 
 class!(
 /// **xsd:ID**
-:"http://www.w3.org/2001/XMLSchema#ID", ID,
+:xsd::ID, ID,
 18);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for ID<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, ID<'g, G>> where
@@ -130,7 +131,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 
 class!(
 /// **xsd:IDREF**
-:"http://www.w3.org/2001/XMLSchema#IDREF", IDREF,
+:xsd::IDREF, IDREF,
 19);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for IDREF<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, IDREF<'g, G>> where
@@ -192,7 +193,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 
 class!(
 /// **xsd:NCName**
-:"http://www.w3.org/2001/XMLSchema#NCName", NCName,
+:xsd::NCNAME, NCName,
 20);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for NCName<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, NCName<'g, G>> where
@@ -257,7 +258,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 
 class!(
 /// **xsd:NMTOKEN**
-:"http://www.w3.org/2001/XMLSchema#NMTOKEN", NMTOKEN,
+:xsd::NMTOKEN, NMTOKEN,
 21);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for NMTOKEN<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, NMTOKEN<'g, G>> where
@@ -322,7 +323,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 
 class!(
 /// **xsd:NOTATION**
-:"http://www.w3.org/2001/XMLSchema#NOTATION", NOTATION,
+:xsd::NOTATION, NOTATION,
 22);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for NOTATION<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, NOTATION<'g, G>> where
@@ -393,7 +394,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 
 class!(
 /// **xsd:Name**
-:"http://www.w3.org/2001/XMLSchema#Name", Name,
+:xsd::NAME, Name,
 23);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for Name<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, Name<'g, G>> where
@@ -453,7 +454,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 
 class!(
 /// **xsd:QName**
-:"http://www.w3.org/2001/XMLSchema#QName", QName,
+:xsd::QNAME, QName,
 24);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for QName<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, QName<'g, G>> where
@@ -515,7 +516,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 
 class!(
 /// **xsd:anySimpleType**
-:"http://www.w3.org/2001/XMLSchema#anySimpleType", AnySimpleType,
+:xsd::ANY_SIMPLE_TYPE, AnySimpleType,
 25);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for AnySimpleType<'g, G> where
     G: graph::Graph<'g>
@@ -602,7 +603,7 @@ where
 
 class!(
 /// **xsd:anyURI**
-:"http://www.w3.org/2001/XMLSchema#anyURI", AnyURI,
+:xsd::ANY_URI, AnyURI,
 26);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for AnyURI<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, AnyURI<'g, G>> where
@@ -667,7 +668,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 
 class!(
 /// **xsd:base64Binary**
-:"http://www.w3.org/2001/XMLSchema#base64Binary", Base64Binary,
+:xsd::BASE64_BINARY, Base64Binary,
 27);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for Base64Binary<'g, G> where G: graph::Graph<'g>
 {}
@@ -753,7 +754,7 @@ where
 
 class!(
 /// **xsd:boolean**
-:"http://www.w3.org/2001/XMLSchema#boolean", Boolean,
+:xsd::BOOLEAN, Boolean,
 28);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for Boolean<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, Boolean<'g, G>> where
@@ -818,7 +819,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 
 class!(
 /// **xsd:byte**
-:"http://www.w3.org/2001/XMLSchema#byte", Byte,
+:xsd::BYTE, Byte,
 29);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for Byte<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, Byte<'g, G>> where
@@ -878,7 +879,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 
 class!(
 /// **xsd:date**
-:"http://www.w3.org/2001/XMLSchema#date", Date,
+:xsd::DATE, Date,
 30);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for Date<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, Date<'g, G>> where
@@ -938,7 +939,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 
 class!(
 /// **xsd:dateTime**
-:"http://www.w3.org/2001/XMLSchema#dateTime", DateTime,
+:xsd::DATE_TIME, DateTime,
 31);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for DateTime<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, DateTime<'g, G>> where
@@ -1009,7 +1010,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 
 class!(
 /// **xsd:decimal**
-:"http://www.w3.org/2001/XMLSchema#decimal", Decimal,
+:xsd::DECIMAL, Decimal,
 32);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for Decimal<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, Decimal<'g, G>> where
@@ -1074,7 +1075,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 
 class!(
 /// **xsd:double**
-:"http://www.w3.org/2001/XMLSchema#double", Double,
+:xsd::DOUBLE, Double,
 33);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for Double<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, Double<'g, G>> where
@@ -1139,7 +1140,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 
 class!(
 /// **xsd:duration**
-:"http://www.w3.org/2001/XMLSchema#duration", Duration,
+:xsd::DURATION, Duration,
 34);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for Duration<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, Duration<'g, G>> where
@@ -1210,7 +1211,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 
 class!(
 /// **xsd:float**
-:"http://www.w3.org/2001/XMLSchema#float", Float,
+:xsd::FLOAT, Float,
 35);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for Float<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, Float<'g, G>> where
@@ -1272,7 +1273,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 
 class!(
 /// **xsd:gDay**
-:"http://www.w3.org/2001/XMLSchema#gDay", GDay,
+:xsd::G_DAY, GDay,
 36);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for GDay<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, GDay<'g, G>> where
@@ -1332,7 +1333,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 
 class!(
 /// **xsd:gMonth**
-:"http://www.w3.org/2001/XMLSchema#gMonth", GMonth,
+:xsd::G_MONTH, GMonth,
 37);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for GMonth<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, GMonth<'g, G>> where
@@ -1397,7 +1398,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 
 class!(
 /// **xsd:gMonthDay**
-:"http://www.w3.org/2001/XMLSchema#gMonthDay", GMonthDay,
+:xsd::G_MONTH_DAY, GMonthDay,
 38);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for GMonthDay<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, GMonthDay<'g, G>> where
@@ -1472,7 +1473,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 
 class!(
 /// **xsd:gYear**
-:"http://www.w3.org/2001/XMLSchema#gYear", GYear,
+:xsd::G_YEAR, GYear,
 39);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for GYear<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, GYear<'g, G>> where
@@ -1534,7 +1535,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 
 class!(
 /// **xsd:gYearMonth**
-:"http://www.w3.org/2001/XMLSchema#gYearMonth", GYearMonth,
+:xsd::G_YEAR_MONTH, GYearMonth,
 40);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for GYearMonth<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, GYearMonth<'g, G>> where
@@ -1612,7 +1613,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 
 class!(
 /// **xsd:hexBinary**
-:"http://www.w3.org/2001/XMLSchema#hexBinary", HexBinary,
+:xsd::HEX_BINARY, HexBinary,
 41);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for HexBinary<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, HexBinary<'g, G>> where
@@ -1687,7 +1688,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 
 class!(
 /// **xsd:int**
-:"http://www.w3.org/2001/XMLSchema#int", Int,
+:xsd::INT, Int,
 42);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for Int<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, Int<'g, G>> where
@@ -1746,7 +1747,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 
 class!(
 /// **xsd:integer**
-:"http://www.w3.org/2001/XMLSchema#integer", Integer,
+:xsd::INTEGER, Integer,
 43);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for Integer<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, Integer<'g, G>> where
@@ -1811,7 +1812,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 
 class!(
 /// **xsd:language**
-:"http://www.w3.org/2001/XMLSchema#language", Language,
+:xsd::LANGUAGE, Language,
 44);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for Language<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, Language<'g, G>> where
@@ -1882,7 +1883,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 
 class!(
 /// **xsd:long**
-:"http://www.w3.org/2001/XMLSchema#long", Long,
+:xsd::LONG, Long,
 45);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for Long<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, Long<'g, G>> where
@@ -1942,7 +1943,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 
 class!(
 /// **xsd:negativeInteger**
-:"http://www.w3.org/2001/XMLSchema#negativeInteger", NegativeInteger,
+:xsd::NEGATIVE_INTEGER, NegativeInteger,
 46);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for NegativeInteger<'g, G> where
     G: graph::Graph<'g>
@@ -2033,7 +2034,7 @@ where
 
 class!(
 /// **xsd:nonNegativeInteger**
-:"http://www.w3.org/2001/XMLSchema#nonNegativeInteger", NonNegativeInteger,
+:xsd::NON_NEGATIVE_INTEGER, NonNegativeInteger,
 47);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for NonNegativeInteger<'g, G> where
     G: graph::Graph<'g>
@@ -2132,7 +2133,7 @@ where
 
 class!(
 /// **xsd:nonPositiveInteger**
-:"http://www.w3.org/2001/XMLSchema#nonPositiveInteger", NonPositiveInteger,
+:xsd::NON_POSITIVE_INTEGER, NonPositiveInteger,
 48);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for NonPositiveInteger<'g, G> where
     G: graph::Graph<'g>
@@ -2231,7 +2232,7 @@ where
 
 class!(
 /// **xsd:normalizedString**
-:"http://www.w3.org/2001/XMLSchema#normalizedString", NormalizedString,
+:xsd::NORMALIZED_STRING, NormalizedString,
 49);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for NormalizedString<'g, G> where
     G: graph::Graph<'g>
@@ -2326,7 +2327,7 @@ where
 
 class!(
 /// **xsd:positiveInteger**
-:"http://www.w3.org/2001/XMLSchema#positiveInteger", PositiveInteger,
+:xsd::POSITIVE_INTEGER, PositiveInteger,
 50);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for PositiveInteger<'g, G> where
     G: graph::Graph<'g>
@@ -2417,7 +2418,7 @@ where
 
 class!(
 /// **xsd:short**
-:"http://www.w3.org/2001/XMLSchema#short", Short,
+:xsd::SHORT, Short,
 51);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for Short<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, Short<'g, G>> where
@@ -2479,7 +2480,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 
 class!(
 /// **xsd:string**
-:"http://www.w3.org/2001/XMLSchema#string", String,
+:xsd::STRING, String,
 52);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for String<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, String<'g, G>> where
@@ -2544,7 +2545,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 
 class!(
 /// **xsd:time**
-:"http://www.w3.org/2001/XMLSchema#time", Time,
+:xsd::TIME, Time,
 53);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for Time<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, Time<'g, G>> where
@@ -2604,7 +2605,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 
 class!(
 /// **xsd:token**
-:"http://www.w3.org/2001/XMLSchema#token", Token,
+:xsd::TOKEN, Token,
 54);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for Token<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, Token<'g, G>> where
@@ -2666,7 +2667,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 
 class!(
 /// **xsd:unsignedByte**
-:"http://www.w3.org/2001/XMLSchema#unsignedByte", UnsignedByte,
+:xsd::UNSIGNED_BYTE, UnsignedByte,
 55);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for UnsignedByte<'g, G> where G: graph::Graph<'g>
 {}
@@ -2752,7 +2753,7 @@ where
 
 class!(
 /// **xsd:unsignedInt**
-:"http://www.w3.org/2001/XMLSchema#unsignedInt", UnsignedInt,
+:xsd::UNSIGNED_INT, UnsignedInt,
 56);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for UnsignedInt<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, UnsignedInt<'g, G>> where
@@ -2834,7 +2835,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 
 class!(
 /// **xsd:unsignedLong**
-:"http://www.w3.org/2001/XMLSchema#unsignedLong", UnsignedLong,
+:xsd::UNSIGNED_LONG, UnsignedLong,
 57);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for UnsignedLong<'g, G> where G: graph::Graph<'g>
 {}
@@ -2920,7 +2921,7 @@ where
 
 class!(
 /// **xsd:unsignedShort**
-:"http://www.w3.org/2001/XMLSchema#unsignedShort", UnsignedShort,
+:xsd::UNSIGNED_SHORT, UnsignedShort,
 58);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for UnsignedShort<'g, G> where
     G: graph::Graph<'g>

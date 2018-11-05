@@ -1,9 +1,9 @@
 #![cfg_attr(feature = "cargo-clippy", allow(redundant_closure_call))]
 use super::grammar_helper::*;
 use super::grammar_structs::*;
-use constants;
 use nom::types::CompleteStr;
 use nom::{Err, ErrorKind, IResult, Needed};
+use ontology::iri::rdf;
 
 /// Take one character if it fits the function
 macro_rules! one_if (
@@ -172,7 +172,7 @@ named!(object_list<CompleteStr,Vec<Object> >, separated_nonempty_list!(
 named!(verb<CompleteStr,IRI>, alt!(iri|a));
 
 named!(a<CompleteStr,IRI>, value!(
-    IRI::IRI(constants::RDF_TYPE),
+    IRI::IRI(rdf::TYPE),
     char!('a')
 ));
 

@@ -5,6 +5,7 @@ use rome::graph::*;
 use rome::graphs::tel;
 use rome::io::{write_ntriples, write_pretty_turtle, TurtleParser};
 use rome::namespaces::Namespaces;
+use rome::ontology::iri::{rdf, rdfs, xsd};
 use std::env::args;
 use std::fs;
 use std::io;
@@ -23,7 +24,6 @@ macro_rules! println_stderr(
     } }
 );
 
-const RDFS_COMMENT: &'static str = "http://www.w3.org/2000/01/rdf-schema#comment";
 const MF_ACTION: &'static str = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#action";
 const MF_NAME: &'static str = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#name";
 const MF_RESULT: &'static str = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#result";
@@ -31,10 +31,9 @@ const RDFT_APPROVAL: &'static str = "http://www.w3.org/ns/rdftest#approval";
 const RDFT_APPROVED: &'static str = "http://www.w3.org/ns/rdftest#Approved";
 const RDFT_PROPOSED: &'static str = "http://www.w3.org/ns/rdftest#Proposed";
 const RDFT_REJECTED: &'static str = "http://www.w3.org/ns/rdftest#Rejected";
-const RDF_TYPE: &'static str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 
 const DC_DATE: &'static str = "http://purl.org/dc/elements/1.1/date";
-const XSD_DATE_TIME: &'static str = "http://www.w3.org/2001/XMLSchema#dateTime";
+
 const EARL_ASSERTION: &'static str = "http://www.w3.org/ns/earl#Assertion";
 const EARL_RESULT: &'static str = "http://www.w3.org/ns/earl#result";
 const EARL_TEST_RESULT: &'static str = "http://www.w3.org/ns/earl#TestResult";
@@ -191,7 +190,7 @@ where
         o.clone().unwrap()
     }
     fn rdf_type(&mut self, w: &mut W) -> W::IRI {
-        Cache::get(&mut self.rdf_type, w, RDF_TYPE)
+        Cache::get(&mut self.rdf_type, w, rdf::TYPE)
     }
     fn earl_assertion(&mut self, w: &mut W) -> W::IRI {
         Cache::get(&mut self.earl_assertion, w, EARL_ASSERTION)
@@ -222,7 +221,7 @@ where
     }
     fn xsd_date_time(&mut self, w: &mut W) -> W::Datatype {
         if self.xsd_date_time.is_none() {
-            self.xsd_date_time = Some(w.create_datatype(XSD_DATE_TIME));
+            self.xsd_date_time = Some(w.create_datatype(xsd::DATE_TIME));
         }
         self.xsd_date_time.clone().unwrap()
     }
@@ -346,7 +345,7 @@ fn load_test_turtle_eval(
     subject: MyBlankNodeOrIRI,
 ) -> Result<TestTurtleEval, String> {
     let mut i = graph.iter_s(&subject);
-    let (comment, prev) = read(None, &mut i, RDFS_COMMENT, to_string)?;
+    let (comment, prev) = read(None, &mut i, rdfs::COMMENT, to_string)?;
     let (action, prev) = read(prev, &mut i, MF_ACTION, to_string)?;
     let (name, prev) = read(prev, &mut i, MF_NAME, to_string)?;
     let (result, prev) = read(prev, &mut i, MF_RESULT, to_string)?;
@@ -365,7 +364,7 @@ fn load_positive_syntax(
     subject: MyBlankNodeOrIRI,
 ) -> Result<TestTurtlePositiveSyntax, String> {
     let mut i = graph.iter_s(&subject);
-    let (comment, prev) = read(None, &mut i, RDFS_COMMENT, to_string)?;
+    let (comment, prev) = read(None, &mut i, rdfs::COMMENT, to_string)?;
     let (action, prev) = read(prev, &mut i, MF_ACTION, to_string)?;
     let (name, prev) = read(prev, &mut i, MF_NAME, to_string)?;
     let (approval, _) = read(prev, &mut i, RDFT_APPROVAL, to_approval)?;
@@ -382,7 +381,7 @@ fn load_negative_syntax(
     subject: MyBlankNodeOrIRI,
 ) -> Result<TestTurtleNegativeSyntax, String> {
     let mut i = graph.iter_s(&subject);
-    let (comment, prev) = read(None, &mut i, RDFS_COMMENT, to_string)?;
+    let (comment, prev) = read(None, &mut i, rdfs::COMMENT, to_string)?;
     let (action, prev) = read(prev, &mut i, MF_ACTION, to_string)?;
     let (name, prev) = read(prev, &mut i, MF_NAME, to_string)?;
     let (approval, _) = read(prev, &mut i, RDFT_APPROVAL, to_approval)?;
@@ -399,7 +398,7 @@ fn load_negative_eval(
     subject: MyBlankNodeOrIRI,
 ) -> Result<TestTurtleNegativeEval, String> {
     let mut i = graph.iter_s(&subject);
-    let (comment, prev) = read(None, &mut i, RDFS_COMMENT, to_string)?;
+    let (comment, prev) = read(None, &mut i, rdfs::COMMENT, to_string)?;
     let (action, prev) = read(prev, &mut i, MF_ACTION, to_string)?;
     let (name, prev) = read(prev, &mut i, MF_NAME, to_string)?;
     let (approval, _) = read(prev, &mut i, RDFT_APPROVAL, to_approval)?;
@@ -433,7 +432,7 @@ fn subject_to_string(subject: &MyBlankNodeOrIRI) -> Rc<String> {
 fn run_tests(graph: &MyGraph, base: &str, base_dir: &str) -> rome::Result<Vec<Assertion>> {
     let mut assertions = Vec::new();
     for t in
-        graph.iter_object_iri_predicate("http://www.w3.org/ns/rdftest#TestTurtleEval", RDF_TYPE)
+        graph.iter_object_iri_predicate("http://www.w3.org/ns/rdftest#TestTurtleEval", rdf::TYPE)
     {
         let test = load_test_turtle_eval(graph, t.subject())?;
         let r = run_eval(&test, base, base_dir)?;
@@ -442,7 +441,7 @@ fn run_tests(graph: &MyGraph, base: &str, base_dir: &str) -> rome::Result<Vec<As
     }
     for t in graph.iter_object_iri_predicate(
         "http://www.w3.org/ns/rdftest#TestTurtlePositiveSyntax",
-        RDF_TYPE,
+        rdf::TYPE,
     ) {
         let test = load_positive_syntax(graph, t.subject())?;
         let r = run_eval_positive_syntax(&test, base, base_dir)?;
@@ -451,7 +450,7 @@ fn run_tests(graph: &MyGraph, base: &str, base_dir: &str) -> rome::Result<Vec<As
     }
     for t in graph.iter_object_iri_predicate(
         "http://www.w3.org/ns/rdftest#TestTurtleNegativeSyntax",
-        RDF_TYPE,
+        rdf::TYPE,
     ) {
         let test = load_negative_syntax(graph, t.subject())?;
         let r = run_eval_negative_syntax(&test, base, base_dir)?;
@@ -460,7 +459,7 @@ fn run_tests(graph: &MyGraph, base: &str, base_dir: &str) -> rome::Result<Vec<As
     }
     for t in graph.iter_object_iri_predicate(
         "http://www.w3.org/ns/rdftest#TestTurtleNegativeEval",
-        RDF_TYPE,
+        rdf::TYPE,
     ) {
         let test = load_negative_eval(graph, t.subject())?;
         let r = run_eval_negative_eval(&test, base, base_dir)?;
@@ -617,10 +616,10 @@ fn output_as_turtle(assertions: &[Assertion]) -> rome::Result<()> {
     }
     let graph: MyGraph = writer.collect().sort_blank_nodes();
     let mut ns = Namespaces::new();
-    ns.set(b"dc", "http://purl.org/dc/elements/1.1/");
-    ns.set(b"earl", "http://www.w3.org/ns/earl#");
-    ns.set(b"xsd", "http://www.w3.org/2001/XMLSchema#");
-    ns.set(b"test", "http://www.w3.org/2013/TurtleTests/manifest.ttl#");
+    ns.set("dc", "http://purl.org/dc/elements/1.1/");
+    ns.set("earl", "http://www.w3.org/ns/earl#");
+    ns.set("xsd", "http://www.w3.org/2001/XMLSchema#");
+    ns.set("test", "http://www.w3.org/2013/TurtleTests/manifest.ttl#");
     write_pretty_turtle(&ns, &graph, &mut ::std::io::stdout())?;
     Ok(())
 }

@@ -1,5 +1,6 @@
 use graph;
 use ontology;
+use ontology::iri::owl;
 use ontology_adapter;
 use resource;
 use std;
@@ -7,7 +8,7 @@ use std;
 class!(
 /// **owl:AllDifferent**
 /// The class of collections of pairwise different individuals.
-:"http://www.w3.org/2002/07/owl#AllDifferent", AllDifferent,
+:owl::ALL_DIFFERENT, AllDifferent,
 59);
 impl<'g, G: 'g> ontology::properties::owl::DistinctMembers<'g> for AllDifferent<'g, G> where
     G: graph::Graph<'g>
@@ -102,7 +103,7 @@ where
 class!(
 /// **owl:AllDisjointClasses**
 /// The class of collections of pairwise disjoint classes.
-:"http://www.w3.org/2002/07/owl#AllDisjointClasses", AllDisjointClasses,
+:owl::ALL_DISJOINT_CLASSES, AllDisjointClasses,
 60);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for AllDisjointClasses<'g, G> where
     G: graph::Graph<'g>
@@ -202,7 +203,7 @@ where
 class!(
 /// **owl:AllDisjointProperties**
 /// The class of collections of pairwise disjoint properties.
-:"http://www.w3.org/2002/07/owl#AllDisjointProperties", AllDisjointProperties,
+:owl::ALL_DISJOINT_PROPERTIES, AllDisjointProperties,
 61);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for AllDisjointProperties<'g, G> where
     G: graph::Graph<'g>
@@ -304,7 +305,7 @@ where
 class!(
 /// **owl:Annotation**
 /// The class of annotated annotations for which the RDF serialization consists of an annotated subject, predicate and object.
-:"http://www.w3.org/2002/07/owl#Annotation", Annotation,
+:owl::ANNOTATION, Annotation,
 62);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for Annotation<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, Annotation<'g, G>> where
@@ -383,7 +384,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 class!(
 /// **owl:AnnotationProperty**
 /// The class of annotation properties.
-:"http://www.w3.org/2002/07/owl#AnnotationProperty", AnnotationProperty,
+:owl::ANNOTATION_PROPERTY, AnnotationProperty,
 63);
 impl<'g, G: 'g> ontology::properties::rdfs::Domain<'g> for AnnotationProperty<'g, G> where
     G: graph::Graph<'g>
@@ -523,7 +524,7 @@ where
 class!(
 /// **owl:AsymmetricProperty**
 /// The class of asymmetric properties.
-:"http://www.w3.org/2002/07/owl#AsymmetricProperty", AsymmetricProperty,
+:owl::ASYMMETRIC_PROPERTY, AsymmetricProperty,
 64);
 impl<'g, G: 'g> ontology::properties::rdfs::Domain<'g> for AsymmetricProperty<'g, G> where
     G: graph::Graph<'g>
@@ -679,7 +680,7 @@ where
 class!(
 /// **owl:Axiom**
 /// The class of annotated axioms for which the RDF serialization consists of an annotated subject, predicate and object.
-:"http://www.w3.org/2002/07/owl#Axiom", Axiom,
+:owl::AXIOM, Axiom,
 65);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for Axiom<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, Axiom<'g, G>> where
@@ -742,7 +743,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 class!(
 /// **owl:Class**
 /// The class of OWL classes.
-:"http://www.w3.org/2002/07/owl#Class", Class,
+:owl::CLASS, Class,
 66);
 impl<'g, G: 'g> ontology::properties::owl::ComplementOf<'g> for Class<'g, G> where
     G: graph::Graph<'g>
@@ -852,7 +853,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 class!(
 /// **owl:DataRange**
 /// The class of OWL data ranges, which are special kinds of datatypes. Note: The use of the IRI owl:DataRange has been deprecated as of OWL 2. The IRI rdfs:Datatype SHOULD be used instead.
-:"http://www.w3.org/2002/07/owl#DataRange", DataRange,
+:owl::DATA_RANGE, DataRange,
 67);
 impl<'g, G: 'g> ontology::properties::rdfs::SubClassOf<'g> for DataRange<'g, G> where
     G: graph::Graph<'g>
@@ -981,7 +982,7 @@ where
 class!(
 /// **owl:DatatypeProperty**
 /// The class of data properties.
-:"http://www.w3.org/2002/07/owl#DatatypeProperty", DatatypeProperty,
+:owl::DATATYPE_PROPERTY, DatatypeProperty,
 68);
 impl<'g, G: 'g> ontology::properties::rdfs::Domain<'g> for DatatypeProperty<'g, G> where
     G: graph::Graph<'g>
@@ -1115,7 +1116,7 @@ where
 class!(
 /// **owl:DeprecatedClass**
 /// The class of deprecated classes.
-:"http://www.w3.org/2002/07/owl#DeprecatedClass", DeprecatedClass,
+:owl::DEPRECATED_CLASS, DeprecatedClass,
 69);
 impl<'g, G: 'g> ontology::properties::rdfs::SubClassOf<'g> for DeprecatedClass<'g, G> where
     G: graph::Graph<'g>
@@ -1243,7 +1244,7 @@ where
 class!(
 /// **owl:DeprecatedProperty**
 /// The class of deprecated properties.
-:"http://www.w3.org/2002/07/owl#DeprecatedProperty", DeprecatedProperty,
+:owl::DEPRECATED_PROPERTY, DeprecatedProperty,
 70);
 impl<'g, G: 'g> ontology::properties::rdfs::Domain<'g> for DeprecatedProperty<'g, G> where
     G: graph::Graph<'g>
@@ -1383,7 +1384,7 @@ where
 class!(
 /// **owl:FunctionalProperty**
 /// The class of functional properties.
-:"http://www.w3.org/2002/07/owl#FunctionalProperty", FunctionalProperty,
+:owl::FUNCTIONAL_PROPERTY, FunctionalProperty,
 71);
 impl<'g, G: 'g> ontology::properties::rdfs::Domain<'g> for FunctionalProperty<'g, G> where
     G: graph::Graph<'g>
@@ -1523,7 +1524,7 @@ where
 class!(
 /// **owl:InverseFunctionalProperty**
 /// The class of inverse-functional properties.
-:"http://www.w3.org/2002/07/owl#InverseFunctionalProperty", InverseFunctionalProperty,
+:owl::INVERSE_FUNCTIONAL_PROPERTY, InverseFunctionalProperty,
 72);
 impl<'g, G: 'g> ontology::properties::rdfs::Domain<'g> for InverseFunctionalProperty<'g, G> where
     G: graph::Graph<'g>
@@ -1689,7 +1690,7 @@ where
 class!(
 /// **owl:IrreflexiveProperty**
 /// The class of irreflexive properties.
-:"http://www.w3.org/2002/07/owl#IrreflexiveProperty", IrreflexiveProperty,
+:owl::IRREFLEXIVE_PROPERTY, IrreflexiveProperty,
 73);
 impl<'g, G: 'g> ontology::properties::rdfs::Domain<'g> for IrreflexiveProperty<'g, G> where
     G: graph::Graph<'g>
@@ -1847,7 +1848,7 @@ where
 class!(
 /// **owl:NamedIndividual**
 /// The class of named individuals.
-:"http://www.w3.org/2002/07/owl#NamedIndividual", NamedIndividual,
+:owl::NAMED_INDIVIDUAL, NamedIndividual,
 74);
 impl<'g, G: 'g> ontology::properties::owl::DifferentFrom<'g> for NamedIndividual<'g, G> where
     G: graph::Graph<'g>
@@ -1867,7 +1868,7 @@ impl<'g, G: 'g> ontology::properties::owl::SameAs<'g> for resource::IRI<'g, Name
 class!(
 /// **owl:NegativePropertyAssertion**
 /// The class of negative property assertions.
-:"http://www.w3.org/2002/07/owl#NegativePropertyAssertion", NegativePropertyAssertion,
+:owl::NEGATIVE_PROPERTY_ASSERTION, NegativePropertyAssertion,
 75);
 impl<'g, G: 'g> ontology::properties::owl::AssertionProperty<'g>
     for NegativePropertyAssertion<'g, G>
@@ -2005,7 +2006,7 @@ where
 class!(
 /// **owl:Nothing**
 /// This is the empty class.
-:"http://www.w3.org/2002/07/owl#Nothing", Nothing,
+:owl::NOTHING, Nothing,
 76);
 impl<'g, G: 'g> ontology::properties::owl::DifferentFrom<'g> for Nothing<'g, G> where
     G: graph::Graph<'g>
@@ -2021,7 +2022,7 @@ impl<'g, G: 'g> ontology::properties::owl::SameAs<'g> for resource::IRI<'g, Noth
 class!(
 /// **owl:ObjectProperty**
 /// The class of object properties.
-:"http://www.w3.org/2002/07/owl#ObjectProperty", ObjectProperty,
+:owl::OBJECT_PROPERTY, ObjectProperty,
 77);
 impl<'g, G: 'g> ontology::properties::owl::InverseOf<'g> for ObjectProperty<'g, G> where
     G: graph::Graph<'g>
@@ -2161,7 +2162,7 @@ where
 class!(
 /// **owl:Ontology**
 /// The class of ontologies.
-:"http://www.w3.org/2002/07/owl#Ontology", Ontology,
+:owl::ONTOLOGY, Ontology,
 78);
 impl<'g, G: 'g> ontology::properties::owl::Imports<'g> for Ontology<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::owl::Imports<'g> for resource::IRI<'g, Ontology<'g, G>> where
@@ -2243,7 +2244,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 class!(
 /// **owl:OntologyProperty**
 /// The class of ontology properties.
-:"http://www.w3.org/2002/07/owl#OntologyProperty", OntologyProperty,
+:owl::ONTOLOGY_PROPERTY, OntologyProperty,
 79);
 impl<'g, G: 'g> ontology::properties::rdfs::Domain<'g> for OntologyProperty<'g, G> where
     G: graph::Graph<'g>
@@ -2377,7 +2378,7 @@ where
 class!(
 /// **owl:ReflexiveProperty**
 /// The class of reflexive properties.
-:"http://www.w3.org/2002/07/owl#ReflexiveProperty", ReflexiveProperty,
+:owl::REFLEXIVE_PROPERTY, ReflexiveProperty,
 80);
 impl<'g, G: 'g> ontology::properties::rdfs::Domain<'g> for ReflexiveProperty<'g, G> where
     G: graph::Graph<'g>
@@ -2531,7 +2532,7 @@ where
 class!(
 /// **owl:Restriction**
 /// The class of property restrictions.
-:"http://www.w3.org/2002/07/owl#Restriction", Restriction,
+:owl::RESTRICTION, Restriction,
 81);
 impl<'g, G: 'g> ontology::properties::owl::AllValuesFrom<'g> for Restriction<'g, G> where
     G: graph::Graph<'g>
@@ -2777,7 +2778,7 @@ impl<'g, G: 'g> ontology::properties::owl::HasKey<'g> for resource::IRI<'g, Rest
 class!(
 /// **owl:SymmetricProperty**
 /// The class of symmetric properties.
-:"http://www.w3.org/2002/07/owl#SymmetricProperty", SymmetricProperty,
+:owl::SYMMETRIC_PROPERTY, SymmetricProperty,
 82);
 impl<'g, G: 'g> ontology::properties::rdfs::Domain<'g> for SymmetricProperty<'g, G> where
     G: graph::Graph<'g>
@@ -2931,7 +2932,7 @@ where
 class!(
 /// **owl:Thing**
 /// The class of OWL individuals.
-:"http://www.w3.org/2002/07/owl#Thing", Thing,
+:owl::THING, Thing,
 83);
 impl<'g, G: 'g> ontology::properties::owl::DifferentFrom<'g> for Thing<'g, G> where
     G: graph::Graph<'g>
@@ -2947,7 +2948,7 @@ impl<'g, G: 'g> ontology::properties::owl::SameAs<'g> for resource::IRI<'g, Thin
 class!(
 /// **owl:TransitiveProperty**
 /// The class of transitive properties.
-:"http://www.w3.org/2002/07/owl#TransitiveProperty", TransitiveProperty,
+:owl::TRANSITIVE_PROPERTY, TransitiveProperty,
 84);
 impl<'g, G: 'g> ontology::properties::rdfs::Domain<'g> for TransitiveProperty<'g, G> where
     G: graph::Graph<'g>

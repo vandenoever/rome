@@ -6,6 +6,7 @@ use graph::*;
 use namespaces::*;
 use nom::types::CompleteStr;
 use nom::IResult;
+use ontology::iri::{rdf, xsd};
 use std::fmt::Display;
 use std::io::Write;
 use std::iter::Peekable;
@@ -45,15 +46,15 @@ where
         buffer: Vec::new(),
         base: String::new(),
         writer,
-        xsd_string: graph.find_datatype(constants::XSD_STRING),
-        xsd_boolean: graph.find_datatype(constants::XSD_BOOLEAN),
-        xsd_integer: graph.find_datatype(constants::XSD_INTEGER),
-        xsd_decimal: graph.find_datatype(constants::XSD_DECIMAL),
-        xsd_double: graph.find_datatype(constants::XSD_DOUBLE),
-        rdf_first: graph.find_iri(constants::RDF_FIRST),
+        xsd_string: graph.find_datatype(xsd::STRING),
+        xsd_boolean: graph.find_datatype(xsd::BOOLEAN),
+        xsd_integer: graph.find_datatype(xsd::INTEGER),
+        xsd_decimal: graph.find_datatype(xsd::DECIMAL),
+        xsd_double: graph.find_datatype(xsd::DOUBLE),
+        rdf_first: graph.find_iri(rdf::FIRST),
         rdf_nil: graph.find_iri(constants::RDF_NIL),
-        rdf_rest: graph.find_iri(constants::RDF_REST),
-        rdf_type: graph.find_iri(constants::RDF_TYPE),
+        rdf_rest: graph.find_iri(rdf::REST),
+        rdf_type: graph.find_iri(rdf::TYPE),
         graph,
     };
     for ns in namespaces.iter() {
@@ -71,7 +72,7 @@ where
 {
     fn write_prefix(&mut self, ns: &Namespace) -> Result<()> {
         self.writer.write_all(b"@prefix ")?;
-        self.writer.write_all(ns.prefix())?;
+        self.writer.write_all(ns.prefix().as_bytes())?;
         self.writer.write_all(b":\t")?;
         self.write_full_iri(ns.namespace())?;
         self.writer.write_all(b" .\n")?;
@@ -97,8 +98,8 @@ where
         }
         Ok(())
     }
-    fn write_prefixed_iri(&mut self, prefix: &[u8], iri: &str) -> Result<()> {
-        self.writer.write_all(prefix)?;
+    fn write_prefixed_iri(&mut self, prefix: &str, iri: &str) -> Result<()> {
+        self.writer.write_all(prefix.as_bytes())?;
         self.writer.write_all(b":")?;
         self.writer.write_all(iri.as_bytes())?;
         Ok(())

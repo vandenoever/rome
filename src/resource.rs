@@ -272,12 +272,12 @@ $(#[$meta])*
 pub trait $trait_name<'g>: resource::ResourceBase<'g>
     where Self: std::marker::Sized
 {
-    #[doc=$iri]
+    /// The IRI for the property.
     fn property_iri() -> &'static str {
         $iri
     }
     $(#[$meta])*
-    #[doc=$iri]
+    /// The values for this property.
     fn $function<G>(&self) -> resource::ObjectIter<'g, $range>
         where $range: resource::ResourceBase<'g, Graph = Self::Graph>,
               G: graph::Graph<'g>,
@@ -306,7 +306,7 @@ pub struct $name<'g, G: 'g>
 impl<'g, G> $name<'g, G>
     where G: graph::Graph<'g>
 {
-    #[doc=$iri]
+    /// Return the IRI for this class.
     pub fn class_iri() -> &'static str {
         $iri
     }
@@ -377,46 +377,38 @@ impl<'g, G: 'g> resource::ResourceBase<'g> for $name<'g, G>
 
 #[cfg(test)]
 mod tests {
-    use constants;
     use graph;
     use graph::GraphWriter;
     use graphs::tel;
+    use ontology::iri::{rdf, rdfs};
     use ontology_adapter;
     use resource;
     use resource::{ResourceBase, IRI};
     use std;
-
-    const RDF_PROPERTY: &'static str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#Property";
-    const RDFS_CLASS: &'static str = "http://www.w3.org/2000/01/rdf-schema#Class";
-    const RDFS_LITERAL: &'static str = "http://www.w3.org/2000/01/rdf-schema#Literal";
-    const RDFS_COMMENT: &'static str = "http://www.w3.org/2000/01/rdf-schema#comment";
-    const RDFS_DOMAIN: &'static str = "http://www.w3.org/2000/01/rdf-schema#domain";
-    const RDFS_RANGE: &'static str = "http://www.w3.org/2000/01/rdf-schema#range";
-    const RDFS_SUB_CLASS_OF: &'static str = "http://www.w3.org/2000/01/rdf-schema#subClassOf";
 
     pub fn adapter<'g, G: 'g>(graph: &'g G) -> ontology_adapter::OntologyAdapter<'g, G>
     where
         G: graph::Graph<'g>,
     {
         let mut iris = Vec::with_capacity(7);
-        iris.push(graph.find_iri(constants::RDF_TYPE));
-        iris.push(graph.find_iri(RDFS_CLASS));
-        iris.push(graph.find_iri(RDF_PROPERTY));
-        iris.push(graph.find_iri(RDFS_LITERAL));
-        iris.push(graph.find_iri(RDFS_COMMENT));
-        iris.push(graph.find_iri(RDFS_DOMAIN));
-        iris.push(graph.find_iri(RDFS_RANGE));
-        iris.push(graph.find_iri(RDFS_SUB_CLASS_OF));
+        iris.push(graph.find_iri(rdf::TYPE));
+        iris.push(graph.find_iri(rdfs::CLASS));
+        iris.push(graph.find_iri(rdf::PROPERTY));
+        iris.push(graph.find_iri(rdfs::LITERAL));
+        iris.push(graph.find_iri(rdfs::COMMENT));
+        iris.push(graph.find_iri(rdfs::DOMAIN));
+        iris.push(graph.find_iri(rdfs::RANGE));
+        iris.push(graph.find_iri(rdfs::SUB_CLASS_OF));
         ontology_adapter::OntologyAdapter::new(graph, iris)
     }
 
-    class!(:"http://www.w3.org/2000/01/rdf-schema#Class", Class, 1);
-    class!(:"http://www.w3.org/1999/02/22-rdf-syntax-ns#Property", Property, 2);
-    class!(:"http://www.w3.org/2000/01/rdf-schema#Literal", Literal, 3);
-    property!(:"http://www.w3.org/2000/01/rdf-schema#comment", Comment, comment, Literal<'g, G>, 4);
-    property!(:"http://www.w3.org/2000/01/rdf-schema#domain", Domain, domain, Class<'g, G>, 5);
-    property!(:"http://www.w3.org/2000/01/rdf-schema#range", Range, range, Class<'g, G>, 6);
-    property!(:"http://www.w3.org/2000/01/rdf-schema#subClassOf", SubClassOf, sub_class_of, Class<'g, G>, 7);
+    class!(:rdfs::CLASS, Class, 1);
+    class!(:rdf::PROPERTY, Property, 2);
+    class!(:rdfs::LITERAL, Literal, 3);
+    property!(:rdfs::COMMENT, Comment, comment, Literal<'g, G>, 4);
+    property!(:rdfs::DOMAIN, Domain, domain, Class<'g, G>, 5);
+    property!(:rdfs::RANGE, Range, range, Class<'g, G>, 6);
+    property!(:rdfs::SUB_CLASS_OF, SubClassOf, sub_class_of, Class<'g, G>, 7);
 
     impl<'g, G> SubClassOf<'g> for Class<'g, G> where G: graph::Graph<'g> {}
     impl<'g, G> Comment<'g> for Class<'g, G> where G: graph::Graph<'g> {}
@@ -442,8 +434,8 @@ mod tests {
     }
     #[test]
     fn test_class_iri() {
-        assert_eq!(Class::<tel::Graph64>::class_iri(), RDFS_CLASS);
-        assert_eq!(Property::<tel::Graph64>::class_iri(), RDF_PROPERTY);
-        assert_eq!(Literal::<tel::Graph64>::class_iri(), RDFS_LITERAL);
+        assert_eq!(Class::<tel::Graph64>::class_iri(), rdfs::CLASS);
+        assert_eq!(Property::<tel::Graph64>::class_iri(), rdf::PROPERTY);
+        assert_eq!(Literal::<tel::Graph64>::class_iri(), rdfs::LITERAL);
     }
 }

@@ -7,6 +7,7 @@ use rome::graph::{Graph, GraphWriter, ResourceTranslator, Triple, WriterResource
 use rome::graphs::tel;
 use rome::io::{write_pretty_turtle, TurtleParser};
 use rome::namespaces::Namespaces;
+use rome::ontology::iri::{rdf, rdfs};
 use std::collections::BTreeMap;
 use std::env::args;
 use std::fs;
@@ -49,14 +50,10 @@ fn load_graph(data: &str, base: &str) -> rome::Result<MyGraph> {
 
 fn output_as_turtle(graph: &MyGraph) -> rome::Result<()> {
     let mut ns = Namespaces::new();
-    ns.set(b"rdfs", "http://www.w3.org/2000/01/rdf-schema#");
+    ns.set("rdfs", "http://www.w3.org/2000/01/rdf-schema#");
     write_pretty_turtle(&ns, graph, &mut ::std::io::stdout())?;
     Ok(())
 }
-
-const RDFS_SUB_CLASS_OF: &'static str = "http://www.w3.org/2000/01/rdf-schema#subClassOf";
-const RDFS_CLASS: &'static str = "http://www.w3.org/2000/01/rdf-schema#Class";
-const RDF_TYPE: &'static str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 
 struct Translator<'g> {
     blank_nodes: BTreeMap<
@@ -95,9 +92,9 @@ fn infer(graph: &MyGraph) -> rome::Result<MyGraph> {
     // object are rdfs:Class instances
     let mut w = tel::GraphCreator::with_capacity(65000);
     let mut translator = Translator::new();
-    let rdf_type = w.create_iri(&RDF_TYPE);
-    let rdfs_class = WriterResource::IRI(w.create_iri(&RDFS_CLASS));
-    let rdfs_sub_class_of = graph.find_iri(RDFS_SUB_CLASS_OF).unwrap();
+    let rdf_type = w.create_iri(&rdf::TYPE);
+    let rdfs_class = WriterResource::IRI(w.create_iri(&rdfs::CLASS));
+    let rdfs_sub_class_of = graph.find_iri(rdfs::SUB_CLASS_OF).unwrap();
     for triple in graph
         .iter()
         .filter(|triple| !triple.object().is_literal() && triple.predicate() == rdfs_sub_class_of)

@@ -1,5 +1,5 @@
-use constants;
 use graph::*;
+use ontology::iri::xsd;
 use std::fmt::Display;
 use std::io::{Result, Write};
 use std::marker::PhantomData;
@@ -31,7 +31,7 @@ where
     let mut writer = NTriplesWriter::<_, G> {
         buffer: Vec::new(),
         writer,
-        xsd_string: graph.find_datatype(constants::XSD_STRING),
+        xsd_string: graph.find_datatype(xsd::STRING),
         phantom: PhantomData,
     };
     for triple in triples {

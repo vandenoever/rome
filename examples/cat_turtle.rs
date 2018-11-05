@@ -43,6 +43,6 @@ fn main() {
     let mut base = String::from("file:");
     base.push_str(&input);
     base.push('#');
-    ns.insert(b"", base);
+    ns.insert("", base);
     write_pretty_turtle(&ns, &graph, &mut ::std::io::stdout()).expect("Cannot write graph.");
 }

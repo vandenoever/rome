@@ -1,5 +1,6 @@
 use graph;
 use ontology;
+use ontology::iri::rdf;
 use ontology_adapter;
 use resource;
 use std;
@@ -7,7 +8,7 @@ use std;
 class!(
 /// **rdf:Alt**
 /// The class of containers of alternatives.
-:"http://www.w3.org/1999/02/22-rdf-syntax-ns#Alt", Alt,
+:rdf::ALT, Alt,
 1);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for Alt<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, Alt<'g, G>> where
@@ -67,7 +68,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 class!(
 /// **rdf:Bag**
 /// The class of unordered containers.
-:"http://www.w3.org/1999/02/22-rdf-syntax-ns#Bag", Bag,
+:rdf::BAG, Bag,
 2);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for Bag<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, Bag<'g, G>> where
@@ -127,7 +128,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 class!(
 /// **rdf:HTML**
 /// The datatype of RDF literals storing fragments of HTML content
-:"http://www.w3.org/1999/02/22-rdf-syntax-ns#HTML", HTML,
+:rdf::HTML, HTML,
 3);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for HTML<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, HTML<'g, G>> where
@@ -188,7 +189,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 class!(
 /// **rdf:List**
 /// The class of RDF Lists.
-:"http://www.w3.org/1999/02/22-rdf-syntax-ns#List", List,
+:rdf::LIST, List,
 4);
 impl<'g, G: 'g> ontology::properties::rdf::First<'g> for List<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::First<'g> for resource::IRI<'g, List<'g, G>> where
@@ -257,7 +258,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 class!(
 /// **rdf:PlainLiteral**
 /// The class of plain (i.e. untyped) literal values, as used in RIF and OWL 2
-:"http://www.w3.org/1999/02/22-rdf-syntax-ns#PlainLiteral", PlainLiteral,
+:rdf::PLAIN_LITERAL, PlainLiteral,
 5);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for PlainLiteral<'g, G> where G: graph::Graph<'g>
 {}
@@ -344,7 +345,7 @@ where
 class!(
 /// **rdf:Property**
 /// The class of RDF properties.
-:"http://www.w3.org/1999/02/22-rdf-syntax-ns#Property", Property,
+:rdf::PROPERTY, Property,
 6);
 impl<'g, G: 'g> ontology::properties::rdfs::Domain<'g> for Property<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdfs::Domain<'g> for resource::IRI<'g, Property<'g, G>> where
@@ -446,7 +447,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 class!(
 /// **rdf:Seq**
 /// The class of ordered containers.
-:"http://www.w3.org/1999/02/22-rdf-syntax-ns#Seq", Seq,
+:rdf::SEQ, Seq,
 7);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for Seq<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, Seq<'g, G>> where
@@ -506,7 +507,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 class!(
 /// **rdf:Statement**
 /// The class of RDF statements.
-:"http://www.w3.org/1999/02/22-rdf-syntax-ns#Statement", Statement,
+:rdf::STATEMENT, Statement,
 8);
 impl<'g, G: 'g> ontology::properties::rdf::Object<'g> for Statement<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Object<'g> for resource::IRI<'g, Statement<'g, G>> where
@@ -597,7 +598,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 class!(
 /// **rdf:XMLLiteral**
 /// The datatype of XML literal values.
-:"http://www.w3.org/1999/02/22-rdf-syntax-ns#XMLLiteral", XMLLiteral,
+:rdf::XMLLITERAL, XMLLiteral,
 9);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for XMLLiteral<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, XMLLiteral<'g, G>> where
@@ -676,7 +677,7 @@ impl<'g, G: 'g> ontology::properties::owl::VersionInfo<'g> for resource::IRI<'g,
 class!(
 /// **rdf:langString**
 /// The datatype of language-tagged string values
-:"http://www.w3.org/1999/02/22-rdf-syntax-ns#langString", LangString,
+:rdf::LANG_STRING, LangString,
 10);
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for LangString<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::rdf::Type<'g> for resource::IRI<'g, LangString<'g, G>> where
