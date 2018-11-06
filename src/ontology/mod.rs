@@ -11,7 +11,7 @@ pub fn adapter<'g, G>(graph: &'g G) -> ontology_adapter::OntologyAdapter<'g, G>
 where
     G: graph::Graph<'g>,
 {
-    let mut iris = Vec::with_capacity(147);
+    let mut iris = Vec::with_capacity(155);
     iris.push(graph.find_iri(iri::rdf::TYPE));
     iris.push(graph.find_iri(iri::rdf::ALT));
     iris.push(graph.find_iri(iri::rdf::BAG));
@@ -120,9 +120,13 @@ where
     iris.push(graph.find_iri(iri::owl::ANNOTATED_SOURCE));
     iris.push(graph.find_iri(iri::owl::ANNOTATED_TARGET));
     iris.push(graph.find_iri(iri::owl::ASSERTION_PROPERTY));
+    iris.push(graph.find_iri(iri::owl::BACKWARD_COMPATIBLE_WITH));
+    iris.push(graph.find_iri(iri::owl::BOTTOM_DATA_PROPERTY));
+    iris.push(graph.find_iri(iri::owl::BOTTOM_OBJECT_PROPERTY));
     iris.push(graph.find_iri(iri::owl::CARDINALITY));
     iris.push(graph.find_iri(iri::owl::COMPLEMENT_OF));
     iris.push(graph.find_iri(iri::owl::DATATYPE_COMPLEMENT_OF));
+    iris.push(graph.find_iri(iri::owl::DEPRECATED));
     iris.push(graph.find_iri(iri::owl::DIFFERENT_FROM));
     iris.push(graph.find_iri(iri::owl::DISJOINT_UNION_OF));
     iris.push(graph.find_iri(iri::owl::DISJOINT_WITH));
@@ -133,6 +137,7 @@ where
     iris.push(graph.find_iri(iri::owl::HAS_SELF));
     iris.push(graph.find_iri(iri::owl::HAS_VALUE));
     iris.push(graph.find_iri(iri::owl::IMPORTS));
+    iris.push(graph.find_iri(iri::owl::INCOMPATIBLE_WITH));
     iris.push(graph.find_iri(iri::owl::INTERSECTION_OF));
     iris.push(graph.find_iri(iri::owl::INVERSE_OF));
     iris.push(graph.find_iri(iri::owl::MAX_CARDINALITY));
@@ -146,6 +151,7 @@ where
     iris.push(graph.find_iri(iri::owl::ON_PROPERTIES));
     iris.push(graph.find_iri(iri::owl::ON_PROPERTY));
     iris.push(graph.find_iri(iri::owl::ONE_OF));
+    iris.push(graph.find_iri(iri::owl::PRIOR_VERSION));
     iris.push(graph.find_iri(iri::owl::PROPERTY_CHAIN_AXIOM));
     iris.push(graph.find_iri(iri::owl::PROPERTY_DISJOINT_WITH));
     iris.push(graph.find_iri(iri::owl::QUALIFIED_CARDINALITY));
@@ -154,6 +160,8 @@ where
     iris.push(graph.find_iri(iri::owl::SOURCE_INDIVIDUAL));
     iris.push(graph.find_iri(iri::owl::TARGET_INDIVIDUAL));
     iris.push(graph.find_iri(iri::owl::TARGET_VALUE));
+    iris.push(graph.find_iri(iri::owl::TOP_DATA_PROPERTY));
+    iris.push(graph.find_iri(iri::owl::TOP_OBJECT_PROPERTY));
     iris.push(graph.find_iri(iri::owl::UNION_OF));
     iris.push(graph.find_iri(iri::owl::VERSION_IRI));
     iris.push(graph.find_iri(iri::owl::VERSION_INFO));

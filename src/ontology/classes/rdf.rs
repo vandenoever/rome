@@ -56,6 +56,10 @@ impl<'g, G: 'g> ontology::properties::owl::AnnotatedTarget<'g> for Alt<'g, G> wh
 impl<'g, G: 'g> ontology::properties::owl::AnnotatedTarget<'g> for resource::IRI<'g, Alt<'g, G>> where
     G: graph::Graph<'g>
 {}
+impl<'g, G: 'g> ontology::properties::owl::Deprecated<'g> for Alt<'g, G> where G: graph::Graph<'g> {}
+impl<'g, G: 'g> ontology::properties::owl::Deprecated<'g> for resource::IRI<'g, Alt<'g, G>> where
+    G: graph::Graph<'g>
+{}
 impl<'g, G: 'g> ontology::properties::owl::Members<'g> for Alt<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::owl::Members<'g> for resource::IRI<'g, Alt<'g, G>> where
     G: graph::Graph<'g>
@@ -114,6 +118,10 @@ impl<'g, G: 'g> ontology::properties::owl::AnnotatedTarget<'g> for Bag<'g, G> wh
     G: graph::Graph<'g>
 {}
 impl<'g, G: 'g> ontology::properties::owl::AnnotatedTarget<'g> for resource::IRI<'g, Bag<'g, G>> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::Deprecated<'g> for Bag<'g, G> where G: graph::Graph<'g> {}
+impl<'g, G: 'g> ontology::properties::owl::Deprecated<'g> for resource::IRI<'g, Bag<'g, G>> where
     G: graph::Graph<'g>
 {}
 impl<'g, G: 'g> ontology::properties::owl::Members<'g> for Bag<'g, G> where G: graph::Graph<'g> {}
@@ -175,6 +183,10 @@ impl<'g, G: 'g> ontology::properties::owl::AnnotatedTarget<'g> for HTML<'g, G> w
     G: graph::Graph<'g>
 {}
 impl<'g, G: 'g> ontology::properties::owl::AnnotatedTarget<'g> for resource::IRI<'g, HTML<'g, G>> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::Deprecated<'g> for HTML<'g, G> where G: graph::Graph<'g> {}
+impl<'g, G: 'g> ontology::properties::owl::Deprecated<'g> for resource::IRI<'g, HTML<'g, G>> where
     G: graph::Graph<'g>
 {}
 impl<'g, G: 'g> ontology::properties::owl::Members<'g> for HTML<'g, G> where G: graph::Graph<'g> {}
@@ -244,6 +256,10 @@ impl<'g, G: 'g> ontology::properties::owl::AnnotatedTarget<'g> for List<'g, G> w
     G: graph::Graph<'g>
 {}
 impl<'g, G: 'g> ontology::properties::owl::AnnotatedTarget<'g> for resource::IRI<'g, List<'g, G>> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::Deprecated<'g> for List<'g, G> where G: graph::Graph<'g> {}
+impl<'g, G: 'g> ontology::properties::owl::Deprecated<'g> for resource::IRI<'g, List<'g, G>> where
     G: graph::Graph<'g>
 {}
 impl<'g, G: 'g> ontology::properties::owl::Members<'g> for List<'g, G> where G: graph::Graph<'g> {}
@@ -326,6 +342,12 @@ impl<'g, G: 'g> ontology::properties::owl::AnnotatedTarget<'g>
     for resource::IRI<'g, PlainLiteral<'g, G>>
 where
     G: graph::Graph<'g>,
+{}
+impl<'g, G: 'g> ontology::properties::owl::Deprecated<'g> for PlainLiteral<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::Deprecated<'g> for resource::IRI<'g, PlainLiteral<'g, G>> where
+    G: graph::Graph<'g>
 {}
 impl<'g, G: 'g> ontology::properties::owl::Members<'g> for PlainLiteral<'g, G> where
     G: graph::Graph<'g>
@@ -433,6 +455,12 @@ impl<'g, G: 'g> ontology::properties::owl::AnnotatedTarget<'g>
 where
     G: graph::Graph<'g>,
 {}
+impl<'g, G: 'g> ontology::properties::owl::Deprecated<'g> for Property<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::Deprecated<'g> for resource::IRI<'g, Property<'g, G>> where
+    G: graph::Graph<'g>
+{}
 impl<'g, G: 'g> ontology::properties::owl::Members<'g> for Property<'g, G> where G: graph::Graph<'g> {}
 impl<'g, G: 'g> ontology::properties::owl::Members<'g> for resource::IRI<'g, Property<'g, G>> where
     G: graph::Graph<'g>
@@ -493,6 +521,10 @@ impl<'g, G: 'g> ontology::properties::owl::AnnotatedTarget<'g> for Seq<'g, G> wh
     G: graph::Graph<'g>
 {}
 impl<'g, G: 'g> ontology::properties::owl::AnnotatedTarget<'g> for resource::IRI<'g, Seq<'g, G>> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::Deprecated<'g> for Seq<'g, G> where G: graph::Graph<'g> {}
+impl<'g, G: 'g> ontology::properties::owl::Deprecated<'g> for resource::IRI<'g, Seq<'g, G>> where
     G: graph::Graph<'g>
 {}
 impl<'g, G: 'g> ontology::properties::owl::Members<'g> for Seq<'g, G> where G: graph::Graph<'g> {}
@@ -583,6 +615,12 @@ impl<'g, G: 'g> ontology::properties::owl::AnnotatedTarget<'g>
 where
     G: graph::Graph<'g>,
 {}
+impl<'g, G: 'g> ontology::properties::owl::Deprecated<'g> for Statement<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::Deprecated<'g> for resource::IRI<'g, Statement<'g, G>> where
+    G: graph::Graph<'g>
+{}
 impl<'g, G: 'g> ontology::properties::owl::Members<'g> for Statement<'g, G> where G: graph::Graph<'g>
 {}
 impl<'g, G: 'g> ontology::properties::owl::Members<'g> for resource::IRI<'g, Statement<'g, G>> where
@@ -660,6 +698,12 @@ impl<'g, G: 'g> ontology::properties::owl::AnnotatedTarget<'g>
     for resource::IRI<'g, XMLLiteral<'g, G>>
 where
     G: graph::Graph<'g>,
+{}
+impl<'g, G: 'g> ontology::properties::owl::Deprecated<'g> for XMLLiteral<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::Deprecated<'g> for resource::IRI<'g, XMLLiteral<'g, G>> where
+    G: graph::Graph<'g>
 {}
 impl<'g, G: 'g> ontology::properties::owl::Members<'g> for XMLLiteral<'g, G> where
     G: graph::Graph<'g>
@@ -739,6 +783,12 @@ impl<'g, G: 'g> ontology::properties::owl::AnnotatedTarget<'g>
     for resource::IRI<'g, LangString<'g, G>>
 where
     G: graph::Graph<'g>,
+{}
+impl<'g, G: 'g> ontology::properties::owl::Deprecated<'g> for LangString<'g, G> where
+    G: graph::Graph<'g>
+{}
+impl<'g, G: 'g> ontology::properties::owl::Deprecated<'g> for resource::IRI<'g, LangString<'g, G>> where
+    G: graph::Graph<'g>
 {}
 impl<'g, G: 'g> ontology::properties::owl::Members<'g> for LangString<'g, G> where
     G: graph::Graph<'g>

@@ -2,7 +2,7 @@
 ///
 extern crate rome;
 use rome::graph::{
-    BlankNodeOrIRI, Graph, GraphWriter, IRIPtr, LiteralPtr, ResourceTranslator, Triple,
+    BlankNodeOrIRI, Graph, GraphWriter, IRIPtr, LiteralPtr, Resource, ResourceTranslator, Triple,
     WriterBlankNodeOrIRI, WriterResource,
 };
 use rome::graphs::tel;
@@ -212,6 +212,61 @@ impl<'g> ResourceTranslator<'g> for Translator<'g> {
     }
 }
 
+/// CONSTRUCT {
+///   ?s a ?class
+/// } WHERE {
+///   ?s ?p ?o .
+///   ?p rdfs:domain ?class
+/// }
+fn infer_class_from_domain<'g, T, G, W>(graph: &'g G, w: &mut W, translator: &mut T)
+where
+    G: Graph<'g>,
+    W: GraphWriter<'g, Graph = G>,
+    T: ResourceTranslator<'g, Graph = G, GraphWriter = W> + 'g,
+{
+    if let Some(rdfs_domain) = graph.find_iri(iri::rdfs::DOMAIN) {
+        let rdf_type = w.create_iri(&iri::rdf::TYPE);
+        for triple in graph.iter().filter(|t| t.predicate() == rdfs_domain) {
+            let class = translator.translate_resource(w, &triple.object());
+            if let BlankNodeOrIRI::IRI(p) = triple.subject() {
+                for triple2 in graph.iter().filter(|t| t.predicate() == p) {
+                    let s = translator.translate_blank_node_or_iri(w, &triple2.subject());
+                    w.add(&s, &rdf_type, &class);
+                }
+            }
+        }
+    }
+}
+
+/// CONSTRUCT {
+///   ?o a ?class
+/// } WHERE {
+///   ?s ?p ?o .
+///   ?p rdfs:range ?class
+///   FILTER(isIRI(?o))
+/// }
+fn infer_class_from_range<'g, T, G, W>(graph: &'g G, w: &mut W, translator: &mut T)
+where
+    G: Graph<'g>,
+    W: GraphWriter<'g, Graph = G>,
+    T: ResourceTranslator<'g, Graph = G, GraphWriter = W> + 'g,
+{
+    if let Some(rdfs_range) = graph.find_iri(iri::rdfs::RANGE) {
+        let rdf_type = w.create_iri(&iri::rdf::TYPE);
+        for triple in graph.iter().filter(|t| t.predicate() == rdfs_range) {
+            let class = translator.translate_resource(w, &triple.object());
+            if let BlankNodeOrIRI::IRI(p) = triple.subject() {
+                for triple2 in graph.iter().filter(|t| t.predicate() == p) {
+                    if let Resource::IRI(o) = triple2.object() {
+                        let s = WriterBlankNodeOrIRI::IRI(w.create_iri(&o));
+                        w.add(&s, &rdf_type, &class);
+                    }
+                }
+            }
+        }
+    }
+}
+
 /// For every triple with rdfs:subClassOf infer that the subject and the
 /// object are rdfs:Class instances
 ///
@@ -227,17 +282,45 @@ where
     W: GraphWriter<'g>,
     T: ResourceTranslator<'g, Graph = G, GraphWriter = W> + 'g,
 {
-    let rdf_type = w.create_iri(&iri::rdf::TYPE);
-    let rdfs_class = WriterResource::IRI(w.create_iri(&iri::rdfs::CLASS));
     if let Some(rdfs_sub_class_of) = graph.find_iri(iri::rdfs::SUB_CLASS_OF) {
+        let rdf_type = w.create_iri(&iri::rdf::TYPE);
+        let rdfs_class = WriterResource::IRI(w.create_iri(&iri::rdfs::CLASS));
         for triple in graph.iter().filter(|triple| {
             !triple.object().is_literal() && triple.predicate() == rdfs_sub_class_of
         }) {
-            let class = translator.translate_blank_node_or_iri(w, &triple.subject());
-            w.add(&class, &rdf_type, &rdfs_class);
-            let class = translator
-                .translate_blank_node_or_iri(w, &triple.object().to_blank_node_or_iri().unwrap());
-            w.add(&class, &rdf_type, &rdfs_class);
+            let a = translator.translate_blank_node_or_iri(w, &triple.subject());
+            w.add(&a, &rdf_type, &rdfs_class);
+            if let Some(b) = triple.object().to_blank_node_or_iri() {
+                let b = translator.translate_blank_node_or_iri(w, &b);
+                w.add(&b, &rdf_type, &rdfs_class);
+            }
+        }
+    }
+}
+
+/// CONSTRUCT {
+///   ?x ?r ?y
+/// } WHERE {
+///   ?x ?q ?y .
+///   ?q rdfs:subPropertyOf ?r
+/// }
+fn infer_property_from_sub_property_of<'g, T, G, W>(graph: &'g G, w: &mut W, translator: &mut T)
+where
+    G: Graph<'g>,
+    W: GraphWriter<'g>,
+    T: ResourceTranslator<'g, Graph = G, GraphWriter = W> + 'g,
+{
+    if let Some(sub_property) = graph.find_iri(iri::rdfs::SUB_PROPERTY_OF) {
+        for triple in graph.iter().filter(|t| t.predicate() == sub_property) {
+            if let (BlankNodeOrIRI::IRI(q), Resource::IRI(r)) = (triple.subject(), triple.object())
+            {
+                let r = w.create_iri(&r);
+                for triple2 in graph.iter().filter(|t| t.predicate() == q) {
+                    let x = translator.translate_blank_node_or_iri(w, &triple2.subject());
+                    let y = translator.translate_resource(w, &triple2.object());
+                    w.add(&x, &r, &y);
+                }
+            }
         }
     }
 }
@@ -321,7 +404,10 @@ fn infer<'g>(graph: &'g MyGraph) -> rome::Result<MyGraph> {
     let mut w = tel::GraphCreator::with_capacity(65000);
     let oa = ontology::adapter(graph);
     let mut translator = Translator::new();
+    infer_class_from_domain(graph, &mut w, &mut translator);
+    infer_class_from_range(graph, &mut w, &mut translator);
     infer_class_from_sub_class_of(graph, &mut w, &mut translator);
+    infer_property_from_sub_property_of(graph, &mut w, &mut translator);
     infer_properties(graph, &mut w, &mut translator);
     copy_triples(graph, &mut w, &mut translator);
     make_sub_class_of_entailment_concrete(&mut w, &mut translator, &oa);

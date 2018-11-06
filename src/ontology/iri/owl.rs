@@ -62,12 +62,20 @@ pub const ANNOTATED_SOURCE: &str = "http://www.w3.org/2002/07/owl#annotatedSourc
 pub const ANNOTATED_TARGET: &str = "http://www.w3.org/2002/07/owl#annotatedTarget";
 /// http://www.w3.org/2002/07/owl#assertionProperty
 pub const ASSERTION_PROPERTY: &str = "http://www.w3.org/2002/07/owl#assertionProperty";
+/// http://www.w3.org/2002/07/owl#backwardCompatibleWith
+pub const BACKWARD_COMPATIBLE_WITH: &str = "http://www.w3.org/2002/07/owl#backwardCompatibleWith";
+/// http://www.w3.org/2002/07/owl#bottomDataProperty
+pub const BOTTOM_DATA_PROPERTY: &str = "http://www.w3.org/2002/07/owl#bottomDataProperty";
+/// http://www.w3.org/2002/07/owl#bottomObjectProperty
+pub const BOTTOM_OBJECT_PROPERTY: &str = "http://www.w3.org/2002/07/owl#bottomObjectProperty";
 /// http://www.w3.org/2002/07/owl#cardinality
 pub const CARDINALITY: &str = "http://www.w3.org/2002/07/owl#cardinality";
 /// http://www.w3.org/2002/07/owl#complementOf
 pub const COMPLEMENT_OF: &str = "http://www.w3.org/2002/07/owl#complementOf";
 /// http://www.w3.org/2002/07/owl#datatypeComplementOf
 pub const DATATYPE_COMPLEMENT_OF: &str = "http://www.w3.org/2002/07/owl#datatypeComplementOf";
+/// http://www.w3.org/2002/07/owl#deprecated
+pub const DEPRECATED: &str = "http://www.w3.org/2002/07/owl#deprecated";
 /// http://www.w3.org/2002/07/owl#differentFrom
 pub const DIFFERENT_FROM: &str = "http://www.w3.org/2002/07/owl#differentFrom";
 /// http://www.w3.org/2002/07/owl#disjointUnionOf
@@ -88,6 +96,8 @@ pub const HAS_SELF: &str = "http://www.w3.org/2002/07/owl#hasSelf";
 pub const HAS_VALUE: &str = "http://www.w3.org/2002/07/owl#hasValue";
 /// http://www.w3.org/2002/07/owl#imports
 pub const IMPORTS: &str = "http://www.w3.org/2002/07/owl#imports";
+/// http://www.w3.org/2002/07/owl#incompatibleWith
+pub const INCOMPATIBLE_WITH: &str = "http://www.w3.org/2002/07/owl#incompatibleWith";
 /// http://www.w3.org/2002/07/owl#intersectionOf
 pub const INTERSECTION_OF: &str = "http://www.w3.org/2002/07/owl#intersectionOf";
 /// http://www.w3.org/2002/07/owl#inverseOf
@@ -114,6 +124,8 @@ pub const ON_PROPERTIES: &str = "http://www.w3.org/2002/07/owl#onProperties";
 pub const ON_PROPERTY: &str = "http://www.w3.org/2002/07/owl#onProperty";
 /// http://www.w3.org/2002/07/owl#oneOf
 pub const ONE_OF: &str = "http://www.w3.org/2002/07/owl#oneOf";
+/// http://www.w3.org/2002/07/owl#priorVersion
+pub const PRIOR_VERSION: &str = "http://www.w3.org/2002/07/owl#priorVersion";
 /// http://www.w3.org/2002/07/owl#propertyChainAxiom
 pub const PROPERTY_CHAIN_AXIOM: &str = "http://www.w3.org/2002/07/owl#propertyChainAxiom";
 /// http://www.w3.org/2002/07/owl#propertyDisjointWith
@@ -130,6 +142,10 @@ pub const SOURCE_INDIVIDUAL: &str = "http://www.w3.org/2002/07/owl#sourceIndivid
 pub const TARGET_INDIVIDUAL: &str = "http://www.w3.org/2002/07/owl#targetIndividual";
 /// http://www.w3.org/2002/07/owl#targetValue
 pub const TARGET_VALUE: &str = "http://www.w3.org/2002/07/owl#targetValue";
+/// http://www.w3.org/2002/07/owl#topDataProperty
+pub const TOP_DATA_PROPERTY: &str = "http://www.w3.org/2002/07/owl#topDataProperty";
+/// http://www.w3.org/2002/07/owl#topObjectProperty
+pub const TOP_OBJECT_PROPERTY: &str = "http://www.w3.org/2002/07/owl#topObjectProperty";
 /// http://www.w3.org/2002/07/owl#unionOf
 pub const UNION_OF: &str = "http://www.w3.org/2002/07/owl#unionOf";
 /// http://www.w3.org/2002/07/owl#versionIRI
