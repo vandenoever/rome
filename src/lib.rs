@@ -13,7 +13,6 @@ extern crate nom;
 extern crate rand;
 extern crate regex;
 
-mod constants;
 pub mod error;
 pub mod graph;
 pub mod graphs;

@@ -67,6 +67,9 @@ fn camel_case(str: &str) -> String {
 }
 
 fn snake_case(str: &str) -> String {
+    if str.is_empty() {
+        return String::new();
+    }
     if str == "type" {
         return String::from("a");
     }
@@ -158,25 +161,6 @@ where
     }
     Ok(())
 }
-
-macro_rules! io_iri {
-    ($fn:ident, $prefix:expr, $namespace:expr, $name:expr) => {
-        fn $fn() -> IoIri {
-            IoIri {
-                prefix: $prefix.into(),
-                namespace: $namespace.into(),
-                name: $name.into(),
-            }
-        }
-    };
-}
-
-io_iri!(
-    rdf_type,
-    "rdf",
-    "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
-    "type"
-);
 
 struct Translator<'g> {
     blank_nodes: BTreeMap<
@@ -299,12 +283,41 @@ where
 }
 
 /// CONSTRUCT {
+///     ?a a rdfs:Property .
+///     ?b a rdfs:Property
+/// } WHERE {
+///     ?a rdfs:subPropertyOf ?b
+/// }
+fn infer_property_from_sub_property_of<'g, T, G, W>(graph: &'g G, w: &mut W, translator: &mut T)
+where
+    G: Graph<'g>,
+    W: GraphWriter<'g>,
+    T: ResourceTranslator<'g, Graph = G, GraphWriter = W> + 'g,
+{
+    if let Some(sub_property) = graph.find_iri(iri::rdfs::SUB_PROPERTY_OF) {
+        let rdf_type = w.create_iri(&iri::rdf::TYPE);
+        let rdf_property = WriterResource::IRI(w.create_iri(&iri::rdf::PROPERTY));
+        for triple in graph
+            .iter()
+            .filter(|triple| !triple.object().is_literal() && triple.predicate() == sub_property)
+        {
+            let a = translator.translate_blank_node_or_iri(w, &triple.subject());
+            w.add(&a, &rdf_type, &rdf_property);
+            if let Some(b) = triple.object().to_blank_node_or_iri() {
+                let b = translator.translate_blank_node_or_iri(w, &b);
+                w.add(&b, &rdf_type, &rdf_property);
+            }
+        }
+    }
+}
+
+/// CONSTRUCT {
 ///   ?x ?r ?y
 /// } WHERE {
 ///   ?x ?q ?y .
 ///   ?q rdfs:subPropertyOf ?r
 /// }
-fn infer_property_from_sub_property_of<'g, T, G, W>(graph: &'g G, w: &mut W, translator: &mut T)
+fn infer_statement_from_sub_property_of<'g, T, G, W>(graph: &'g G, w: &mut W, translator: &mut T)
 where
     G: Graph<'g>,
     W: GraphWriter<'g>,
@@ -319,6 +332,39 @@ where
                     let x = translator.translate_blank_node_or_iri(w, &triple2.subject());
                     let y = translator.translate_resource(w, &triple2.object());
                     w.add(&x, &r, &y);
+                }
+            }
+        }
+    }
+}
+
+/// CONSTRUCT {
+///   ?x ?p ?z
+/// } WHERE {
+///   ?x ?p ?y .
+///   ?y ?p ?z .
+///   ?p a owl:TransitiveProperty
+/// }
+fn infer_transitive_properties<'g, T, G, W>(graph: &'g G, w: &mut W, translator: &mut T)
+where
+    G: Graph<'g>,
+    W: GraphWriter<'g>,
+    T: ResourceTranslator<'g, Graph = G, GraphWriter = W> + 'g,
+{
+    if let (Some(transitive_propery), Some(rdf_type)) = (
+        graph.find_iri(iri::owl::TRANSITIVE_PROPERTY),
+        graph.find_iri(iri::rdf::TYPE),
+    ) {
+        for triple in graph.iter_o_p(&Resource::IRI(transitive_propery), &rdf_type) {
+            if let BlankNodeOrIRI::IRI(p) = triple.subject() {
+                for triple2 in graph.iter().filter(|t| t.predicate() == p) {
+                    let subject = triple2.subject().to_resource();
+                    for triple3 in graph.iter_o_p(&subject, &p) {
+                        let x = translator.translate_blank_node_or_iri(w, &triple3.subject());
+                        let p = w.create_iri(&p);
+                        let y = translator.translate_resource(w, &triple2.object());
+                        w.add(&x, &p, &y);
+                    }
                 }
             }
         }
@@ -408,6 +454,8 @@ fn infer<'g>(graph: &'g MyGraph) -> rome::Result<MyGraph> {
     infer_class_from_range(graph, &mut w, &mut translator);
     infer_class_from_sub_class_of(graph, &mut w, &mut translator);
     infer_property_from_sub_property_of(graph, &mut w, &mut translator);
+    infer_statement_from_sub_property_of(graph, &mut w, &mut translator);
+    infer_transitive_properties(graph, &mut w, &mut translator);
     infer_properties(graph, &mut w, &mut translator);
     copy_triples(graph, &mut w, &mut translator);
     make_sub_class_of_entailment_concrete(&mut w, &mut translator, &oa);
@@ -504,6 +552,33 @@ where
     Ok(())
 }
 
+fn add_iri(prefixes: &Namespaces, iri: &str, iris: &mut BTreeSet<IoIri>) {
+    if let Some((prefix, name)) = prefixes.find_prefix(iri) {
+        if !name.is_empty() {
+            let io_iri = IoIri::new(prefix, iri, name);
+            iris.insert(io_iri);
+        }
+    }
+}
+
+fn collect_iris<'g, G: Graph<'g>>(
+    prefixes: &Namespaces,
+    graph: &'g G,
+    iris: &mut BTreeSet<IoIri>,
+) -> rome::Result<()> {
+    for triple in graph.iter() {
+        if let BlankNodeOrIRI::IRI(iri) = triple.subject() {
+            add_iri(prefixes, iri.as_str(), iris);
+        }
+        let predicate = triple.predicate();
+        add_iri(prefixes, predicate.as_str(), iris);
+        if let Resource::IRI(iri) = triple.object() {
+            add_iri(prefixes, iri.as_str(), iris);
+        }
+    }
+    Ok(())
+}
+
 fn generate_classes(d: &OntoData, iris: &mut Vec<IoIri>) -> rome::Result<()> {
     let mut outputs = BTreeMap::new();
     for ns in d.prefixes.iter() {
@@ -583,7 +658,7 @@ fn generate_properties(d: &OntoData, iris: &mut Vec<IoIri>) -> rome::Result<()> 
     write_files(&d.o, &outputs, "properties", false, true)
 }
 
-fn generate_iris(d: &OntoData, iris: &Vec<IoIri>) -> rome::Result<()> {
+fn generate_iris(d: &OntoData, iris: &BTreeSet<IoIri>) -> rome::Result<()> {
     let mut outputs = BTreeMap::new();
     for ns in d.prefixes.iter() {
         outputs.insert(Vec::from(ns.prefix()), Vec::new());
@@ -705,22 +780,28 @@ fn generate(
     let (prefixes, graph) = load_files(inputs)?;
     let oa = ontology::adapter(&graph);
     let mut iris = Vec::new();
+    let mut all_iris = BTreeSet::new();
     let data = OntoData {
         o: Output {
-            mod_name: mod_name,
-            output_dir: output_dir,
-            internal: internal,
+            mod_name,
+            output_dir,
+            internal,
         },
         classes: IRI::iter(&oa).collect(),
         properties: IRI::iter(&oa).collect(),
-        prefixes: prefixes,
+        prefixes,
     };
 
     // rdf:type is always needed
-    iris.push(rdf_type());
+    iris.push(IoIri {
+        prefix: "rdf".into(),
+        namespace: "http://www.w3.org/1999/02/22-rdf-syntax-ns#".into(),
+        name: "type".into(),
+    });
+    collect_iris(&data.prefixes, &graph, &mut all_iris)?;
     generate_classes(&data, &mut iris)?;
     generate_properties(&data, &mut iris)?;
-    generate_iris(&data, &iris)?;
+    generate_iris(&data, &all_iris)?;
     write_mod(&data.o, &iris)?;
     Ok(())
 }

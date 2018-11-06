@@ -1,7 +1,6 @@
 use super::grammar::{statement, tws};
 use super::grammar_helper::*;
 use super::grammar_structs::*;
-use constants;
 use error::{Error, Result};
 use graph;
 use namespaces::*;
@@ -343,7 +342,7 @@ where
     let mut head = graph::WriterBlankNodeOrIRI::IRI(get_cached_iri(
         &mut state.rdf_nil,
         state.writer,
-        constants::RDF_NIL,
+        rdf::NIL,
     ));
     for object in collection.into_iter().rev() {
         let this = state.new_blank();

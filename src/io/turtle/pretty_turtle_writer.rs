@@ -1,6 +1,5 @@
 use super::grammar::{boolean, decimal, double, integer, pn_local};
 use super::grammar_structs::Literal;
-use constants;
 use error::{Error, Result};
 use graph::*;
 use namespaces::*;
@@ -52,7 +51,7 @@ where
         xsd_decimal: graph.find_datatype(xsd::DECIMAL),
         xsd_double: graph.find_datatype(xsd::DOUBLE),
         rdf_first: graph.find_iri(rdf::FIRST),
-        rdf_nil: graph.find_iri(constants::RDF_NIL),
+        rdf_nil: graph.find_iri(rdf::NIL),
         rdf_rest: graph.find_iri(rdf::REST),
         rdf_type: graph.find_iri(rdf::TYPE),
         graph,

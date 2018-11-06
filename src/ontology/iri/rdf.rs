@@ -20,6 +20,8 @@ pub const XMLLITERAL: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#XMLLite
 pub const FIRST: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#first";
 /// http://www.w3.org/1999/02/22-rdf-syntax-ns#langString
 pub const LANG_STRING: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString";
+/// http://www.w3.org/1999/02/22-rdf-syntax-ns#nil
+pub const NIL: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil";
 /// http://www.w3.org/1999/02/22-rdf-syntax-ns#object
 pub const OBJECT: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#object";
 /// http://www.w3.org/1999/02/22-rdf-syntax-ns#predicate
