@@ -371,6 +371,59 @@ where
     }
 }
 
+/// CONSTRUCT {
+///   ?y ?q ?x
+/// } WHERE {
+///   ?p owl:inverseOf ?q .
+///   ?x ?p ?y
+/// }
+fn infer_inverse<'g, T, G, W>(graph: &'g G, w: &mut W, translator: &mut T)
+where
+    G: Graph<'g>,
+    W: GraphWriter<'g>,
+    T: ResourceTranslator<'g, Graph = G, GraphWriter = W> + 'g,
+{
+    if let Some(owl_inverse_of) = graph.find_iri(iri::owl::INVERSE_OF) {
+        for triple in graph.iter().filter(|t| t.predicate() == owl_inverse_of) {
+            if let (BlankNodeOrIRI::IRI(p), Resource::IRI(q)) = (triple.subject(), triple.object())
+            {
+                for triple2 in graph.iter().filter(|t| t.predicate() == p) {
+                    if let Some(y) = triple2.object().to_blank_node_or_iri() {
+                        let x = translator.translate_resource(w, &triple2.subject().to_resource());
+                        let q = w.create_iri(&q);
+                        let y = translator.translate_blank_node_or_iri(w, &y);
+                        w.add(&y, &q, &x);
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// CONSTRUCT {
+///   ?p owl:inverseOf ?p
+/// } WHERE {
+///   ?p a owl:SymmetricProperty
+/// }
+fn infer_symmetric<'g, T, G, W>(graph: &'g G, w: &mut W, translator: &mut T)
+where
+    G: Graph<'g>,
+    W: GraphWriter<'g>,
+    T: ResourceTranslator<'g, Graph = G, GraphWriter = W> + 'g,
+{
+    if let (Some(a), Some(symmetric_property)) = (
+        graph.find_iri(iri::rdf::TYPE),
+        graph.find_iri(iri::owl::SYMMETRIC_PROPERTY),
+    ) {
+        let inverse = w.create_iri(&iri::owl::INVERSE_OF);
+        for triple in graph.iter_o_p(&Resource::IRI(symmetric_property), &a) {
+            let p = translator.translate_blank_node_or_iri(w, &triple.subject());
+            let p2 = translator.translate_resource(w, &triple.subject().to_resource());
+            w.add(&p, &inverse, &p2);
+        }
+    }
+}
+
 /// Infer properties
 ///
 /// CONSTRUCT {
@@ -456,6 +509,8 @@ fn infer<'g>(graph: &'g MyGraph) -> rome::Result<MyGraph> {
     infer_property_from_sub_property_of(graph, &mut w, &mut translator);
     infer_statement_from_sub_property_of(graph, &mut w, &mut translator);
     infer_transitive_properties(graph, &mut w, &mut translator);
+    infer_inverse(graph, &mut w, &mut translator);
+    infer_symmetric(graph, &mut w, &mut translator);
     infer_properties(graph, &mut w, &mut translator);
     copy_triples(graph, &mut w, &mut translator);
     make_sub_class_of_entailment_concrete(&mut w, &mut translator, &oa);
