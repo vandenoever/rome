@@ -1,10 +1,10 @@
 use super::grammar::{boolean, decimal, double, integer, pn_local};
 use super::grammar_structs::Literal;
-use graph::*;
-use namespaces::*;
+use crate::graph::*;
+use crate::namespaces::*;
+use crate::ontology::iri::{rdf, xsd};
 use nom::types::CompleteStr;
 use nom::IResult;
-use ontology::iri::{rdf, xsd};
 use std::fmt::Display;
 use std::io::{Result, Write};
 

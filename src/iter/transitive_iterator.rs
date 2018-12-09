@@ -1,6 +1,6 @@
 //! Iterator that is a collection of iterators.
 
-use iter::SortedIterator;
+use crate::iter::SortedIterator;
 use std::collections::BTreeSet;
 
 /// Iterator that is a collection of iterators.
@@ -61,4 +61,5 @@ impl<I> SortedIterator for TransitiveIterator<I>
 where
     I: SortedIterator,
     I::Item: Ord + Clone,
-{}
+{
+}

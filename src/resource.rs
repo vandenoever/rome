@@ -1,10 +1,10 @@
 //! Helper traits used in generated ontology code.
-#![cfg_attr(feature = "cargo-clippy", allow(type_complexity))]
-use graph;
-use graph::Triple;
-use iter;
-use ontology_adapter;
-use resource;
+#![allow(clippy::type_complexity)]
+use crate::graph;
+use crate::graph::Triple;
+use crate::iter;
+use crate::ontology_adapter;
+use crate::resource;
 use std;
 
 macro_rules! rb {
@@ -96,7 +96,7 @@ where
     }
     /// Access the IRI that underlies this instance as a string.
     pub fn as_str(&self) -> &str {
-        use graph::IRIPtr;
+        use crate::graph::IRIPtr;
         match *self.resource.this() {
             graph::Resource::IRI(ref iri) => iri.as_str(),
             _ => panic!("unreachable"),
@@ -354,7 +354,7 @@ impl<'g, G: 'g> resource::ResourceBase<'g> for $name<'g, G>
         }
     }
     fn iter(adapter: &'g adapter!()) -> resource::SubjectIter<'g, Self> {
-        use graph::IRIPtr;
+        use crate::graph::IRIPtr;
         let rdf_type = adapter.preloaded_iri(0);
         let class = adapter.preloaded_iri($pos);
         let iter = match (rdf_type, class) {
@@ -377,13 +377,13 @@ impl<'g, G: 'g> resource::ResourceBase<'g> for $name<'g, G>
 
 #[cfg(test)]
 mod tests {
-    use graph;
-    use graph::GraphWriter;
-    use graphs::tel;
-    use ontology::iri::{rdf, rdfs};
-    use ontology_adapter;
-    use resource;
-    use resource::{ResourceBase, IRI};
+    use crate::graph;
+    use crate::graph::GraphWriter;
+    use crate::graphs::tel;
+    use crate::ontology::iri::{rdf, rdfs};
+    use crate::ontology_adapter;
+    use crate::resource;
+    use crate::resource::{ResourceBase, IRI};
     use std;
 
     pub fn adapter<'g, G: 'g>(graph: &'g G) -> ontology_adapter::OntologyAdapter<'g, G>

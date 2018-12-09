@@ -1,7 +1,7 @@
 use super::compact_triple::*;
 use super::graph::*;
 use super::string_collector::*;
-use graph;
+use crate::graph;
 use std::cmp;
 use std::fmt;
 use std::marker::PhantomData;
@@ -40,7 +40,8 @@ impl<'g, SPO, OPS> graph::BlankNodePtr<'g> for BlankNodePtr<'g, SPO, OPS>
 where
     SPO: CompactTriple<u32>,
     OPS: CompactTriple<u32>,
-{}
+{
+}
 impl<'g, SPO, OPS> fmt::Debug for BlankNodePtr<'g, SPO, OPS>
 where
     SPO: CompactTriple<u32>,
@@ -103,7 +104,7 @@ where
         if self.graph.graph_id == other.graph.graph_id {
             self.iri == other.iri
         } else {
-            use graph::IRIPtr;
+            use crate::graph::IRIPtr;
             self.as_str() == other.as_str()
         }
     }
@@ -112,7 +113,8 @@ impl<'g, SPO, OPS> Eq for IRIPtr<'g, SPO, OPS>
 where
     SPO: CompactTriple<u32>,
     OPS: CompactTriple<u32>,
-{}
+{
+}
 impl<'g, SPO, OPS> PartialOrd for IRIPtr<'g, SPO, OPS>
 where
     SPO: CompactTriple<u32>,
@@ -146,7 +148,7 @@ where
     OPS: CompactTriple<u32>,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use graph::IRIPtr;
+        use crate::graph::IRIPtr;
         write!(f, "<{}>", self.as_str())
     }
 }
@@ -203,7 +205,7 @@ where
         if self.graph.graph_id == other.graph.graph_id {
             self.datatype == other.datatype
         } else {
-            use graph::DatatypePtr;
+            use crate::graph::DatatypePtr;
             self.as_str() == other.as_str()
         }
     }
@@ -241,7 +243,7 @@ where
                 && self.datatype == other.datatype
                 && self.language == other.language
         } else {
-            use graph::LiteralPtr;
+            use crate::graph::LiteralPtr;
             self.as_str() == other.as_str()
                 && self.datatype_str() == other.datatype_str()
                 && self.language() == other.language()
@@ -252,7 +254,8 @@ impl<'g, SPO, OPS> Eq for LiteralPtr<'g, SPO, OPS>
 where
     SPO: CompactTriple<u32>,
     OPS: CompactTriple<u32>,
-{}
+{
+}
 impl<'g, SPO, OPS> PartialOrd for LiteralPtr<'g, SPO, OPS>
 where
     SPO: CompactTriple<u32>,
@@ -302,7 +305,7 @@ where
     OPS: CompactTriple<u32>,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use graph::LiteralPtr;
+        use crate::graph::LiteralPtr;
         match self.language() {
             None => write!(f, "\"{}\"^^<{}>", self.as_str(), self.datatype_str()),
             Some(lang) => write!(f, "\"{}\"@{}", self.as_str(), lang),
@@ -359,7 +362,7 @@ where
         // if the triples use the same Graph, it's ok to compare
         // the numeric value of the triple, when Rc::ptr_eq becomes stable,
         // we can use that.
-        use graph::Triple;
+        use crate::graph::Triple;
         self.subject().eq(&other.subject())
             && self.predicate().eq(&other.predicate())
             && self.object().eq(&other.object())
@@ -370,7 +373,8 @@ where
     SPO: CompactTriple<u32>,
     OPS: CompactTriple<u32>,
     T: CompactTriple<u32>,
-{}
+{
+}
 impl<'g, SPO, OPS, T> PartialOrd for Triple<'g, SPO, OPS, T>
 where
     SPO: CompactTriple<u32>,

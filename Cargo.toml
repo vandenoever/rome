@@ -7,6 +7,7 @@ description = "An RDF library in pure Rust"
 homepage = "https://github.com/vandenoever/rome"
 repository = "https://github.com/vandenoever/rome"
 documentation = "https://www.vandenoever.info/rust/rome/"
+edition = "2018"
 
 [dependencies]
 # for the library

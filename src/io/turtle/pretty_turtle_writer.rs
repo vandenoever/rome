@@ -1,11 +1,11 @@
 use super::grammar::{boolean, decimal, double, integer, pn_local};
 use super::grammar_structs::Literal;
-use error::{Error, Result};
-use graph::*;
-use namespaces::*;
+use crate::error::{Error, Result};
+use crate::graph::*;
+use crate::namespaces::*;
+use crate::ontology::iri::{rdf, xsd};
 use nom::types::CompleteStr;
 use nom::IResult;
-use ontology::iri::{rdf, xsd};
 use std::fmt::Display;
 use std::io::Write;
 use std::iter::Peekable;

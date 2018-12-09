@@ -1,7 +1,7 @@
-use graph;
-use ontology;
-use ontology::iri::owl;
-use resource;
+use crate::graph;
+use crate::ontology;
+use crate::ontology::iri::owl;
+use crate::resource;
 use std;
 
 property!(

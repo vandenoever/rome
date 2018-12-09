@@ -1,6 +1,5 @@
 /// Generate rust code from a set of ontologies
 ///
-extern crate rome;
 use rome::graph::{
     BlankNodeOrIRI, Graph, GraphWriter, IRIPtr, LiteralPtr, Resource, ResourceTranslator, Triple,
     WriterBlankNodeOrIRI, WriterResource,
@@ -120,7 +119,8 @@ where
                     prop_prefix,
                     camel_case(prop),
                     camel_case(domain)
-                ).as_bytes(),
+                )
+                .as_bytes(),
             )?;
             writer.write_all(
                 format!(
@@ -131,7 +131,8 @@ where
                     prop_prefix,
                     camel_case(prop),
                     camel_case(domain)
-                ).as_bytes(),
+                )
+                .as_bytes(),
             )?;
             done.insert(String::from(iri));
         }
@@ -545,8 +546,8 @@ fn write_mod(o: &Output, iris: &[IoIri]) -> rome::Result<()> {
     mod_rs.write_all(b"/// Ontology properties\n")?;
     mod_rs.write_all(b"pub mod properties;\n")?;
     if o.internal {
-        mod_rs.write_all(b"use graph;\n")?;
-        mod_rs.write_all(b"use ontology_adapter;\n")?;
+        mod_rs.write_all(b"use crate::graph;\n")?;
+        mod_rs.write_all(b"use crate::ontology_adapter;\n")?;
     } else {
         mod_rs.write_all(b"use rome::graph;\n")?;
         mod_rs.write_all(b"use rome::ontology_adapter;\n")?;
@@ -565,7 +566,8 @@ fn write_mod(o: &Output, iris: &[IoIri]) -> rome::Result<()> {
                 "    iris.push(graph.find_iri(iri::{}::{}));\n",
                 iri.prefix,
                 iri.upper_name()
-            ).as_bytes(),
+            )
+            .as_bytes(),
         )?;
     }
     mod_rs.write_all(b"    ontology_adapter::OntologyAdapter::new(graph, iris)\n}\n")?;
@@ -657,7 +659,8 @@ fn generate_classes(d: &OntoData, iris: &mut Vec<IoIri>) -> rome::Result<()> {
                         io_iri.upper_name(),
                         camel_case(name),
                         iris.len()
-                    ).as_bytes(),
+                    )
+                    .as_bytes(),
                 )?;
                 let mut done = HashSet::new();
                 write_impl_properties(class, class, d, &mut done, &mut writer)?;
@@ -683,7 +686,7 @@ fn generate_properties(d: &OntoData, iris: &mut Vec<IoIri>) -> rome::Result<()> 
                     .as_iri()
                     .and_then(|i| d.prefixes.find_prefix(i.as_str()))
                 {
-                    if let Some(mut writer) = outputs.get_mut(prop_prefix.as_bytes()) {
+                    if let Some(writer) = outputs.get_mut(prop_prefix.as_bytes()) {
                         writer.write_all(b"\nproperty!(\n/// **")?;
                         writer.write_all(prop_prefix.as_bytes())?;
                         writer.write_all(b":")?;
@@ -702,7 +705,8 @@ fn generate_properties(d: &OntoData, iris: &mut Vec<IoIri>) -> rome::Result<()> 
                                 prefix,
                                 camel_case(range),
                                 iris.len()
-                            ).as_bytes(),
+                            )
+                            .as_bytes(),
                         )?;
                     }
                 }
@@ -720,14 +724,15 @@ fn generate_iris(d: &OntoData, iris: &BTreeSet<IoIri>) -> rome::Result<()> {
     }
     let iris: BTreeSet<IoIri> = iris.iter().map(|i| i.clone()).collect();
     for iri in iris {
-        if let Some(mut writer) = outputs.get_mut(iri.prefix.as_bytes()) {
+        if let Some(writer) = outputs.get_mut(iri.prefix.as_bytes()) {
             writer.write_all(format!("/// {}\n", iri.iri()).as_bytes())?;
             writer.write_all(
                 format!(
                     "pub const {}: &str = \"{}\";\n",
                     iri.upper_name(),
                     iri.iri()
-                ).as_bytes(),
+                )
+                .as_bytes(),
             )?;
         }
     }
@@ -738,11 +743,11 @@ fn uses(o: &Output, classes: bool, prefix: &str) -> String {
     let mut uses: Vec<String> = Vec::new();
     uses.push("std".into());
     if o.internal {
-        uses.push("graph".into());
-        uses.push("resource".into());
-        uses.push(format!("ontology::iri::{}", prefix));
+        uses.push("crate::graph".into());
+        uses.push("crate::resource".into());
+        uses.push(format!("crate::ontology::iri::{}", prefix));
         if classes {
-            uses.push("ontology_adapter".into());
+            uses.push("crate::ontology_adapter".into());
         }
     } else {
         uses.push("rome::graph".into());
@@ -752,7 +757,7 @@ fn uses(o: &Output, classes: bool, prefix: &str) -> String {
             uses.push("rome::ontology_adapter".into());
         }
     }
-    uses.push(o.mod_name.clone());
+    uses.push(format!("crate::{}", o.mod_name));
     uses.sort();
     let mut s = String::new();
     for u in uses {

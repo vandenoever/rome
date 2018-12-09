@@ -62,8 +62,8 @@
 //!
 //!
 
-use iter::SortedIterator;
-use ontology::iri::xsd;
+use crate::iter::SortedIterator;
+use crate::ontology::iri::xsd;
 use std::cmp::Ordering;
 use std::marker::PhantomData;
 
@@ -473,17 +473,17 @@ pub trait GraphWriter<'g> {
     /// Create a new blank node for the graph.
     fn create_blank_node(&mut self) -> Self::BlankNode;
     /// Create a new IRI from an existing IRI for the graph.
-    fn create_iri<'a, I: 'a>(&mut self, &I) -> Self::IRI
+    fn create_iri<'a, I: 'a>(&mut self, _: &I) -> Self::IRI
     where
         I: IRIPtr<'a>;
     /// Create a new literal from an existing literal for the graph.
-    fn create_literal<'a, L: 'a>(&mut self, &L) -> Self::Literal
+    fn create_literal<'a, L: 'a>(&mut self, _: &L) -> Self::Literal
     where
         L: LiteralPtr<'a>;
     /// Create a new datatype for the graph.
-    fn create_datatype(&mut self, &str) -> Self::Datatype;
+    fn create_datatype(&mut self, _: &str) -> Self::Datatype;
     /// Create a new language for the graph.
-    fn create_language(&mut self, &str) -> Self::Language;
+    fn create_language(&mut self, _: &str) -> Self::Language;
     /// Create a new literal with the given datatype for the graph.
     fn create_literal_datatype(&mut self, value: &str, datatype: &Self::Datatype) -> Self::Literal;
     /// Create a new literal with the given language for the graph.

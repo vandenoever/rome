@@ -1,6 +1,6 @@
 //! `OntologyAdapter` allows accessing of a graph via an ontology.
 
-use graph::*;
+use crate::graph::*;
 
 /// `OntologyAdapter` allows accessing of a graph via an ontology.
 pub struct OntologyAdapter<'g, G: 'g>

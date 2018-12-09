@@ -1,6 +1,6 @@
 //! Iterator that merges other iterators.
 
-use iter::SortedIterator;
+use crate::iter::SortedIterator;
 use std::iter::Peekable;
 
 /// Iterator that merges other iterators.

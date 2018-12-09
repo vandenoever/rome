@@ -1,12 +1,12 @@
 use super::grammar::{statement, tws};
 use super::grammar_helper::*;
 use super::grammar_structs::*;
-use error::{Error, Result};
-use graph;
-use namespaces::*;
+use crate::error::{Error, Result};
+use crate::graph;
+use crate::namespaces::*;
+use crate::ontology::iri::{rdf, xsd};
 use nom::types::CompleteStr;
 use nom::Err;
-use ontology::iri::{rdf, xsd};
 use regex::Regex;
 use std::collections::HashMap;
 use std::marker::PhantomData;
@@ -105,7 +105,7 @@ where
 }
 
 fn is_absolute(url: &str) -> bool {
-    lazy_static! {
+    lazy_static::lazy_static! {
         static ref RE: Regex = Regex::new("^[a-z][a-z0-9+.-]*:").unwrap();
     }
     RE.is_match(url)

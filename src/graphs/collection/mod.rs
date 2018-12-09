@@ -1,6 +1,6 @@
 //! Combine a number of graphs and access them as one graph.
 
-use graph::*;
+use crate::graph::*;
 use std::cmp;
 use std::iter::Peekable;
 
@@ -186,7 +186,7 @@ macro_rules! impl_triple_cmp_wrap_spo_ops {
                 self.predicate().as_str().cmp(o)
             }
             fn cmp_object_iri(&self, o: &str) -> cmp::Ordering {
-                use graph::{IRIPtr, Resource, Triple};
+                use $crate::graph::{IRIPtr, Resource, Triple};
                 match self.object() {
                     Resource::BlankNode(_, _) => cmp::Ordering::Less,
                     Resource::IRI(i) => i.as_str().cmp(o),
@@ -297,9 +297,9 @@ impl<'g> Triple<'g, BlankNode<'g>, IRI<'g>, Literal<'g>> for $name<'g> {
 /// # Example
 ///
 /// ```
-/// # #[macro_use] extern crate rome;
 /// use rome::graph::{Graph, GraphWriter};
 /// use rome::graphs::tel::{GraphCreator, Graph64, Graph128};
+/// use rome::graph_collection;
 
 /// /// define a new collection type that has a Graph64 and a Graph128
 /// graph_collection!(my_collection(0: ::rome::graphs::tel::Graph64,
@@ -338,6 +338,7 @@ pub mod $name {
     use $crate::iter::SortedIterator;
     use $crate::graph::*;
     use $crate::graphs::collection::*;
+    use $crate::spo_ops;
 
     type Graphs<'g> = ($(&'g $graph_type,)+);
     type BlankNodes<'g> = ($(Option<<$graph_type as Graph<'g>>::BlankNodePtr>,)+);

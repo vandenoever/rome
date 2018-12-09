@@ -2,7 +2,7 @@ use super::compact_triple::*;
 use super::iter::*;
 use super::string_collector::*;
 use super::triple::*;
-use graph;
+use crate::graph;
 use std::cmp;
 use std::marker::PhantomData;
 

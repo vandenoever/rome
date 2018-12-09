@@ -1,4 +1,4 @@
-use error::{Error, Result};
+use crate::error::{Error, Result};
 use nom::types::CompleteStr;
 use nom::ErrorKind;
 use nom::Needed;

@@ -1,9 +1,10 @@
-#![cfg_attr(feature = "cargo-clippy", allow(redundant_closure_call))]
+#![allow(clippy::redundant_closure_call)]
+use nom::*;
 use super::grammar_helper::*;
 use super::grammar_structs::*;
+use crate::ontology::iri::rdf;
 use nom::types::CompleteStr;
 use nom::{Err, ErrorKind, IResult, Needed};
-use ontology::iri::rdf;
 
 /// Take one character if it fits the function
 macro_rules! one_if (

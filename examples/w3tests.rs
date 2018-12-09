@@ -1,5 +1,3 @@
-extern crate rome;
-extern crate time;
 use rome::graph;
 use rome::graph::*;
 use rome::graphs::tel;

@@ -1,7 +1,7 @@
 use super::compact_triple::*;
 use super::graph::*;
 use super::triple::*;
-use iter::SortedIterator;
+use crate::iter::SortedIterator;
 use std::marker::PhantomData;
 
 pub struct GraphIterator<'g, SPO: 'g, OPS: 'g, T, F>
@@ -42,7 +42,8 @@ where
     OPS: CompactTriple<u32>,
     T: CompactTriple<u32>,
     F: Index<SPO, OPS, T>,
-{}
+{
+}
 
 pub struct TripleRangeIterator<'g, SPO: 'g, OPS: 'g, T, F>
 where
@@ -87,4 +88,5 @@ where
     OPS: CompactTriple<u32>,
     T: CompactTriple<u32>,
     F: Index<SPO, OPS, T>,
-{}
+{
+}

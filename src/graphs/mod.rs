@@ -19,7 +19,7 @@ mod test {
 
     #[test]
     fn test() {
-        use graph::{Graph, GraphWriter};
+        use crate::graph::{Graph, GraphWriter};
         let mut gw1 = super::tel::GraphCreator::with_capacity(0);
         let b1 = gw1.create_blank_node();
         let p1 = gw1.create_iri(&"p");

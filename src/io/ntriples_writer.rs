@@ -1,5 +1,5 @@
-use graph::*;
-use ontology::iri::xsd;
+use crate::graph::*;
+use crate::ontology::iri::xsd;
 use std::fmt::Display;
 use std::io::{Result, Write};
 use std::marker::PhantomData;

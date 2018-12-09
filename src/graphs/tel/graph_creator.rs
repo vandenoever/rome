@@ -4,8 +4,8 @@ use super::string_collector::*;
 use super::triple::*;
 #[cfg(test)]
 use super::triple64::*;
-use graph;
-use ontology::iri::rdf;
+use crate::graph;
+use crate::ontology::iri::rdf;
 use rand;
 use std::cmp;
 use std::marker::PhantomData;
@@ -319,14 +319,14 @@ where
 #[test]
 fn collect_empty() {
     let creator: GraphCreator<Triple64SPO, Triple64OPS> = GraphCreator::with_capacity(0);
-    use graph::GraphWriter;
+    use crate::graph::GraphWriter;
     creator.collect();
 }
 
 #[test]
 fn keep_blank_subject() {
     let mut creator: GraphCreator<Triple64SPO, Triple64OPS> = GraphCreator::with_capacity(0);
-    use graph::{Graph, GraphWriter, IRIPtr, Triple};
+    use crate::graph::{Graph, GraphWriter, IRIPtr, Triple};
     let blank1 = creator.create_blank_node();
     let blank2 = creator.create_blank_node();
     let iri = creator.create_iri(&"");

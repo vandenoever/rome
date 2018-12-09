@@ -1,4 +1,3 @@
-extern crate rome;
 use rome::graph::GraphWriter;
 use rome::graphs::tel;
 use rome::io::write_pretty_turtle;

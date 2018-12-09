@@ -2,7 +2,6 @@
 ///
 /// The program reads a Turtle or N-Triples file and infers Class instances by
 /// using rdf:subClassOf.
-extern crate rome;
 use rome::graph::{Graph, GraphWriter, ResourceTranslator, Triple, WriterResource};
 use rome::graphs::tel;
 use rome::io::{write_pretty_turtle, TurtleParser};
