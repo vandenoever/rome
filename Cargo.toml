@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 # for the library
 lazy_static = "1"
-nom = "4"
+nom = "5"
 rand = "0.5"
 regex = "1"
 clippy = {version = "0.0.302", optional = true}

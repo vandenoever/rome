@@ -1,4 +1,5 @@
 #![warn(missing_docs)]
+#![allow(unused_doc_comments)]
 #![cfg_attr(feature = "clippy", feature(plugin))]
 #![cfg_attr(feature = "clippy", plugin(clippy))]
 //! A crate for working with RDF

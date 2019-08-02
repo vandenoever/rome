@@ -1,27 +1,24 @@
 use crate::error::{Error, Result};
-use nom::types::CompleteStr;
-use nom::ErrorKind;
-use nom::Needed;
-use nom::{Context, Err, IResult};
+use nom::{error::ErrorKind, Err, IResult, Needed};
 use std::char;
 use std::str::Chars;
 
 pub fn string_literal(
-    str: CompleteStr,
+    str: &str,
     ql: usize,
-    starts_with: fn(CompleteStr) -> bool,
-    find: fn(CompleteStr) -> Option<usize>,
-) -> IResult<CompleteStr, &str> {
+    starts_with: fn(&str) -> bool,
+    find: fn(&str) -> Option<usize>,
+) -> IResult<&str, &str> {
     if !starts_with(str) {
-        return Err(Err::Error(Context::Code(str, ErrorKind::Custom(0))));
+        return Err(Err::Error((str, ErrorKind::Tag)));
     }
-    let hay = CompleteStr(&str[ql..]);
+    let hay = &str[ql..];
     if starts_with(hay) {
-        return Ok((CompleteStr(&hay[ql..]), ""));
+        return Ok((&hay[ql..], ""));
     }
     let mut offset = 0;
     loop {
-        let left = CompleteStr(&hay[offset..]);
+        let left = &hay[offset..];
         if let Some(i) = find(left) {
             offset += i;
             if !escaped(hay.as_bytes(), offset) {
@@ -32,7 +29,7 @@ pub fn string_literal(
             return Err(Err::Incomplete(Needed::Unknown));
         }
     }
-    Ok((CompleteStr(&hay[offset + ql..]), &hay[..offset]))
+    Ok((&hay[offset + ql..], &hay[..offset]))
 }
 
 fn escaped(hay: &[u8], offset: usize) -> bool {
