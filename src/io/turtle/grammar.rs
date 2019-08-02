@@ -841,9 +841,9 @@ fn test_triples() {
         language: None,
     })];
     let i = IRI::IRI("urn:123");
-    let s = Subject::IRI(i.clone());
+    let s = Subject::IRI(i);
     let po = vec![PredicatedObjects {
-        verb: i.clone(),
+        verb: i,
         objects: v,
     }];
     let t = Triples {
@@ -856,10 +856,10 @@ fn test_triples() {
 #[test]
 fn test_statement_triples() {
     let i = IRI::PrefixedName("", "");
-    let s = Subject::IRI(i.clone());
+    let s = Subject::IRI(i);
     let po = vec![PredicatedObjects {
-        verb: i.clone(),
-        objects: vec![Object::IRI(i.clone())],
+        verb: i,
+        objects: vec![Object::IRI(i)],
     }];
     let t = Triples {
         subject: s,
