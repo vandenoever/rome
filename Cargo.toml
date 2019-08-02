@@ -15,7 +15,6 @@ lazy_static = "1"
 nom = "5"
 rand = "0.5"
 regex = "1"
-clippy = {version = "0.0.302", optional = true}
 
 # for the examples
 time = "0.1"

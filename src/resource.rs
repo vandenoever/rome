@@ -1,5 +1,4 @@
 //! Helper traits used in generated ontology code.
-#![allow(clippy::type_complexity)]
 use crate::graph;
 use crate::graph::Triple;
 use crate::iter;
