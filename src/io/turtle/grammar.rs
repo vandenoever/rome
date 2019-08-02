@@ -2,16 +2,13 @@ use super::grammar_helper::*;
 use super::grammar_structs::*;
 use crate::ontology::iri::rdf;
 
-use nom::{
-    alt, char, do_parse, many0, map, named, one_of, opt, recognize, take_while, take_while1, tuple,
-    value,
-};
+use nom::{alt, do_parse, map, named, opt};
 
 use nom::{
     branch::alt,
     bytes::complete::{tag, tag_no_case, take_while, take_while1},
     character::complete::{char, one_of},
-    combinator::{map, opt, recognize},
+    combinator::{map, opt, recognize, value},
     error::{ErrorKind, ParseError},
     error_position,
     multi::{fold_many0, fold_many1, many0, separated_nonempty_list},
@@ -191,10 +188,9 @@ fn object_list(i: &str) -> IResult<&str, Vec<Object>> {
 /// [9] `verb ::= predicate | 'a'`
 named!(verb<&str,IRI>, alt!(iri|a));
 
-named!(a<&str,IRI>, value!(
-    IRI::IRI(rdf::TYPE),
-    char!('a')
-));
+fn a(i: &str) -> IResult<&str, IRI> {
+    value(IRI::IRI(rdf::TYPE), char('a'))(i)
+}
 
 /// [10] `subject ::= iri | BlankNode | collection`
 named!(subject<&str,Subject>, alt!(
@@ -218,20 +214,22 @@ named!(object<&str,Object>, alt!(
 named!(literal<&str,Literal>, alt!(rdfliteral | boolean | double | decimal | integer));
 
 /// [14] `blankNodePropertyList ::= '[' predicateObjectList ']'`
-named!(blank_node_property_list<&str,Vec<PredicatedObjects> >, do_parse!(
-    char!('[') >> tws >>
-    pol: predicated_objects_list >> tws >>
-    char!(']') >> (pol)
-));
+fn blank_node_property_list(i: &str) -> IResult<&str, Vec<PredicatedObjects>> {
+    let (i, (_, _, pos, _, _)) =
+        tuple((char('['), tws, predicated_objects_list, tws, char(']')))(i)?;
+    Ok((i, pos))
+}
 
 /// [15] `collection ::= '(' object* ')'`
-named!(collection<&str,Vec<Object> >, do_parse!(
-    char!('(') >> tws >>
-    objects: many0!(do_parse!(
-        object: object >> tws >>
-        (object))) >>
-    char!(')') >> (objects)
-));
+fn collection(i: &str) -> IResult<&str, Vec<Object>> {
+    let (i, (_, _, objects, _)) = tuple((
+        char('('),
+        tws,
+        many0(map(tuple((object, tws)), |t| t.0)),
+        char(')'),
+    ))(i)?;
+    Ok((i, objects))
+}
 
 /// [16] `NumericLiteral ::= INTEGER | DECIMAL | DOUBLE`
 
@@ -293,15 +291,16 @@ named!(string<&str,&str>, alt!(string_literal_long_single_quote
 named!(iri<&str,IRI>, alt!(iri_iri|prefixed_name));
 
 /// [136s]  `PrefixedName ::= PNAME_LN | PNAME_NS`
-named!(prefixed_name<&str,IRI>, do_parse!(
-    pn_prefix: opt!(pn_prefix) >>
-    char!(':') >>
-    pn_local: opt!(pn_local) >>
-    (IRI::PrefixedName(
-        pn_prefix.map(|p|p).unwrap_or(""),
-        pn_local.map(|p|p).unwrap_or("")
+fn prefixed_name(i: &str) -> IResult<&str, IRI> {
+    let (i, (pn_prefix, _, pn_local)) = tuple((opt(pn_prefix), char(':'), opt(pn_local)))(i)?;
+    Ok((
+        i,
+        IRI::PrefixedName(
+            pn_prefix.map(|p| p).unwrap_or(""),
+            pn_local.map(|p| p).unwrap_or(""),
+        ),
     ))
-));
+}
 
 /// [137s]  `BlankNode ::= BLANK_NODE_LABEL | ANON`
 named!(blank_node<&str,BlankNode>, alt!(blank_node_label | anon));
@@ -351,63 +350,64 @@ fn blank_node_label2(src: &str) -> IResult<&str, ()> {
     }
 }
 
-named!(blank_node_label3<&str,&str>, take_while!(is_pn_chars_or_dot));
+fn blank_node_label3(i: &str) -> IResult<&str, &str> {
+    take_while(is_pn_chars_or_dot)(i)
+}
 
 /// [144s] `LANGTAG ::= '@' [a-zA-Z]+ ('-' [a-zA-Z0-9]+)*`
-named!(langtag<&str,RDFLiteralType>, do_parse!(
-    char!('@') >>
-    langtag: recognize!(tuple!(
-        alpha,
-        opt!(tuple!(char!('-'), alphanumeric))
-    )) >>
-    (RDFLiteralType::LangTag(langtag))
-));
+fn langtag(i: &str) -> IResult<&str, RDFLiteralType> {
+    let (i, (_, langtag)) = tuple((
+        char('@'),
+        recognize(tuple((alpha, opt(tuple((char('-'), alphanumeric)))))),
+    ))(i)?;
+    Ok((i, RDFLiteralType::LangTag(langtag)))
+}
 
 /// [19] `INTEGER ::= [+-]? [0-9]+`
-named!(pub integer<&str,Literal>, map!(recognize!(tuple!(
-    opt!(one_of!("+-")), digit)),
-    (|integer|{
+pub fn integer(i: &str) -> IResult<&str, Literal> {
+    map(recognize(tuple((opt(one_of("+-")), digit))), |integer| {
         Literal {
             lexical: integer,
             datatype: Datatype::XSDInteger,
-            language: None
+            language: None,
         }
-    })
-));
+    })(i)
+}
 
 /// [20] `DECIMAL ::= [+-]? [0-9]* '.' [0-9]+`
-named!(pub decimal<&str,Literal>, map!(recognize!(tuple!(
-    opt!(one_of!("+-")), opt_digit, char!('.'), digit)),
-    (|decimal|{
-        Literal {
+pub fn decimal(i: &str) -> IResult<&str, Literal> {
+    map(
+        recognize(tuple((opt(one_of("+-")), opt_digit, char('.'), digit))),
+        |decimal| Literal {
             lexical: decimal,
             datatype: Datatype::XSDDecimal,
-            language: None
-        }
-    })
-));
+            language: None,
+        },
+    )(i)
+}
 
 /// [21] `DOUBLE ::= [+-]? ([0-9]+ '.' [0-9]* EXPONENT | '.' [0-9]+ EXPONENT | [0-9]+ EXPONENT)`
-named!(pub double<&str,Literal>, map!(recognize!(tuple!(
-    opt!(one_of!("+-")),
-    alt!(
-        recognize!(tuple!(digit,char!('.'), opt_digit, exponent)) |
-        recognize!(tuple!(opt!(char!('.')), digit, exponent))
-    ))),
-    (|double|{
-        Literal {
+pub fn double(i: &str) -> IResult<&str, Literal> {
+    map(
+        recognize(tuple((
+            opt(one_of("+-")),
+            alt((
+                recognize(tuple((digit, char('.'), opt_digit, exponent))),
+                recognize(tuple((opt(char('.')), digit, exponent))),
+            )),
+        ))),
+        |double| Literal {
             lexical: double,
             datatype: Datatype::XSDDouble,
-            language: None
-        }
-    })
-));
+            language: None,
+        },
+    )(i)
+}
 
 /// [154s] `EXPONENT ::= [eE] [+-]? [0-9]+`
-named!(exponent<&str,()>, map!(tuple!(
-    one_of!("Ee"),opt!(one_of!("+-")), digit),
-    (|_|())
-));
+fn exponent(i: &str) -> IResult<&str, ()> {
+    map(tuple((one_of("Ee"), opt(one_of("+-")), digit)), |_| ())(i)
+}
 
 /// [22] `STRING_LITERAL_QUOTE ::= '"' ([^#x22#x5C#xA#xD] | ECHAR | UCHAR)* '"'`
 /// /* #x22=" #x5C=\ #xA=new line #xD=carriage return */
@@ -461,11 +461,10 @@ fn find_long_quote(s: &str) -> Option<usize> {
 /// [161s] `WS ::= #x20 | #x9 | #xD | #xA`
 /// /* #x20=space #x9=character tabulation #xD=carriage return #xA=new line */
 /// [162s] `ANON ::= '[' WS* ']'`
-named!(anon<&str,BlankNode>, do_parse!(
-    char!('[') >>
-    tws >>
-    char!(']') >> (BlankNode::Anon)
-));
+fn anon(i: &str) -> IResult<&str, BlankNode> {
+    let (i, _) = tuple((char('['), tws, char(']')))(i)?;
+    Ok((i, BlankNode::Anon))
+}
 
 /// `[163s] PN_CHARS_BASE ::= [A-Z] | [a-z] | [#x00C0-#x00D6] | [#x00D8-#x00F6]`
 /// `| [#x00F8-#x02FF] | [#x0370-#x037D] | [#x037F-#x1FFF] | [#x200C-#x200D]`
@@ -604,10 +603,18 @@ fn test_prefixed_name() {
     assert_eq!(prefixed_name(": "), Ok((" ", IRI::PrefixedName("", ""))));
 }
 
-named!(alpha<&str,&str>, take_while1!(is_alpha));
-named!(alphanumeric<&str,&str>, take_while1!(is_alphanum));
-named!(digit<&str,&str>, take_while1!(is_digit));
-named!(opt_digit<&str,&str>, take_while!(is_digit));
+fn alpha(i: &str) -> IResult<&str, &str> {
+    take_while1(is_alpha)(i)
+}
+fn alphanumeric(i: &str) -> IResult<&str, &str> {
+    take_while1(is_alphanum)(i)
+}
+fn digit(i: &str) -> IResult<&str, &str> {
+    take_while1(is_digit)(i)
+}
+fn opt_digit(i: &str) -> IResult<&str, &str> {
+    take_while(is_digit)(i)
+}
 
 #[inline]
 fn is_iri_ref(chr: char) -> bool {
