@@ -62,12 +62,12 @@ impl StringCollector {
         if refs.is_empty() {
             return Vec::new();
         }
-        let mut translation = vec![StringId { id: 0 }; refs.len()];
+        let refs_len = refs.len();
+        let mut translation = vec![StringId { id: 0 }; refs_len];
         translation[refs[0].index as usize] = StringId { id: 0 };
         let mut to = 0;
         let mut prev_str = slice(buffer, &refs[0]);
-        let end = refs.len();
-        for i in 1..end {
+        for i in 1..refs_len {
             let r = refs[i].clone();
             let str = slice(buffer, &r);
             if str != prev_str {
