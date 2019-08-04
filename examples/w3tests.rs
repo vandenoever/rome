@@ -350,11 +350,11 @@ fn load_test_turtle_eval(
     let (approval, _) = read(prev, &mut i, RDFT_APPROVAL, to_approval)?;
     Ok(TestTurtleEval {
         id: subject_to_string(&subject),
-        name: name,
-        comment: comment,
-        approval: approval,
-        action: action,
-        result: result,
+        name,
+        comment,
+        approval,
+        action,
+        result,
     })
 }
 fn load_positive_syntax(
@@ -368,10 +368,10 @@ fn load_positive_syntax(
     let (approval, _) = read(prev, &mut i, RDFT_APPROVAL, to_approval)?;
     Ok(TestTurtlePositiveSyntax {
         id: subject_to_string(&subject),
-        name: name,
-        comment: comment,
-        approval: approval,
-        action: action,
+        name,
+        comment,
+        approval,
+        action,
     })
 }
 fn load_negative_syntax(
@@ -385,10 +385,10 @@ fn load_negative_syntax(
     let (approval, _) = read(prev, &mut i, RDFT_APPROVAL, to_approval)?;
     Ok(TestTurtleNegativeSyntax {
         id: subject_to_string(&subject),
-        name: name,
-        comment: comment,
-        approval: approval,
-        action: action,
+        name,
+        comment,
+        approval,
+        action,
     })
 }
 fn load_negative_eval(
@@ -402,10 +402,10 @@ fn load_negative_eval(
     let (approval, _) = read(prev, &mut i, RDFT_APPROVAL, to_approval)?;
     Ok(TestTurtleNegativeEval {
         id: subject_to_string(&subject),
-        name: name,
-        comment: comment,
-        approval: approval,
-        action: action,
+        name,
+        comment,
+        approval,
+        action,
     })
 }
 
@@ -480,7 +480,7 @@ fn fail(test: &Rc<String>, input_file: &str, info: String) -> rome::Result<Asser
         result: TestResult {
             outcome: Outcome::Failed,
             date: String::new(),
-            info: info,
+            info,
         },
         date: time::now_utc(),
     })
