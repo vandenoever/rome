@@ -1,0 +1,6 @@
+#blank_lines_lower_bound = 1
+#format_code_in_doc_comments = true
+#merge_imports = true
+edition = "2018"
+use_field_init_shorthand = true
+use_try_shorthand = true
