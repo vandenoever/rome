@@ -38,11 +38,13 @@ impl From<io::Error> for Error {
         Error::IOError(io_error)
     }
 }
-impl<T: ::std::fmt::Debug> From<nom::Context<T>> for Error {
-    fn from(error: nom::Context<T>) -> Error {
+
+impl From<(&str, nom::error::ErrorKind)> for Error {
+    fn from(error: (&str, nom::error::ErrorKind)) -> Error {
         Error::NomError(format!("{:?}", error))
     }
 }
+
 impl From<String> for Error {
     fn from(error: String) -> Error {
         Error::String(error)

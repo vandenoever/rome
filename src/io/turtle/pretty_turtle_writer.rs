@@ -4,7 +4,6 @@ use crate::error::{Error, Result};
 use crate::graph::*;
 use crate::namespaces::*;
 use crate::ontology::iri::{rdf, xsd};
-use nom::types::CompleteStr;
 use nom::IResult;
 use std::fmt::Display;
 use std::io::Write;
@@ -80,7 +79,7 @@ where
     fn write_iri_str(&mut self, iri: &str, namespaces: &Namespaces) -> Result<()> {
         match namespaces.find_prefix(iri) {
             Some((prefix, local)) => {
-                if let Ok((CompleteStr(""), _)) = pn_local(CompleteStr(local)) {
+                if let Ok(("", _)) = pn_local(local) {
                     self.write_prefixed_iri(prefix, local)
                 } else {
                     self.write_full_iri(iri)
@@ -145,14 +144,14 @@ where
         for i in &[
             (
                 &self.xsd_boolean,
-                boolean as fn(CompleteStr) -> IResult<CompleteStr, Literal>,
+                boolean as fn(&str) -> IResult<&str, Literal>,
             ),
             (&self.xsd_integer, integer),
             (&self.xsd_decimal, decimal),
             (&self.xsd_double, double),
         ] {
             if &d == i.0 {
-                if let Ok((CompleteStr(""), _)) = (i.1)(CompleteStr(v)) {
+                if let Ok(("", _)) = (i.1)(v) {
                     unquoted = true;
                     break;
                 }

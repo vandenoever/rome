@@ -1,6 +1,5 @@
 #![warn(missing_docs)]
-#![cfg_attr(feature = "clippy", feature(plugin))]
-#![cfg_attr(feature = "clippy", plugin(clippy))]
+#![allow(unused_doc_comments)]
 //! A crate for working with RDF
 //! By implementing `graph::Graph`, one can make any data source available as RDF.
 //! Ontology wrappers can be generated from RDF Schema.

@@ -5,28 +5,24 @@ use crate::error::{Error, Result};
 use crate::graph;
 use crate::namespaces::*;
 use crate::ontology::iri::{rdf, xsd};
-use nom::types::CompleteStr;
 use nom::Err;
 use regex::Regex;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
 struct StatementIterator<'a> {
-    src: CompleteStr<'a>,
+    src: &'a str,
     done: bool,
 }
 
 impl<'a> StatementIterator<'a> {
     pub fn new(src: &str) -> Result<StatementIterator> {
-        match tws(CompleteStr(src)) {
+        match tws(src) {
             Ok((left, _)) => Ok(StatementIterator {
                 src: left,
                 done: false,
             }),
-            Err(Err::Incomplete(_)) => Ok(StatementIterator {
-                src: CompleteStr(src),
-                done: false,
-            }),
+            Err(Err::Incomplete(_)) => Ok(StatementIterator { src, done: false }),
             Err(_) => Err(Error::Custom("cannot start parsing")),
         }
     }
