@@ -52,7 +52,7 @@ impl StringCollector {
     /// Sort the references by the strings that they point to.
     fn sort(&mut self) {
         let buffer = &self.buffer;
-        self.refs.sort_by_key(|s| slice(buffer, s));
+        self.refs.sort_unstable_by_key(|s| slice(buffer, s));
     }
     /// Remove duplicate strings from the refs array and create an array that
     /// translates from the old order to the new order.

@@ -121,7 +121,7 @@ where
             t.datatype_or_lang(),
         ));
     }
-    ops.sort();
+    ops.sort_unstable();
     ops
 }
 
@@ -220,7 +220,7 @@ where
             translate(t, &translation, &datatrans);
         }
         // sort according to StringId, which is sorted alphabetically
-        spo.sort();
+        spo.sort_unstable();
         spo.dedup();
         spo.shrink_to_fit();
         let ops = create_ops(&spo);

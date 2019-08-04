@@ -363,7 +363,7 @@ where
             }
         }
         // sort the vector
-        blank_info.sort_by(compare);
+        blank_info.sort_unstable_by(compare);
         let mut translation = vec![0 as u32; len];
         for (i, b) in blank_info.iter().enumerate().take(len) {
             translation[b.blank_node as usize] = i as u32;
@@ -376,12 +376,12 @@ where
         for t in &mut spo {
             translate_object(t, &translation);
         }
-        spo.sort();
+        spo.sort_unstable();
         let mut ops = self.d.ops.clone();
         for t in &mut ops {
             translate_object(t, &translation);
         }
-        ops.sort();
+        ops.sort_unstable();
 
         Graph {
             d: GraphData {
