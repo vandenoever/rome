@@ -32,7 +32,7 @@ pub trait TripleCmpWrap<'g> {
     fn object_type(&self) -> Object;
 }
 fn compare_subject<'g, B: 'g, I: 'g>(
-    a: &TripleCmpWrap,
+    a: &dyn TripleCmpWrap,
     b: BlankNodeOrIRI<'g, B, I>,
 ) -> cmp::Ordering
 where
@@ -47,7 +47,7 @@ where
     }
 }
 fn compare_object<'g, B: 'g, I: 'g, L: 'g>(
-    a: &TripleCmpWrap,
+    a: &dyn TripleCmpWrap,
     b: Resource<'g, B, I, L>,
 ) -> cmp::Ordering
 where
@@ -63,7 +63,7 @@ where
 }
 #[doc(hidden)]
 /// sort by subject, predicate, object
-pub fn compare_spo<'g, B: 'g, I: 'g, L: 'g, T: 'g>(a: &TripleCmpWrap, b: &T) -> cmp::Ordering
+pub fn compare_spo<'g, B: 'g, I: 'g, L: 'g, T: 'g>(a: &dyn TripleCmpWrap, b: &T) -> cmp::Ordering
 where
     B: BlankNodePtr<'g>,
     I: IRIPtr<'g>,
@@ -81,7 +81,7 @@ where
 }
 #[doc(hidden)]
 /// sort by object, predicate, subject
-pub fn compare_ops<'g, B: 'g, I: 'g, L: 'g, T: 'g>(a: &TripleCmpWrap, b: &T) -> cmp::Ordering
+pub fn compare_ops<'g, B: 'g, I: 'g, L: 'g, T: 'g>(a: &dyn TripleCmpWrap, b: &T) -> cmp::Ordering
 where
     B: BlankNodePtr<'g>,
     I: IRIPtr<'g>,
@@ -103,7 +103,7 @@ where
 /// the iterator is forwarded one position at most
 pub fn get_equal_spo<'g, K: 'g, T: 'g, B: 'g, I: 'g, L: 'g>(
     iter: &mut Peekable<K>,
-    t: &TripleCmpWrap<'g>,
+    t: &dyn TripleCmpWrap<'g>,
     n: &mut u8,
     min_n: u8,
 ) -> Option<T>
@@ -134,7 +134,7 @@ where
 // the iterator is forwarded one position at most
 pub fn get_equal_ops<'g, K: 'g, T: 'g, B: 'g, I: 'g, L: 'g>(
     iter: &mut Peekable<K>,
-    t: &TripleCmpWrap<'g>,
+    t: &dyn TripleCmpWrap<'g>,
     n: &mut u8,
     min_n: u8,
 ) -> Option<T>
@@ -248,7 +248,7 @@ pub struct $name<'g> {
 }
 
 impl<'g> $name<'g> {
-    fn new(triple_ref: &TripleCmpWrap<'g>, triples: $names<'g>) -> $name<'g> {
+    fn new(triple_ref: &dyn TripleCmpWrap<'g>, triples: $names<'g>) -> $name<'g> {
         use std::marker::PhantomData;
         $name {
             subject: if triple_ref.subject_is_blank_node() {
@@ -454,7 +454,7 @@ pub mod $name {
                 if let Some(t) = triples.$n.as_ref() {
                     if min.is_none() || compare_spo(min.unwrap(), t) == cmp::Ordering::Greater {
                         min_n = n;
-                        min = Some(t as &TripleCmpWrap);
+                        min = Some(t as &dyn TripleCmpWrap);
                     }
                 }
             )+
@@ -484,7 +484,7 @@ pub mod $name {
                 if let Some(t) = triples.$n.as_ref() {
                     if min.is_none() || compare_spo(min.unwrap(), t) == cmp::Ordering::Greater {
                         min_n = n;
-                        min = Some(t as &TripleCmpWrap);
+                        min = Some(t as &dyn TripleCmpWrap);
                     }
                 }
             )+
@@ -514,7 +514,7 @@ pub mod $name {
                 if let Some(t) = triples.$n.as_ref() {
                     if min.is_none() || compare_ops(min.unwrap(), t) == cmp::Ordering::Greater {
                         min_n = n;
-                        min = Some(t as &TripleCmpWrap);
+                        min = Some(t as &dyn TripleCmpWrap);
                     }
                 }
             )+

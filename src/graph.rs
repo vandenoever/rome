@@ -159,19 +159,19 @@ pub trait IRIPtr<'g> {
         Resource::IRI(self.clone())
     }
 }
-impl<'g> PartialEq for IRIPtr<'g> {
-    fn eq(&self, other: &IRIPtr<'g>) -> bool {
+impl<'g> PartialEq for dyn IRIPtr<'g> {
+    fn eq(&self, other: &dyn IRIPtr<'g>) -> bool {
         self.as_str() == other.as_str()
     }
 }
-impl<'g> Eq for IRIPtr<'g> {}
-impl<'g> PartialOrd for IRIPtr<'g> {
-    fn partial_cmp(&self, other: &IRIPtr<'g>) -> Option<Ordering> {
+impl<'g> Eq for dyn IRIPtr<'g> {}
+impl<'g> PartialOrd for dyn IRIPtr<'g> {
+    fn partial_cmp(&self, other: &dyn IRIPtr<'g>) -> Option<Ordering> {
         Some(self.as_str().cmp(other.as_str()))
     }
 }
-impl<'g> Ord for IRIPtr<'g> {
-    fn cmp(&self, other: &IRIPtr<'g>) -> Ordering {
+impl<'g> Ord for dyn IRIPtr<'g> {
+    fn cmp(&self, other: &dyn IRIPtr<'g>) -> Ordering {
         self.as_str().cmp(other.as_str())
     }
 }

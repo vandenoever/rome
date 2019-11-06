@@ -290,7 +290,7 @@ fn load_graph(data: &str, base: &str) -> rome::Result<MyGraph> {
 
 fn read<'g, T, B: 'g, I: 'g, L: 'g, F, R>(
     mut last: Option<T>,
-    i: &mut Iterator<Item = T>,
+    i: &mut dyn Iterator<Item = T>,
     predicate: &str,
     convert: F,
 ) -> Result<(R, Option<T>), String>
