@@ -13,7 +13,7 @@ edition = "2018"
 # for the library
 lazy_static = "1"
 nom = "5"
-rand = "0.5"
+rand = "0.7"
 regex = { version = "1", default-features = false, features = ["std"] }
 
 # for the examples
