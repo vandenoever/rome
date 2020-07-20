@@ -1,3 +1,4 @@
+use chrono::{offset::Utc, DateTime};
 use rome::graph;
 use rome::graph::*;
 use rome::graphs::tel;
@@ -98,7 +99,7 @@ enum Outcome {
 #[derive(Debug)]
 struct Assertion {
     test: Rc<String>,
-    date: time::Tm,
+    date: DateTime<Utc>,
     input_file: String,
     result: TestResult,
 }
@@ -246,7 +247,7 @@ where
 
     let assertion_blank_node = w.create_blank_node();
     w.add_blank_iri(&assertion_blank_node, &rdf_type, &earl_assertion);
-    let date = format!("{}", assertion.date.rfc3339());
+    let date = assertion.date.to_rfc3339();
     let date_time = cache.xsd_date_time(w);
     let literal = w.create_literal_datatype(&date, &date_time);
     w.add_blank_literal(&assertion_blank_node, &dc_date, &literal);
@@ -482,7 +483,7 @@ fn fail(test: &Rc<String>, input_file: &str, info: String) -> rome::Result<Asser
             date: String::new(),
             info,
         },
-        date: time::now_utc(),
+        date: Utc::now(),
     })
 }
 
@@ -495,7 +496,7 @@ fn pass(test: &Rc<String>, input_file: &str) -> rome::Result<Assertion> {
             date: String::new(),
             info: String::new(),
         },
-        date: time::now_utc(),
+        date: Utc::now(),
     })
 }
 
@@ -515,7 +516,7 @@ fn run_eval(test: &TestTurtleEval, base: &str, base_dir: &str) -> rome::Result<A
                     date: String::new(),
                     info: format!("parsing of result failed {}", err),
                 },
-                date: time::now_utc(),
+                date: Utc::now(),
             });
         }
     };

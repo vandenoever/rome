@@ -17,7 +17,7 @@ rand = "0.5"
 regex = "1"
 
 # for the examples
-time = "0.1"
+chrono = "0.4"
 
 [features]
 default = []
