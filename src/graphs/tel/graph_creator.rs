@@ -6,7 +6,6 @@ use super::triple::*;
 use super::triple64::*;
 use crate::graph;
 use crate::ontology::iri::rdf;
-use rand;
 use std::cmp;
 use std::marker::PhantomData;
 use std::mem;

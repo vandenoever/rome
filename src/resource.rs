@@ -4,7 +4,6 @@ use crate::graph::Triple;
 use crate::iter;
 use crate::ontology_adapter;
 use crate::resource;
-use std;
 
 macro_rules! rb {
     ($p:ident) => {
@@ -348,8 +347,8 @@ impl<'g, G: 'g> resource::ResourceBase<'g> for $name<'g, G>
     type SubjectIter = resource::SubjectIter<'g, Self>;
     fn new(resource: resource!(), adapter: &'g adapter!()) -> Self {
         $name {
-            resource: resource,
-            adapter: adapter,
+            resource,
+            adapter,
         }
     }
     fn iter(adapter: &'g adapter!()) -> resource::SubjectIter<'g, Self> {
@@ -361,8 +360,8 @@ impl<'g, G: 'g> resource::ResourceBase<'g> for $name<'g, G>
             _ => adapter.empty_ops_range()
         };
         resource::SubjectIter {
-            adapter: adapter,
-            iter: iter,
+            adapter,
+            iter,
         }
     }
     fn this(&self) -> &resource!() {
@@ -383,7 +382,6 @@ mod tests {
     use crate::ontology_adapter;
     use crate::resource;
     use crate::resource::{ResourceBase, IRI};
-    use std;
 
     pub fn adapter<'g, G: 'g>(graph: &'g G) -> ontology_adapter::OntologyAdapter<'g, G>
     where

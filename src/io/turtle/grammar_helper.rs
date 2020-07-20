@@ -41,7 +41,7 @@ fn escaped(hay: &[u8], offset: usize) -> bool {
 }
 
 fn acc(acc: Option<(u32, u8)>, c: char) -> Option<(u32, u8)> {
-    acc.and_then(|(acc, n)| c.to_digit(16).and_then(|c| Some(((acc << 4) + c, n + 1))))
+    acc.and_then(|(acc, n)| c.to_digit(16).map(|c| ((acc << 4) + c, n + 1)))
 }
 
 fn hex_to_char(chars: &mut Chars, n: u8) -> Option<char> {

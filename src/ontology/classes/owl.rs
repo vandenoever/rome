@@ -3,7 +3,6 @@ use crate::ontology;
 use crate::ontology::iri::owl;
 use crate::ontology_adapter;
 use crate::resource;
-use std;
 
 class!(
 /// **owl:AllDifferent**

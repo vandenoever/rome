@@ -1,6 +1,5 @@
 //! The error and result types for this crate.
 
-use nom;
 use std::fmt;
 use std::io;
 use std::result;

@@ -3,7 +3,6 @@ use crate::ontology;
 use crate::ontology::iri::rdf;
 use crate::ontology_adapter;
 use crate::resource;
-use std;
 
 class!(
 /// **rdf:Alt**

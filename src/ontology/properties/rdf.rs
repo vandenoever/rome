@@ -2,7 +2,6 @@ use crate::graph;
 use crate::ontology;
 use crate::ontology::iri::rdf;
 use crate::resource;
-use std;
 
 property!(
 /// **rdf:first**

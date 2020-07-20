@@ -761,7 +761,9 @@ fn uses(o: &Output, classes: bool, prefix: &str) -> String {
     uses.sort_unstable();
     let mut s = String::new();
     for u in uses {
-        s.push_str(&format!("use {};\n", u));
+        if u != "std" {
+            s.push_str(&format!("use {};\n", u));
+        }
     }
     s
 }
